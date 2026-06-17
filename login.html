@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domcub — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #4f46e5;
+    --primary-dark: #3730a3;
+    --sidebar: #1a1f36;
+    --bg: #f8fafc;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --danger: #ef4444;
+    --success: #10b981;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ── Left panel ── */
+  .left-panel {
+    width: 46%;
+    background: var(--sidebar);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .left-panel::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: rgba(79,70,229,0.18);
+    pointer-events: none;
+  }
+
+  .left-panel::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    background: rgba(6,182,212,0.1);
+    pointer-events: none;
+  }
+
+  .brand-block {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .brand-icon-wrap {
+    width: 72px; height: 72px;
+    background: var(--primary);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 8px 24px rgba(79,70,229,0.4);
+  }
+
+  .brand-icon-wrap i { font-size: 30px; color: white; }
+
+  .brand-name {
+    font-size: 32px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -1px;
+  }
+
+  .brand-tagline {
+    color: rgba(255,255,255,0.5);
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  .feature-list {
+    margin-top: 48px;
+    list-style: none;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .feature-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255,255,255,0.65);
+    font-size: 13.5px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .feature-list li:last-child { border-bottom: none; }
+
+  .feature-list li i {
+    width: 32px; height: 32px;
+    background: rgba(79,70,229,0.25);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #818cf8;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .version-tag {
+    position: absolute;
+    bottom: 24px;
+    color: rgba(255,255,255,0.2);
+    font-size: 11px;
+    z-index: 1;
+  }
+
+  /* ── Right panel ── */
+  .right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 48px 32px;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .auth-header {
+    margin-bottom: 32px;
+  }
+
+  .auth-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .auth-header p {
+    color: var(--muted);
+    margin-top: 6px;
+    font-size: 14px;
+  }
+
+  /* Tabs */
+  .auth-tabs {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 28px;
+  }
+
+  .auth-tab {
+    flex: 1;
+    padding: 9px;
+    text-align: center;
+    border: none;
+    background: none;
+    border-radius: 7px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .auth-tab.active {
+    background: white;
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+
+  /* Form */
+  .form-group { margin-bottom: 18px; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 7px;
+  }
+
+  .input-wrap {
+    position: relative;
+  }
+
+  .input-wrap i {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  .input-wrap input {
+    width: 100%;
+    padding: 11px 14px 11px 38px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: white;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .input-wrap input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+  }
+
+  .input-wrap .toggle-pw {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    pointer-events: all;
+  }
+
+  select.auth-select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: white;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2394a3b8' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+
+  select.auth-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+
+  .btn-auth {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .btn-auth:hover { background: var(--primary-dark); }
+  .btn-auth:active { transform: scale(0.99); }
+  .btn-auth:disabled { opacity: 0.65; cursor: not-allowed; }
+
+  /* Alert */
+  .auth-alert {
+    padding: 11px 14px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    margin-bottom: 18px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .auth-alert.error   { background: #fee2e2; color: #991b1b; display: flex; }
+  .auth-alert.success { background: #d1fae5; color: #065f46; display: flex; }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 22px 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--border);
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  @media (max-width: 768px) {
+    .left-panel { display: none; }
+    .right-panel { padding: 32px 20px; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Left branding panel -->
+<div class="left-panel">
+  <div class="brand-block">
+    <div class="brand-icon-wrap">
+      <i class="fa-solid fa-mobile-screen-button"></i>
+    </div>
+    <div class="brand-name">Domcub</div>
+    <div class="brand-tagline">Employee Management Portal</div>
+  </div>
+
+  <ul class="feature-list">
+    <li><i class="fa-solid fa-clock"></i> Real-time hour tracking</li>
+    <li><i class="fa-solid fa-users"></i> Multi-store employee management</li>
+    <li><i class="fa-solid fa-file-invoice-dollar"></i> Automated pay statements</li>
+    <li><i class="fa-solid fa-calendar-days"></i> Time off management</li>
+    <li><i class="fa-solid fa-shield-halved"></i> Secure &amp; role-based access</li>
+  </ul>
+
+  <div class="version-tag">Domcub v2.0 · All Stores</div>
+</div>
+
+<!-- Right auth panel -->
+<div class="right-panel">
+  <div class="auth-card">
+
+    <div class="auth-header">
+      <h2 id="authHeading">Welcome back</h2>
+      <p id="authSubheading">Sign in to your Domcub account to continue.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <!-- Alert -->
+    <div class="auth-alert" id="authAlert">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span id="authAlertMsg"></span>
+    </div>
+
+    <!-- ── LOGIN FORM ── -->
+    <form id="loginForm" onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label>Email Address</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-envelope"></i>
+          <input type="email" id="loginEmail" placeholder="you@domcub.com" required autocomplete="email">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password">
+          <button type="button" class="toggle-pw" onclick="togglePw('loginPassword', this)"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn-auth" id="loginBtn">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        Sign In
+      </button>
+    </form>
+
+    <!-- ── REGISTER FORM ── -->
+    <form id="registerForm" onsubmit="doRegister(event)" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label>First Name</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-user"></i>
+            <input type="text" id="regFirstName" placeholder="First" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-user"></i>
+            <input type="text" id="regLastName" placeholder="Last" required>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-envelope"></i>
+          <input type="email" id="regEmail" placeholder="you@domcub.com" required autocomplete="email">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select class="auth-select" id="regRole">
+          <option value="owner">Owner</option>
+          <option value="manager" selected>Manager</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="regPassword" placeholder="Min. 8 characters" required autocomplete="new-password">
+          <button type="button" class="toggle-pw" onclick="togglePw('regPassword', this)"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="regConfirm" placeholder="Re-enter password" required autocomplete="new-password">
+          <button type="button" class="toggle-pw" onclick="togglePw('regConfirm', this)"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn-auth" id="registerBtn">
+        <i class="fa-solid fa-user-plus"></i>
+        Create Account
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+
+// If already signed in, redirect to dashboard
+auth.onAuthStateChanged(user => {
+  if (user) window.location.href = 'index.html';
+});
+
+function switchTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('loginForm').style.display    = isLogin ? '' : 'none';
+  document.getElementById('registerForm').style.display = isLogin ? 'none' : '';
+  document.getElementById('authHeading').textContent    = isLogin ? 'Welcome back' : 'Create your account';
+  document.getElementById('authSubheading').textContent = isLogin
+    ? 'Sign in to your Domcub account to continue.'
+    : 'Set up your manager or owner account below.';
+  document.querySelectorAll('.auth-tab').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0) === isLogin);
+  });
+  clearAlert();
+}
+
+function showAlert(msg, type) {
+  const el  = document.getElementById('authAlert');
+  const msg2 = document.getElementById('authAlertMsg');
+  el.className = 'auth-alert ' + type;
+  msg2.textContent = msg;
+}
+
+function clearAlert() {
+  const el = document.getElementById('authAlert');
+  el.className = 'auth-alert';
+}
+
+function togglePw(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const icon  = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'fa-solid fa-eye-slash';
+  } else {
+    input.type = 'password';
+    icon.className = 'fa-solid fa-eye';
+  }
+}
+
+function setLoading(btnId, loading, label, icon) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? `<i class="fa-solid fa-spinner fa-spin"></i> Please wait...`
+    : `<i class="${icon}"></i> ${label}`;
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  clearAlert();
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  setLoading('loginBtn', true);
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    // onAuthStateChanged will redirect
+  } catch (err) {
+    setLoading('loginBtn', false, 'Sign In', 'fa-solid fa-arrow-right-to-bracket');
+    const msgs = {
+      'auth/user-not-found': 'No account found with this email.',
+      'auth/wrong-password': 'Incorrect password. Please try again.',
+      'auth/invalid-credential': 'Invalid email or password.',
+      'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
+      'auth/invalid-email': 'Please enter a valid email address.',
+    };
+    showAlert(msgs[err.code] || err.message, 'error');
+  }
+}
+
+async function doRegister(e) {
+  e.preventDefault();
+  clearAlert();
+  const first   = document.getElementById('regFirstName').value.trim();
+  const last    = document.getElementById('regLastName').value.trim();
+  const email   = document.getElementById('regEmail').value.trim();
+  const role    = document.getElementById('regRole').value;
+  const pw      = document.getElementById('regPassword').value;
+  const confirm = document.getElementById('regConfirm').value;
+
+  if (pw.length < 8) {
+    showAlert('Password must be at least 8 characters.', 'error'); return;
+  }
+  if (pw !== confirm) {
+    showAlert('Passwords do not match.', 'error'); return;
+  }
+
+  setLoading('registerBtn', true);
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pw);
+    const uid  = cred.user.uid;
+    await db.collection('Main').doc(uid).set({
+      name: `${first} ${last}`,
+      firstName: first,
+      lastName: last,
+      email,
+      role,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // onAuthStateChanged will redirect
+  } catch (err) {
+    setLoading('registerBtn', false, 'Create Account', 'fa-solid fa-user-plus');
+    const msgs = {
+      'auth/email-already-in-use': 'An account with this email already exists.',
+      'auth/weak-password': 'Password is too weak. Use at least 8 characters.',
+      'auth/invalid-email': 'Please enter a valid email address.',
+    };
+    showAlert(msgs[err.code] || err.message, 'error');
+  }
+}
+</script>
+</body>
+</html>

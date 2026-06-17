@@ -13,10 +13,7 @@
   <div class="sidebar-brand">
     <div class="brand-logo">
       <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-      <div>
-        <div class="brand-name">Domcub</div>
-        <div class="brand-sub">Employee Portal</div>
-      </div>
+      <div><div class="brand-name">Domcub</div><div class="brand-sub">Employee Portal</div></div>
     </div>
   </div>
   <nav class="sidebar-nav">
@@ -30,11 +27,15 @@
     <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
   </nav>
   <div class="sidebar-footer">
-    <select class="store-selector" id="storeFilter" onchange="changeStore(this.value)">
+    <div id="sidebarUser" style="margin-bottom:12px"></div>
+    <select class="store-selector" id="storeFilter" onchange="onStoreChange(this.value)">
       <option value="all">All Stores</option>
       <option value="1">Store 1</option>
       <option value="2">Store 2</option>
     </select>
+    <button onclick="signOut()" style="margin-top:10px;width:100%;padding:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(255,255,255,0.6);font-family:Inter,sans-serif;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+    </button>
   </div>
 </aside>
 
@@ -46,32 +47,34 @@
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-outline" onclick="openAddEntry()"><i class="fa-solid fa-plus"></i> Add Entry</button>
-      <button class="btn btn-primary" onclick="savePeriod()"><i class="fa-solid fa-floppy-disk"></i> Save Period</button>
+      <button class="btn btn-primary" onclick="openSavePeriod()"><i class="fa-solid fa-floppy-disk"></i> Save Period</button>
     </div>
   </div>
 
   <!-- Period Nav -->
   <div class="period-nav">
-    <button class="btn-icon" onclick="shiftPeriod(-1)" title="Previous period"><i class="fa-solid fa-chevron-left"></i></button>
+    <button class="btn-icon" onclick="shiftPeriod(-1)"><i class="fa-solid fa-chevron-left"></i></button>
     <div style="flex:1;text-align:center">
-      <div class="period-label" id="periodLabel"></div>
+      <div class="period-label" id="periodLabel">—</div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="periodSub"></div>
     </div>
-    <button class="btn-icon" onclick="shiftPeriod(1)" title="Next period"><i class="fa-solid fa-chevron-right"></i></button>
+    <button class="btn-icon" onclick="shiftPeriod(1)"><i class="fa-solid fa-chevron-right"></i></button>
   </div>
 
-  <!-- Store filter tabs -->
+  <!-- Store tabs -->
   <div class="tabs">
     <button class="tab-btn active" onclick="filterStore('all',this)">All Stores</button>
     <button class="tab-btn" onclick="filterStore('1',this)">Store 1</button>
     <button class="tab-btn" onclick="filterStore('2',this)">Store 2</button>
   </div>
 
-  <!-- Summary strip -->
+  <!-- Summary -->
   <div id="periodSummary" style="display:flex;gap:12px;margin-bottom:22px;flex-wrap:wrap"></div>
 
-  <!-- Employees accordion -->
-  <div id="hoursAccordion"></div>
+  <!-- Accordion -->
+  <div id="hoursAccordion">
+    <div style="text-align:center;padding:48px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px"></i></div>
+  </div>
 </main>
 
 <!-- Add Entry Modal -->
@@ -105,16 +108,16 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('addEntryModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEntry()">Add Entry</button>
+      <button class="btn btn-primary" id="saveEntryBtn" onclick="doSaveEntry()">Add Entry</button>
     </div>
   </div>
 </div>
 
-<!-- Save Period Confirm -->
+<!-- Save Period Modal -->
 <div class="modal-overlay" id="savePeriodModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <h3>Save Period</h3>
+      <h3>Save Period & Generate Payroll</h3>
       <button class="modal-close" onclick="closeModal('savePeriodModal')">&times;</button>
     </div>
     <div class="modal-body">
@@ -122,45 +125,60 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('savePeriodModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmSavePeriod()">Save & Generate Payroll</button>
+      <button class="btn btn-primary" id="confirmSaveBtn" onclick="doSavePeriod()">Confirm & Save</button>
     </div>
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="app.js"></script>
 <script>
 let periodIndex = getPeriodIndex(new Date());
 let storeFilter = 'all';
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 document.getElementById('storeFilter').value = getSelectedStore();
-function changeStore(v) { setSelectedStore(v); render(); }
+requireAuth(() => render());
+
+function onStoreChange(v) { setSelectedStore(v); render(); }
+
 function filterStore(val, btn) {
   storeFilter = val;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   render();
 }
+
 function shiftPeriod(dir) { periodIndex += dir; render(); }
 
-const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-function render() {
+async function render() {
   const period = getPeriodByIndex(periodIndex);
-  const cur = getCurrentPeriod();
+  const cur    = getCurrentPeriod();
+
   document.getElementById('periodLabel').textContent = formatPeriodLabel(period);
-  document.getElementById('periodSub').textContent = periodIndex === cur.index ? 'Current period' : periodIndex < cur.index ? 'Past period' : 'Future period';
+  document.getElementById('periodSub').textContent   =
+    periodIndex === cur.index ? 'Current period' :
+    periodIndex  < cur.index ? 'Past period' : 'Future period';
 
   const store = getSelectedStore();
-  let emps = getDB(KEYS.employees).filter(e => e.status === 'active');
-  if (storeFilter !== 'all') emps = emps.filter(e => e.store === storeFilter);
-  else if (store !== 'all') emps = emps.filter(e => e.store === store);
+  const [allEmps, jobs, cis] = await Promise.all([
+    getEmployees(),
+    getJobs(),
+    getClockInsRange(period.start, period.end)
+  ]);
 
-  const jobs = getJobs();
-  const cis  = getClockIns();
+  let emps = allEmps.filter(e => e.status === 'active');
+  if (storeFilter !== 'all') emps = emps.filter(e => e.store === storeFilter);
+  else if (store !== 'all')  emps = emps.filter(e => e.store === store);
 
   // Summary
-  let totalHrs = 0;
-  emps.forEach(e => { totalHrs += getTotalHoursForPeriod(e.id, period); });
+  const totalHrs = emps.reduce((s, e) => {
+    return s + cis.filter(c => c.employeeId === e.id && c.clockOut).reduce((h, c) => h + (c.hours||0), 0);
+  }, 0);
+
   document.getElementById('periodSummary').innerHTML = `
     <div class="stat-card" style="flex:1;min-width:140px">
       <div class="stat-label">Total Hours</div>
@@ -176,11 +194,11 @@ function render() {
     </div>
   `;
 
-  // Build list of days in period
+  // Days in period
   const days = [];
   let d = new Date(period.start + 'T00:00:00');
-  const end = new Date(period.end + 'T00:00:00');
-  while (d <= end) { days.push(toDateStr(d)); d.setDate(d.getDate()+1); }
+  const endD = new Date(period.end + 'T00:00:00');
+  while (d <= endD) { days.push(toDateStr(d)); d.setDate(d.getDate()+1); }
 
   const acc = document.getElementById('hoursAccordion');
   if (emps.length === 0) {
@@ -189,16 +207,16 @@ function render() {
   }
 
   acc.innerHTML = emps.map(emp => {
-    const job = jobs.find(j => j.id === emp.jobId);
-    const empCIs = cis.filter(c => c.employeeId === emp.id && c.date >= period.start && c.date <= period.end);
-    const totalH = empCIs.filter(c=>c.clockOut).reduce((s,c)=>s+(c.hours||0),0);
+    const job     = jobs.find(j => j.id === emp.jobId);
+    const empCIs  = cis.filter(c => c.employeeId === emp.id);
+    const totalH  = empCIs.filter(c => c.clockOut).reduce((s,c) => s+(c.hours||0), 0);
+    const estPay  = (totalH * (emp.hourlyRate || 0)).toFixed(2);
 
     const rows = days.map(dateStr => {
-      const d2 = new Date(dateStr + 'T00:00:00');
+      const d2       = new Date(dateStr + 'T00:00:00');
       const isWeekend = d2.getDay() === 0 || d2.getDay() === 6;
-      const dayCIs = empCIs.filter(c => c.date === dateStr);
-      const dayHrs = dayCIs.filter(c=>c.clockOut).reduce((s,c)=>s+(c.hours||0),0);
-      const future = dateStr > todayStr();
+      const dayCIs   = empCIs.filter(c => c.date === dateStr);
+      const future   = dateStr > todayStr();
 
       if (dayCIs.length === 0) {
         return `<tr style="${isWeekend?'color:var(--text-light);background:#fafbfd':''}">
@@ -218,7 +236,7 @@ function render() {
         <td>${ci.clockOut ? formatTime(ci.clockOut) : '<span class="badge badge-green">Active</span>'}</td>
         <td><strong>${ci.clockOut ? (ci.hours||0).toFixed(2)+'h' : '—'}</strong></td>
         <td>${ci.clockOut ? '<span class="badge badge-green">Complete</span>' : '<span class="badge badge-yellow">In Progress</span>'}</td>
-        <td><button class="btn-icon btn-sm" onclick="deleteEntry('${ci.id}')" title="Remove"><i class="fa-solid fa-xmark" style="font-size:11px"></i></button></td>
+        <td><button class="btn-icon btn-sm" onclick="doDeleteEntry('${ci.id}')" title="Remove"><i class="fa-solid fa-xmark" style="font-size:11px"></i></button></td>
       </tr>`).join('');
     }).join('');
 
@@ -234,16 +252,14 @@ function render() {
         </div>
         <div class="hours-emp-right">
           <div class="hours-total">${totalH.toFixed(2)}h total</div>
-          <span class="badge badge-gray">$${(totalH * emp.hourlyRate).toFixed(2)} est.</span>
+          <span class="badge badge-gray">$${estPay} est.</span>
           <i class="fa-solid fa-chevron-down" style="color:var(--text-muted);font-size:12px;transition:transform 0.2s"></i>
         </div>
       </div>
       <div class="hours-emp-body">
         <div class="table-wrap">
           <table>
-            <thead><tr>
-              <th>Date</th><th>Day</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th><th></th>
-            </tr></thead>
+            <thead><tr><th>Date</th><th>Day</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th><th></th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
@@ -259,71 +275,105 @@ function toggleEmp(header) {
   if (icon) icon.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
 }
 
-function openAddEntry() {
-  const emps = getDB(KEYS.employees).filter(e=>e.status==='active');
-  document.getElementById('entryEmp').innerHTML = emps.map(e=>`<option value="${e.id}">${e.name} — Store ${e.store}</option>`).join('');
+let empsCache = [];
+
+async function openAddEntry() {
+  empsCache = await getEmployees();
+  const active = empsCache.filter(e => e.status === 'active');
+  document.getElementById('entryEmp').innerHTML = active.map(e =>
+    `<option value="${e.id}">${e.name} — Store ${e.store}</option>`
+  ).join('');
   document.getElementById('entryDate').value = todayStr();
-  document.getElementById('addEntryModal').classList.add('open');
+  openModal('addEntryModal');
 }
 
-function saveEntry() {
-  const empId = document.getElementById('entryEmp').value;
+async function doSaveEntry() {
+  const empId   = document.getElementById('entryEmp').value;
   const dateStr = document.getElementById('entryDate').value;
   const inTime  = document.getElementById('entryIn').value;
   const outTime = document.getElementById('entryOut').value;
   if (!empId || !dateStr || !inTime || !outTime) { alert('Please fill all fields.'); return; }
-  const emp = getEmployee(empId);
-  const clockIn  = new Date(`${dateStr}T${inTime}:00`).toISOString();
-  const clockOut = new Date(`${dateStr}T${outTime}:00`).toISOString();
-  const hours = calculateHours(clockIn, clockOut);
-  const cis = getClockIns();
-  cis.push({ id: generateId(), employeeId: empId, clockIn, clockOut, date: dateStr, store: emp.store, hours });
-  saveClockIns(cis);
-  closeModal('addEntryModal');
-  render();
+  if (outTime <= inTime) { alert('Clock-out must be after clock-in.'); return; }
+
+  const emp = empsCache.find(e => e.id === empId);
+  const ciTime  = new Date(`${dateStr}T${inTime}:00`);
+  const coTime  = new Date(`${dateStr}T${outTime}:00`);
+  const hours   = calculateHours(ciTime.toISOString(), coTime.toISOString());
+
+  const btn = document.getElementById('saveEntryBtn');
+  btn.disabled = true;
+  try {
+    await db.collection('ClockIns').add({
+      employeeId: empId,
+      store: emp ? emp.store : '',
+      clockIn:  firebase.firestore.Timestamp.fromDate(ciTime),
+      clockOut: firebase.firestore.Timestamp.fromDate(coTime),
+      date: dateStr,
+      hours
+    });
+    closeModal('addEntryModal');
+    render();
+  } catch (err) {
+    alert('Error saving: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
-function deleteEntry(id) {
+async function doDeleteEntry(id) {
   if (!confirm('Remove this entry?')) return;
-  saveClockIns(getClockIns().filter(c => c.id !== id));
+  await deleteClockIn(id);
   render();
 }
 
-function savePeriod() {
+function openSavePeriod() {
   const period = getPeriodByIndex(periodIndex);
   document.getElementById('savePeriodText').textContent =
-    `Save and snapshot hours for ${formatPeriodLabel(period)}? This will also generate pay statements for all active employees.`;
-  document.getElementById('savePeriodModal').classList.add('open');
+    `Save and generate pay statements for ${formatPeriodLabel(period)}? Existing statements for this period will be replaced.`;
+  openModal('savePeriodModal');
 }
 
-function confirmSavePeriod() {
+async function doSavePeriod() {
   const period = getPeriodByIndex(periodIndex);
-  const emps = getDB(KEYS.employees).filter(e => e.status === 'active');
-  const statements = getPayStatements().filter(s => s.periodStart !== period.start);
-  emps.forEach(emp => {
-    const hours = getTotalHoursForPeriod(emp.id, period);
-    const gross = hours * emp.hourlyRate;
-    statements.push({
-      id: generateId(),
-      periodStart: period.start,
-      periodEnd: period.end,
-      employeeId: emp.id,
-      hours: Math.round(hours * 100) / 100,
-      rate: emp.hourlyRate,
-      gross: Math.round(gross * 100) / 100,
-      status: 'pending',
-      paidDate: null,
-      savedAt: new Date().toISOString()
-    });
-  });
-  savePayStatements(statements);
-  closeModal('savePeriodModal');
-  alert('Period saved! Pay statements generated.');
+  const btn    = document.getElementById('confirmSaveBtn');
+  btn.disabled = true;
+  try {
+    const [emps, cis] = await Promise.all([
+      getEmployees(),
+      getClockInsRange(period.start, period.end)
+    ]);
+    const active = emps.filter(e => e.status === 'active');
+
+    // Delete existing statements for this period
+    const existing = await getPayStatements(period.start);
+    await Promise.all(existing.map(s => db.collection('PayStatements').doc(s.id).delete()));
+
+    // Create new
+    await Promise.all(active.map(emp => {
+      const empHours = cis
+        .filter(c => c.employeeId === emp.id && c.clockOut)
+        .reduce((s, c) => s + (c.hours || 0), 0);
+      const gross = Math.round(empHours * emp.hourlyRate * 100) / 100;
+      return savePayStatement({
+        periodStart: period.start,
+        periodEnd:   period.end,
+        employeeId:  emp.id,
+        hours:       Math.round(empHours * 100) / 100,
+        rate:        emp.hourlyRate || 0,
+        gross,
+        status:      'pending',
+        paidDate:    null
+      });
+    }));
+
+    closeModal('savePeriodModal');
+    alert('Period saved! Pay statements generated successfully.');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
 }
-
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-render();
 </script>
 </body>
 </html>

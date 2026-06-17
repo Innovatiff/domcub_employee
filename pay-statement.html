@@ -13,10 +13,7 @@
   <div class="sidebar-brand">
     <div class="brand-logo">
       <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-      <div>
-        <div class="brand-name">Domcub</div>
-        <div class="brand-sub">Employee Portal</div>
-      </div>
+      <div><div class="brand-name">Domcub</div><div class="brand-sub">Employee Portal</div></div>
     </div>
   </div>
   <nav class="sidebar-nav">
@@ -30,11 +27,15 @@
     <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
   </nav>
   <div class="sidebar-footer">
-    <select class="store-selector" id="storeFilter" onchange="changeStore(this.value)">
+    <div id="sidebarUser" style="margin-bottom:12px"></div>
+    <select class="store-selector" id="storeFilter" onchange="onStoreChange(this.value)">
       <option value="all">All Stores</option>
       <option value="1">Store 1</option>
       <option value="2">Store 2</option>
     </select>
+    <button onclick="signOut()" style="margin-top:10px;width:100%;padding:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(255,255,255,0.6);font-family:Inter,sans-serif;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+    </button>
   </div>
 </aside>
 
@@ -47,25 +48,25 @@
     <button class="btn btn-primary" onclick="openGenerateModal()"><i class="fa-solid fa-calculator"></i> Generate Payroll</button>
   </div>
 
-  <!-- Period Selector -->
-  <div class="pay-period-select card" style="padding:16px 20px;margin-bottom:22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+  <!-- Period selector -->
+  <div class="card" style="padding:16px 20px;margin-bottom:22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
     <div style="display:flex;align-items:center;gap:10px;flex:1">
-      <label style="margin:0;white-space:nowrap;font-weight:500"><i class="fa-solid fa-calendar-week" style="margin-right:6px;color:var(--primary)"></i>Pay Period</label>
-      <select id="periodSelect" onchange="render()" style="width:auto;min-width:240px"></select>
+      <label style="margin:0;white-space:nowrap;font-weight:500;font-size:13.5px"><i class="fa-solid fa-calendar-week" style="margin-right:6px;color:var(--primary)"></i>Pay Period</label>
+      <select id="periodSelect" onchange="render()" style="width:auto;min-width:260px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:Inter,sans-serif;font-size:13.5px;outline:none"></select>
     </div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-outline btn-sm" onclick="markAllPaid()"><i class="fa-solid fa-check-double"></i> Mark All Paid</button>
-    </div>
+    <button class="btn btn-outline btn-sm" onclick="markAllPaid()"><i class="fa-solid fa-check-double"></i> Mark All Paid</button>
   </div>
 
   <!-- Stats -->
-  <div class="stats-grid" id="payStats" style="margin-bottom:22px"></div>
+  <div class="stats-grid" id="payStats" style="margin-bottom:22px">
+    <div class="stat-card"><div class="stat-label">Loading...</div></div>
+  </div>
 
   <!-- Table -->
   <div class="card">
     <div class="card-header">
-      <span class="card-title">Employees</span>
-      <span class="badge badge-blue" id="stmtCount">0 records</span>
+      <span class="card-title">Payroll Detail</span>
+      <span class="badge badge-blue" id="stmtCount">—</span>
     </div>
     <div class="table-wrap">
       <table>
@@ -82,7 +83,9 @@
             <th>Actions</th>
           </tr>
         </thead>
-        <tbody id="stmtTable"></tbody>
+        <tbody id="stmtTable">
+          <tr><td colspan="9"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin"></i></div></td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -98,59 +101,68 @@
     <div class="modal-body">
       <div class="form-group">
         <label>Select Period</label>
-        <select id="genPeriodSelect"></select>
+        <select id="genPeriodSelect" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:Inter,sans-serif;font-size:13.5px;outline:none"></select>
       </div>
-      <p style="font-size:13px;color:var(--text-muted);margin-top:8px">This will create pay statements for all active employees based on their clocked hours for the selected period.</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:8px">Creates pay statements for all active employees based on their clocked hours. Existing statements for the period will be replaced.</p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('generateModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="generatePayroll()">Generate</button>
+      <button class="btn btn-primary" id="genBtn" onclick="doGenerate()">Generate</button>
     </div>
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="app.js"></script>
 <script>
 document.getElementById('storeFilter').value = getSelectedStore();
-function changeStore(v) { setSelectedStore(v); render(); }
+requireAuth(() => { buildPeriodOptions(); render(); });
+
+function onStoreChange(v) { setSelectedStore(v); render(); }
 
 function buildPeriodOptions() {
   const cur = getCurrentPeriod();
   const options = [];
-  for (let i = cur.index; i >= cur.index - 12; i--) {
+  for (let i = cur.index; i >= cur.index - 13; i--) {
     const p = getPeriodByIndex(i);
-    options.push({ value: p.start, label: formatPeriodLabel(p) + (i === cur.index ? ' (Current)' : '') });
+    options.push(`<option value="${p.start}">${formatPeriodLabel(p)}${i===cur.index?' (Current)':''}</option>`);
   }
-  return options;
+  document.getElementById('periodSelect').innerHTML     = options.join('');
+  document.getElementById('genPeriodSelect').innerHTML  = options.join('');
 }
 
-function initPeriodSelect() {
-  const opts = buildPeriodOptions();
-  const sel = document.getElementById('periodSelect');
-  sel.innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
-}
-
-function render() {
+async function render() {
   const periodStart = document.getElementById('periodSelect').value;
-  const store = getSelectedStore();
-  let stmts = getPayStatements().filter(s => s.periodStart === periodStart);
+  if (!periodStart) return;
+
+  const store  = getSelectedStore();
+  const [allStmts, allEmps, jobs] = await Promise.all([
+    getPayStatements(periodStart),
+    getEmployees(),
+    getJobs()
+  ]);
+
+  let stmts = allStmts;
   if (store !== 'all') {
     stmts = stmts.filter(s => {
-      const emp = getEmployee(s.employeeId);
+      const emp = allEmps.find(e => e.id === s.employeeId);
       return emp && emp.store === store;
     });
   }
 
-  const totalGross = stmts.reduce((s,x) => s + x.gross, 0);
-  const paid = stmts.filter(s => s.status === 'paid');
-  const pending = stmts.filter(s => s.status === 'pending');
+  const totalGross = stmts.reduce((s,x) => s+x.gross, 0);
+  const paid       = stmts.filter(s => s.status === 'paid');
+  const pending    = stmts.filter(s => s.status !== 'paid');
 
   document.getElementById('stmtCount').textContent = stmts.length + ' records';
   document.getElementById('payStats').innerHTML = `
     <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-dollar-sign"></i></div><div class="stat-label">Total Payroll</div><div class="stat-value">$${totalGross.toFixed(2)}</div></div>
     <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div><div class="stat-label">Paid</div><div class="stat-value">${paid.length}</div><div class="stat-sub">$${paid.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
     <div class="stat-card"><div class="stat-icon yellow"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-label">Pending</div><div class="stat-value">${pending.length}</div><div class="stat-sub">$${pending.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
-    <div class="stat-card"><div class="stat-icon cyan"><i class="fa-solid fa-clock"></i></div><div class="stat-label">Total Hours</div><div class="stat-value">${stmts.reduce((s,x)=>s+x.hours,0).toFixed(1)}</div></div>
+    <div class="stat-card"><div class="stat-icon cyan"><i class="fa-solid fa-clock"></i></div><div class="stat-label">Total Hours</div><div class="stat-value">${stmts.reduce((s,x)=>s+(x.hours||0),0).toFixed(1)}</div></div>
   `;
 
   const tb = document.getElementById('stmtTable');
@@ -159,26 +171,25 @@ function render() {
     return;
   }
 
-  const jobs = getJobs();
   tb.innerHTML = stmts.map(s => {
-    const emp = getEmployee(s.employeeId);
+    const emp    = allEmps.find(e => e.id === s.employeeId);
     if (!emp) return '';
-    const job = jobs.find(j => j.id === emp.jobId);
+    const job    = jobs.find(j => j.id === emp.jobId);
     const isPaid = s.status === 'paid';
     return `<tr>
       <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}</div></div></td>
       <td>${job ? job.title : '—'}</td>
       <td><span class="badge badge-gray">Store ${emp.store}</span></td>
-      <td>${s.hours.toFixed(2)}h</td>
-      <td>$${s.rate.toFixed(2)}</td>
-      <td><strong>$${s.gross.toFixed(2)}</strong></td>
-      <td><span class="badge ${isPaid ? 'badge-green' : 'badge-yellow'}">${isPaid ? 'Paid' : 'Pending'}</span></td>
+      <td>${(s.hours||0).toFixed(2)}h</td>
+      <td>$${(s.rate||0).toFixed(2)}</td>
+      <td><strong>$${(s.gross||0).toFixed(2)}</strong></td>
+      <td><span class="badge ${isPaid?'badge-green':'badge-yellow'}">${isPaid?'Paid':'Pending'}</span></td>
       <td>${s.paidDate ? formatDate(s.paidDate) : '—'}</td>
       <td>
         <div class="td-actions">
           ${!isPaid
-            ? `<button class="btn btn-sm btn-success" onclick="markPaid('${s.id}')"><i class="fa-solid fa-check"></i> Mark Paid</button>`
-            : `<button class="btn btn-sm btn-outline" onclick="markUnpaid('${s.id}')">Undo</button>`
+            ? `<button class="btn btn-sm btn-success" onclick="doMarkPaid('${s.id}')"><i class="fa-solid fa-check"></i> Mark Paid</button>`
+            : `<button class="btn btn-sm btn-outline" onclick="doMarkUnpaid('${s.id}')">Undo</button>`
           }
         </div>
       </td>
@@ -186,77 +197,70 @@ function render() {
   }).join('');
 }
 
-function markPaid(id) {
-  const stmts = getPayStatements();
-  const s = stmts.find(x => x.id === id);
-  if (s) { s.status = 'paid'; s.paidDate = todayStr(); }
-  savePayStatements(stmts);
+async function doMarkPaid(id) {
+  await updatePayStatement(id, { status: 'paid', paidDate: todayStr() });
   render();
 }
 
-function markUnpaid(id) {
-  const stmts = getPayStatements();
-  const s = stmts.find(x => x.id === id);
-  if (s) { s.status = 'pending'; s.paidDate = null; }
-  savePayStatements(stmts);
+async function doMarkUnpaid(id) {
+  await updatePayStatement(id, { status: 'pending', paidDate: null });
   render();
 }
 
-function markAllPaid() {
+async function markAllPaid() {
   const periodStart = document.getElementById('periodSelect').value;
-  const stmts = getPayStatements().map(s => {
-    if (s.periodStart === periodStart && s.status === 'pending') {
-      return { ...s, status: 'paid', paidDate: todayStr() };
-    }
-    return s;
-  });
-  savePayStatements(stmts);
+  const stmts = await getPayStatements(periodStart);
+  const pending = stmts.filter(s => s.status !== 'paid');
+  if (pending.length === 0) { alert('All statements are already marked as paid.'); return; }
+  if (!confirm(`Mark ${pending.length} statement(s) as paid?`)) return;
+  await Promise.all(pending.map(s => updatePayStatement(s.id, { status: 'paid', paidDate: todayStr() })));
   render();
 }
 
-function openGenerateModal() {
-  const opts = buildPeriodOptions();
-  document.getElementById('genPeriodSelect').innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
-  document.getElementById('generateModal').classList.add('open');
-}
+function openGenerateModal() { openModal('generateModal'); }
 
-function generatePayroll() {
+async function doGenerate() {
   const periodStart = document.getElementById('genPeriodSelect').value;
-  const period = { start: periodStart, end: '' };
-  // Compute end from start
-  const s = new Date(periodStart + 'T00:00:00');
-  const e2 = new Date(s); e2.setDate(e2.getDate() + 13);
-  period.end = toDateStr(e2);
-
-  const emps = getDB(KEYS.employees).filter(e => e.status === 'active');
-  let stmts = getPayStatements().filter(s2 => s2.periodStart !== periodStart);
-  emps.forEach(emp => {
-    const hours = getTotalHoursForPeriod(emp.id, period);
-    const gross = Math.round(hours * emp.hourlyRate * 100) / 100;
-    stmts.push({
-      id: generateId(),
-      periodStart: period.start,
-      periodEnd: period.end,
-      employeeId: emp.id,
-      hours: Math.round(hours * 100) / 100,
-      rate: emp.hourlyRate,
-      gross,
-      status: 'pending',
-      paidDate: null,
-      savedAt: new Date().toISOString()
-    });
-  });
-  savePayStatements(stmts);
-  // Set period select to generated period
-  document.getElementById('periodSelect').value = periodStart;
-  closeModal('generateModal');
-  render();
+  const periodEnd   = (() => {
+    const s = new Date(periodStart + 'T00:00:00');
+    s.setDate(s.getDate() + 13);
+    return toDateStr(s);
+  })();
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  try {
+    const [emps, cis, existing] = await Promise.all([
+      getEmployees(),
+      getClockInsRange(periodStart, periodEnd),
+      getPayStatements(periodStart)
+    ]);
+    // Remove existing
+    await Promise.all(existing.map(s => db.collection('PayStatements').doc(s.id).delete()));
+    // Create new
+    const active = emps.filter(e => e.status === 'active');
+    await Promise.all(active.map(emp => {
+      const hrs   = cis.filter(c => c.employeeId === emp.id && c.clockOut).reduce((s,c) => s+(c.hours||0), 0);
+      const gross = Math.round(hrs * (emp.hourlyRate||0) * 100) / 100;
+      return savePayStatement({
+        periodStart,
+        periodEnd,
+        employeeId: emp.id,
+        hours:      Math.round(hrs*100)/100,
+        rate:       emp.hourlyRate||0,
+        gross,
+        status:     'pending',
+        paidDate:   null
+      });
+    }));
+    document.getElementById('periodSelect').value = periodStart;
+    closeModal('generateModal');
+    render();
+  } catch (err) {
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
 }
-
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-initPeriodSelect();
-render();
 </script>
 </body>
 </html>
