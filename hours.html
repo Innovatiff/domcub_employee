@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hours — Domcub</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div>
+        <div class="brand-name">Domcub</div>
+        <div class="brand-sub">Employee Portal</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Employees</span></a>
+    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
+    <div class="nav-section-label">Time</div>
+    <a href="hours.html"         class="nav-link active"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
+    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
+    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <select class="store-selector" id="storeFilter" onchange="changeStore(this.value)">
+      <option value="all">All Stores</option>
+      <option value="1">Store 1</option>
+      <option value="2">Store 2</option>
+    </select>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Hours Tracking</h1>
+      <p>View and manage employee hours by pay period.</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" onclick="openAddEntry()"><i class="fa-solid fa-plus"></i> Add Entry</button>
+      <button class="btn btn-primary" onclick="savePeriod()"><i class="fa-solid fa-floppy-disk"></i> Save Period</button>
+    </div>
+  </div>
+
+  <!-- Period Nav -->
+  <div class="period-nav">
+    <button class="btn-icon" onclick="shiftPeriod(-1)" title="Previous period"><i class="fa-solid fa-chevron-left"></i></button>
+    <div style="flex:1;text-align:center">
+      <div class="period-label" id="periodLabel"></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="periodSub"></div>
+    </div>
+    <button class="btn-icon" onclick="shiftPeriod(1)" title="Next period"><i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+
+  <!-- Store filter tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="filterStore('all',this)">All Stores</button>
+    <button class="tab-btn" onclick="filterStore('1',this)">Store 1</button>
+    <button class="tab-btn" onclick="filterStore('2',this)">Store 2</button>
+  </div>
+
+  <!-- Summary strip -->
+  <div id="periodSummary" style="display:flex;gap:12px;margin-bottom:22px;flex-wrap:wrap"></div>
+
+  <!-- Employees accordion -->
+  <div id="hoursAccordion"></div>
+</main>
+
+<!-- Add Entry Modal -->
+<div class="modal-overlay" id="addEntryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add Hours Entry</h3>
+      <button class="modal-close" onclick="closeModal('addEntryModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Employee</label>
+        <select id="entryEmp"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="entryDate">
+        </div>
+        <div class="form-group">
+          <label>Clock In</label>
+          <input type="time" id="entryIn" value="08:00">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Clock Out</label>
+          <input type="time" id="entryOut" value="16:00">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('addEntryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Add Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save Period Confirm -->
+<div class="modal-overlay" id="savePeriodModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Save Period</h3>
+      <button class="modal-close" onclick="closeModal('savePeriodModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-muted);font-size:14px" id="savePeriodText"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('savePeriodModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmSavePeriod()">Save & Generate Payroll</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+let periodIndex = getPeriodIndex(new Date());
+let storeFilter = 'all';
+
+document.getElementById('storeFilter').value = getSelectedStore();
+function changeStore(v) { setSelectedStore(v); render(); }
+function filterStore(val, btn) {
+  storeFilter = val;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+function shiftPeriod(dir) { periodIndex += dir; render(); }
+
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function render() {
+  const period = getPeriodByIndex(periodIndex);
+  const cur = getCurrentPeriod();
+  document.getElementById('periodLabel').textContent = formatPeriodLabel(period);
+  document.getElementById('periodSub').textContent = periodIndex === cur.index ? 'Current period' : periodIndex < cur.index ? 'Past period' : 'Future period';
+
+  const store = getSelectedStore();
+  let emps = getDB(KEYS.employees).filter(e => e.status === 'active');
+  if (storeFilter !== 'all') emps = emps.filter(e => e.store === storeFilter);
+  else if (store !== 'all') emps = emps.filter(e => e.store === store);
+
+  const jobs = getJobs();
+  const cis  = getClockIns();
+
+  // Summary
+  let totalHrs = 0;
+  emps.forEach(e => { totalHrs += getTotalHoursForPeriod(e.id, period); });
+  document.getElementById('periodSummary').innerHTML = `
+    <div class="stat-card" style="flex:1;min-width:140px">
+      <div class="stat-label">Total Hours</div>
+      <div class="stat-value">${totalHrs.toFixed(1)}</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:140px">
+      <div class="stat-label">Employees</div>
+      <div class="stat-value">${emps.length}</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:140px">
+      <div class="stat-label">Avg Hours / Employee</div>
+      <div class="stat-value">${emps.length ? (totalHrs/emps.length).toFixed(1) : '0'}</div>
+    </div>
+  `;
+
+  // Build list of days in period
+  const days = [];
+  let d = new Date(period.start + 'T00:00:00');
+  const end = new Date(period.end + 'T00:00:00');
+  while (d <= end) { days.push(toDateStr(d)); d.setDate(d.getDate()+1); }
+
+  const acc = document.getElementById('hoursAccordion');
+  if (emps.length === 0) {
+    acc.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><i class="fa-solid fa-clock"></i><p>No employees to display.</p></div></div></div>`;
+    return;
+  }
+
+  acc.innerHTML = emps.map(emp => {
+    const job = jobs.find(j => j.id === emp.jobId);
+    const empCIs = cis.filter(c => c.employeeId === emp.id && c.date >= period.start && c.date <= period.end);
+    const totalH = empCIs.filter(c=>c.clockOut).reduce((s,c)=>s+(c.hours||0),0);
+
+    const rows = days.map(dateStr => {
+      const d2 = new Date(dateStr + 'T00:00:00');
+      const isWeekend = d2.getDay() === 0 || d2.getDay() === 6;
+      const dayCIs = empCIs.filter(c => c.date === dateStr);
+      const dayHrs = dayCIs.filter(c=>c.clockOut).reduce((s,c)=>s+(c.hours||0),0);
+      const future = dateStr > todayStr();
+
+      if (dayCIs.length === 0) {
+        return `<tr style="${isWeekend?'color:var(--text-light);background:#fafbfd':''}">
+          <td>${formatDateShort(dateStr)}</td>
+          <td>${DAY_NAMES[d2.getDay()]}</td>
+          <td colspan="2" style="color:var(--text-light)">${future?'—':isWeekend?'Weekend':'No record'}</td>
+          <td>—</td>
+          <td><span class="badge badge-gray">${future?'upcoming':isWeekend?'—':'absent'}</span></td>
+          <td></td>
+        </tr>`;
+      }
+
+      return dayCIs.map(ci => `<tr>
+        <td>${formatDateShort(ci.date)}</td>
+        <td>${DAY_NAMES[d2.getDay()]}</td>
+        <td>${formatTime(ci.clockIn)}</td>
+        <td>${ci.clockOut ? formatTime(ci.clockOut) : '<span class="badge badge-green">Active</span>'}</td>
+        <td><strong>${ci.clockOut ? (ci.hours||0).toFixed(2)+'h' : '—'}</strong></td>
+        <td>${ci.clockOut ? '<span class="badge badge-green">Complete</span>' : '<span class="badge badge-yellow">In Progress</span>'}</td>
+        <td><button class="btn-icon btn-sm" onclick="deleteEntry('${ci.id}')" title="Remove"><i class="fa-solid fa-xmark" style="font-size:11px"></i></button></td>
+      </tr>`).join('');
+    }).join('');
+
+    return `
+    <div class="hours-employee">
+      <div class="hours-emp-header" onclick="toggleEmp(this)">
+        <div class="hours-emp-left">
+          ${avatarHtml(emp.name)}
+          <div>
+            <div class="employee-name">${emp.name}</div>
+            <div class="employee-sub">${job ? job.title : '—'} · Store ${emp.store}</div>
+          </div>
+        </div>
+        <div class="hours-emp-right">
+          <div class="hours-total">${totalH.toFixed(2)}h total</div>
+          <span class="badge badge-gray">$${(totalH * emp.hourlyRate).toFixed(2)} est.</span>
+          <i class="fa-solid fa-chevron-down" style="color:var(--text-muted);font-size:12px;transition:transform 0.2s"></i>
+        </div>
+      </div>
+      <div class="hours-emp-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Day</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th><th></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleEmp(header) {
+  const body = header.nextElementSibling;
+  const icon = header.querySelector('.fa-chevron-down');
+  body.classList.toggle('open');
+  if (icon) icon.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+function openAddEntry() {
+  const emps = getDB(KEYS.employees).filter(e=>e.status==='active');
+  document.getElementById('entryEmp').innerHTML = emps.map(e=>`<option value="${e.id}">${e.name} — Store ${e.store}</option>`).join('');
+  document.getElementById('entryDate').value = todayStr();
+  document.getElementById('addEntryModal').classList.add('open');
+}
+
+function saveEntry() {
+  const empId = document.getElementById('entryEmp').value;
+  const dateStr = document.getElementById('entryDate').value;
+  const inTime  = document.getElementById('entryIn').value;
+  const outTime = document.getElementById('entryOut').value;
+  if (!empId || !dateStr || !inTime || !outTime) { alert('Please fill all fields.'); return; }
+  const emp = getEmployee(empId);
+  const clockIn  = new Date(`${dateStr}T${inTime}:00`).toISOString();
+  const clockOut = new Date(`${dateStr}T${outTime}:00`).toISOString();
+  const hours = calculateHours(clockIn, clockOut);
+  const cis = getClockIns();
+  cis.push({ id: generateId(), employeeId: empId, clockIn, clockOut, date: dateStr, store: emp.store, hours });
+  saveClockIns(cis);
+  closeModal('addEntryModal');
+  render();
+}
+
+function deleteEntry(id) {
+  if (!confirm('Remove this entry?')) return;
+  saveClockIns(getClockIns().filter(c => c.id !== id));
+  render();
+}
+
+function savePeriod() {
+  const period = getPeriodByIndex(periodIndex);
+  document.getElementById('savePeriodText').textContent =
+    `Save and snapshot hours for ${formatPeriodLabel(period)}? This will also generate pay statements for all active employees.`;
+  document.getElementById('savePeriodModal').classList.add('open');
+}
+
+function confirmSavePeriod() {
+  const period = getPeriodByIndex(periodIndex);
+  const emps = getDB(KEYS.employees).filter(e => e.status === 'active');
+  const statements = getPayStatements().filter(s => s.periodStart !== period.start);
+  emps.forEach(emp => {
+    const hours = getTotalHoursForPeriod(emp.id, period);
+    const gross = hours * emp.hourlyRate;
+    statements.push({
+      id: generateId(),
+      periodStart: period.start,
+      periodEnd: period.end,
+      employeeId: emp.id,
+      hours: Math.round(hours * 100) / 100,
+      rate: emp.hourlyRate,
+      gross: Math.round(gross * 100) / 100,
+      status: 'pending',
+      paidDate: null,
+      savedAt: new Date().toISOString()
+    });
+  });
+  savePayStatements(statements);
+  closeModal('savePeriodModal');
+  alert('Period saved! Pay statements generated.');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Off — Domcub</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+.cal-cell { min-height: 80px; }
+.cal-cell.empty { background: transparent; border-color: transparent; }
+.type-vacation { background: #dbeafe; color: #1e40af; }
+.type-sick     { background: #fee2e2; color: #991b1b; }
+.type-personal { background: #fef3c7; color: #92400e; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div>
+        <div class="brand-name">Domcub</div>
+        <div class="brand-sub">Employee Portal</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Employees</span></a>
+    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
+    <div class="nav-section-label">Time</div>
+    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
+    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
+    <a href="time-off.html"      class="nav-link active"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <select class="store-selector" id="storeFilter" onchange="changeStore(this.value)">
+      <option value="all">All Stores</option>
+      <option value="1">Store 1</option>
+      <option value="2">Store 2</option>
+    </select>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Time Off</h1>
+      <p>Review and manage employee time off requests.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openRequestModal()"><i class="fa-solid fa-plus"></i> Request Time Off</button>
+  </div>
+
+  <!-- Calendar -->
+  <div class="calendar-wrap">
+    <div class="cal-header">
+      <button class="btn-icon" onclick="shiftMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+      <div class="cal-month-label" id="calMonthLabel"></div>
+      <button class="btn-icon" onclick="shiftMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap">
+      <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#dbeafe;display:inline-block"></span> Vacation</span>
+      <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#fee2e2;display:inline-block"></span> Sick</span>
+      <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:#fef3c7;display:inline-block"></span> Personal</span>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+    <div class="tabs" style="margin-bottom:0">
+      <button class="tab-btn active" onclick="filterStatus('all',this)">All</button>
+      <button class="tab-btn" onclick="filterStatus('pending',this)">Pending</button>
+      <button class="tab-btn" onclick="filterStatus('approved',this)">Approved</button>
+      <button class="tab-btn" onclick="filterStatus('denied',this)">Denied</button>
+    </div>
+  </div>
+
+  <!-- Requests List -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Time Off Requests</span>
+      <span class="badge badge-blue" id="toCount">0 requests</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Type</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Days</th>
+            <th>Note</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="toTable"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Request Modal -->
+<div class="modal-overlay" id="requestModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Request Time Off</h3>
+      <button class="modal-close" onclick="closeModal('requestModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Employee</label>
+        <select id="toEmp"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" id="toStart">
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" id="toEnd">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="toType">
+          <option value="vacation">Vacation</option>
+          <option value="sick">Sick Leave</option>
+          <option value="personal">Personal</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Note (optional)</label>
+        <textarea id="toNote" placeholder="Additional details..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('requestModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRequest()">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const today = new Date();
+let calYear  = today.getFullYear();
+let calMonth = today.getMonth(); // 0-indexed
+let statusFilter = 'all';
+
+document.getElementById('storeFilter').value = getSelectedStore();
+function changeStore(v) { setSelectedStore(v); renderList(); }
+
+function filterStatus(val, btn) {
+  statusFilter = val;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+// Auto-advance month
+function autoAdvanceMonth() {
+  const now = new Date();
+  calYear  = now.getFullYear();
+  calMonth = now.getMonth();
+}
+
+function shiftMonth(dir) {
+  calMonth += dir;
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0;  calYear++; }
+  renderCalendar();
+}
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function typeClass(type) {
+  return { vacation: 'type-vacation', sick: 'type-sick', personal: 'type-personal' }[type] || '';
+}
+
+function renderCalendar() {
+  document.getElementById('calMonthLabel').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+
+  const first  = new Date(calYear, calMonth, 1);
+  const daysIn = new Date(calYear, calMonth+1, 0).getDate();
+  const startDow = first.getDay();
+  const todayStr2 = todayStr();
+
+  const tos = getTimeOff().filter(t => t.status === 'approved');
+
+  let html = DAY_NAMES.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  // Empty cells before first day
+  for (let i = 0; i < startDow; i++) {
+    html += `<div class="cal-cell empty"></div>`;
+  }
+
+  for (let day = 1; day <= daysIn; day++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr2;
+
+    const events = tos.filter(t => dateStr >= t.startDate && dateStr <= t.endDate);
+    const chips  = events.slice(0, 2).map(t => {
+      const emp = getEmployee(t.employeeId);
+      return `<div class="cal-event-chip ${typeClass(t.type)}">${emp ? emp.name.split(' ')[0] : '?'}</div>`;
+    }).join('') + (events.length > 2 ? `<div class="cal-event-chip badge-gray">+${events.length-2}</div>` : '');
+
+    html += `<div class="cal-cell ${isToday ? 'today' : ''}">
+      <div class="cal-cell-num">${day}</div>
+      ${chips}
+    </div>`;
+  }
+
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function renderList() {
+  const store = getSelectedStore();
+  let tos = getTimeOff();
+
+  if (statusFilter !== 'all') tos = tos.filter(t => t.status === statusFilter);
+  if (store !== 'all') {
+    tos = tos.filter(t => {
+      const emp = getEmployee(t.employeeId);
+      return emp && emp.store === store;
+    });
+  }
+
+  tos.sort((a,b) => b.startDate.localeCompare(a.startDate));
+
+  document.getElementById('toCount').textContent = tos.length + ' requests';
+
+  const tb = document.getElementById('toTable');
+  if (tos.length === 0) {
+    tb.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fa-solid fa-calendar-days"></i><p>No time off requests.</p></div></td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = tos.map(t => {
+    const emp = getEmployee(t.employeeId);
+    const s = new Date(t.startDate + 'T00:00:00');
+    const e = new Date(t.endDate   + 'T00:00:00');
+    const days = Math.round((e - s) / 86400000) + 1;
+
+    const typeBadges = { vacation: 'badge-blue', sick: 'badge-red', personal: 'badge-yellow' };
+    const typeLabels = { vacation: 'Vacation', sick: 'Sick Leave', personal: 'Personal' };
+    const statusBadges = { approved: 'badge-green', pending: 'badge-yellow', denied: 'badge-red' };
+
+    return `<tr>
+      <td><div class="employee-info">${emp ? avatarHtml(emp.name) : ''}<div class="employee-name">${emp ? emp.name : '—'}</div></div></td>
+      <td><span class="badge ${typeBadges[t.type]||'badge-gray'}">${typeLabels[t.type]||t.type}</span></td>
+      <td>${formatDate(t.startDate)}</td>
+      <td>${formatDate(t.endDate)}</td>
+      <td>${days} day${days !== 1 ? 's' : ''}</td>
+      <td style="color:var(--text-muted);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.note || '—'}</td>
+      <td><span class="badge ${statusBadges[t.status]||'badge-gray'}">${t.status.charAt(0).toUpperCase()+t.status.slice(1)}</span></td>
+      <td>
+        <div class="td-actions">
+          ${t.status === 'pending' ? `
+            <button class="btn btn-sm btn-success" onclick="updateStatus('${t.id}','approved')"><i class="fa-solid fa-check"></i> Approve</button>
+            <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="updateStatus('${t.id}','denied')"><i class="fa-solid fa-xmark"></i> Deny</button>
+          ` : `
+            <button class="btn btn-sm btn-outline" onclick="updateStatus('${t.id}','pending')">Reset</button>
+          `}
+          <button class="btn-icon" onclick="deleteTO('${t.id}')" title="Delete"><i class="fa-solid fa-trash" style="font-size:12px;color:var(--danger)"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStatus(id, status) {
+  const tos = getTimeOff();
+  const t = tos.find(x => x.id === id);
+  if (t) t.status = status;
+  saveTimeOff(tos);
+  renderCalendar();
+  renderList();
+}
+
+function deleteTO(id) {
+  if (!confirm('Delete this time off request?')) return;
+  saveTimeOff(getTimeOff().filter(t => t.id !== id));
+  renderCalendar();
+  renderList();
+}
+
+function openRequestModal() {
+  const emps = getDB(KEYS.employees).filter(e => e.status === 'active');
+  document.getElementById('toEmp').innerHTML = emps.map(e => `<option value="${e.id}">${e.name} — Store ${e.store}</option>`).join('');
+  document.getElementById('toStart').value = todayStr();
+  document.getElementById('toEnd').value   = todayStr();
+  document.getElementById('toNote').value  = '';
+  document.getElementById('toType').value  = 'vacation';
+  document.getElementById('requestModal').classList.add('open');
+}
+
+function saveRequest() {
+  const empId = document.getElementById('toEmp').value;
+  const start = document.getElementById('toStart').value;
+  const end   = document.getElementById('toEnd').value;
+  const type  = document.getElementById('toType').value;
+  const note  = document.getElementById('toNote').value.trim();
+  if (!empId || !start || !end) { alert('Please fill required fields.'); return; }
+  if (end < start) { alert('End date cannot be before start date.'); return; }
+  const tos = getTimeOff();
+  tos.push({ id: generateId(), employeeId: empId, startDate: start, endDate: end, type, status: 'pending', note });
+  saveTimeOff(tos);
+  closeModal('requestModal');
+  renderCalendar();
+  renderList();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+autoAdvanceMonth();
+renderCalendar();
+renderList();
+</script>
+</body>
+</html>

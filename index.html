@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Domcub</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div>
+        <div class="brand-name">Domcub</div>
+        <div class="brand-sub">Employee Portal</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="index.html"        class="nav-link active"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+    <a href="employees.html"    class="nav-link"><i class="fa-solid fa-users"></i><span>Employees</span></a>
+    <a href="jobs.html"         class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
+    <div class="nav-section-label">Time</div>
+    <a href="hours.html"        class="nav-link"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
+    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
+    <a href="time-off.html"     class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <select class="store-selector" id="storeFilter" onchange="changeStore(this.value)">
+      <option value="all">All Stores</option>
+      <option value="1">Store 1</option>
+      <option value="2">Store 2</option>
+    </select>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1 id="greeting">Good morning, Manager</h1>
+      <p id="todayDate"></p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <button class="btn btn-primary" onclick="openClockModal()"><i class="fa-solid fa-fingerprint"></i> Clock In / Out</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <!-- Currently Working -->
+  <div class="card" style="margin-bottom:22px">
+    <div class="card-header">
+      <span class="card-title"><i class="fa-solid fa-circle" style="color:#10b981;font-size:9px;margin-right:6px"></i> Currently Working</span>
+      <span class="badge badge-green" id="workingCount">0 active</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Position</th>
+            <th>Store</th>
+            <th>Clocked In</th>
+            <th>Hours So Far</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="workingTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Today's Summary -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title"><i class="fa-solid fa-list-check" style="margin-right:6px;color:var(--primary)"></i> Today's Summary</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Position</th>
+            <th>Store</th>
+            <th>Clock In</th>
+            <th>Clock Out</th>
+            <th>Hours</th>
+          </tr>
+        </thead>
+        <tbody id="todayTable"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Clock Modal -->
+<div class="modal-overlay" id="clockModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Clock In / Out</h3>
+      <button class="modal-close" onclick="closeModal('clockModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Select Employee</label>
+        <select id="clockEmpSelect"></select>
+      </div>
+      <div id="clockStatus" style="margin-bottom:14px;font-size:13px;color:var(--text-muted)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('clockModal')">Cancel</button>
+      <button class="btn btn-primary" id="clockActionBtn" onclick="doClockAction()">Clock In</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const today = new Date();
+const hour = today.getHours();
+const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+document.getElementById('greeting').textContent = `${greeting}, Manager`;
+document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+// Restore store
+document.getElementById('storeFilter').value = getSelectedStore();
+
+function changeStore(val) {
+  setSelectedStore(val);
+  render();
+}
+
+function render() {
+  const store = getSelectedStore();
+  const emps = getEmployees().filter(e => e.status === 'active' && (store === 'all' || e.store === store));
+  const jobs = getJobs();
+  const cis = getClockIns();
+  const todayStr2 = todayStr();
+
+  // Stats
+  const allActive = getEmployees().filter(e => e.status === 'active');
+  const openJobs = jobs.length;
+  const todayCIs = cis.filter(c => c.date === todayStr2);
+  const workingNow = cis.filter(c => c.date === todayStr2 && !c.clockOut && (store === 'all' || c.store === store));
+  const todayHours = todayCIs.filter(c => c.clockOut && (store === 'all' || c.store === store))
+                              .reduce((s,c) => s + (c.hours||0), 0);
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-icon purple"><i class="fa-solid fa-users"></i></div>
+      <div class="stat-label">Total Employees</div>
+      <div class="stat-value">${allActive.length}</div>
+      <div class="stat-sub">${getEmployees().filter(e=>e.store==='1' && e.status==='active').length} Store 1 · ${getEmployees().filter(e=>e.store==='2' && e.status==='active').length} Store 2</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="fa-solid fa-person-walking-arrow-right"></i></div>
+      <div class="stat-label">Working Now</div>
+      <div class="stat-value">${workingNow.length}</div>
+      <div class="stat-sub">Clocked in today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon yellow"><i class="fa-solid fa-clock"></i></div>
+      <div class="stat-label">Hours Today</div>
+      <div class="stat-value">${todayHours.toFixed(1)}</div>
+      <div class="stat-sub">Completed shifts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon cyan"><i class="fa-solid fa-briefcase"></i></div>
+      <div class="stat-label">Job Positions</div>
+      <div class="stat-value">${openJobs}</div>
+      <div class="stat-sub">Across both stores</div>
+    </div>
+  `;
+
+  // Currently Working
+  document.getElementById('workingCount').textContent = workingNow.length + ' active';
+  const wb = document.getElementById('workingTable');
+  if (workingNow.length === 0) {
+    wb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-regular fa-clock"></i><p>No employees are currently clocked in.</p></div></td></tr>`;
+  } else {
+    wb.innerHTML = workingNow.map(c => {
+      const emp = getEmployee(c.employeeId);
+      if (!emp) return '';
+      const job = jobs.find(j => j.id === emp.jobId);
+      const hrs = ((Date.now() - new Date(c.clockIn).getTime()) / 3600000).toFixed(1);
+      return `<tr>
+        <td><div class="employee-info">${avatarHtml(emp.name)}<div><div class="employee-name">${emp.name}</div></div></div></td>
+        <td>${job ? `<span class="badge" style="background:${job.color}22;color:${job.color}">${job.title}</span>` : '—'}</td>
+        <td><span class="badge badge-gray">Store ${emp.store}</span></td>
+        <td>${formatTime(c.clockIn)}</td>
+        <td><strong>${hrs}h</strong></td>
+        <td><button class="btn btn-sm btn-outline" onclick="quickClockOut('${emp.id}')"><i class="fa-solid fa-stop"></i> Clock Out</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Today's Summary (completed shifts)
+  const done = cis.filter(c => c.date === todayStr2 && c.clockOut && (store === 'all' || c.store === store));
+  const tb = document.getElementById('todayTable');
+  if (done.length === 0) {
+    tb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-regular fa-calendar-xmark"></i><p>No completed shifts today.</p></div></td></tr>`;
+  } else {
+    tb.innerHTML = done.map(c => {
+      const emp = getEmployee(c.employeeId);
+      if (!emp) return '';
+      const job = jobs.find(j => j.id === emp.jobId);
+      return `<tr>
+        <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}</div></div></td>
+        <td>${job ? job.title : '—'}</td>
+        <td><span class="badge badge-gray">Store ${emp.store}</span></td>
+        <td>${formatTime(c.clockIn)}</td>
+        <td>${formatTime(c.clockOut)}</td>
+        <td><strong>${(c.hours||0).toFixed(2)}h</strong></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function quickClockOut(empId) {
+  clockOutEmployee(empId);
+  render();
+}
+
+function openClockModal() {
+  const emps = getEmployees().filter(e => e.status === 'active');
+  const sel = document.getElementById('clockEmpSelect');
+  sel.innerHTML = emps.map(e => `<option value="${e.id}">${e.name} — Store ${e.store}</option>`).join('');
+  updateClockStatus();
+  sel.onchange = updateClockStatus;
+  document.getElementById('clockModal').classList.add('open');
+}
+
+function updateClockStatus() {
+  const empId = document.getElementById('clockEmpSelect').value;
+  const entry = isClocked(empId);
+  const statusEl = document.getElementById('clockStatus');
+  const btn = document.getElementById('clockActionBtn');
+  if (entry) {
+    statusEl.innerHTML = `<span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:8px"></i> Currently clocked in since ${formatTime(entry.clockIn)}</span>`;
+    btn.textContent = 'Clock Out';
+    btn.className = 'btn btn-danger';
+  } else {
+    statusEl.innerHTML = `<span class="badge badge-gray"><i class="fa-solid fa-circle" style="font-size:8px"></i> Not clocked in</span>`;
+    btn.textContent = 'Clock In';
+    btn.className = 'btn btn-primary';
+  }
+}
+
+function doClockAction() {
+  const empId = document.getElementById('clockEmpSelect').value;
+  const emp = getEmployee(empId);
+  if (!emp) return;
+  if (isClocked(empId)) {
+    clockOutEmployee(empId);
+  } else {
+    clockInEmployee(empId, emp.store);
+  }
+  closeModal('clockModal');
+  render();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+render();
+</script>
+</body>
+</html>

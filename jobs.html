@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Positions — Domcub</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div>
+        <div class="brand-name">Domcub</div>
+        <div class="brand-sub">Employee Portal</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Employees</span></a>
+    <a href="jobs.html"          class="nav-link active"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
+    <div class="nav-section-label">Time</div>
+    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
+    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
+    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <select class="store-selector" id="storeFilter" onchange="changeStore(this.value)">
+      <option value="all">All Stores</option>
+      <option value="1">Store 1</option>
+      <option value="2">Store 2</option>
+    </select>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Job Positions</h1>
+      <p>Manage the roles available across both Domcub stores.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openJobModal()"><i class="fa-solid fa-plus"></i> Add Position</button>
+  </div>
+
+  <div class="jobs-grid" id="jobsGrid"></div>
+</main>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="jobModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 id="jobModalTitle">Add Position</h3>
+      <button class="modal-close" onclick="closeModal('jobModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="jobId">
+      <div class="form-group">
+        <label>Job Title</label>
+        <input type="text" id="jobTitle" placeholder="e.g. Sales Associate">
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="jobDept" placeholder="e.g. Sales">
+      </div>
+      <div class="form-group">
+        <label>Color Label</label>
+        <div class="color-options" id="colorOptions"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('jobModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveJob()">Save Position</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Delete Position</h3>
+      <button class="modal-close" onclick="closeModal('deleteModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-muted);font-size:14px">Are you sure you want to delete <strong id="deleteJobName"></strong>? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const COLORS = ['#4f46e5','#059669','#0891b2','#d97706','#dc2626','#7c3aed','#be185d','#0284c7'];
+let selectedColor = COLORS[0];
+let deleteId = null;
+
+document.getElementById('storeFilter').value = getSelectedStore();
+function changeStore(v) { setSelectedStore(v); }
+
+function renderColors() {
+  document.getElementById('colorOptions').innerHTML = COLORS.map(c =>
+    `<div class="color-opt ${c === selectedColor ? 'selected' : ''}" style="background:${c}" onclick="selectColor('${c}')" title="${c}"></div>`
+  ).join('');
+}
+
+function selectColor(c) {
+  selectedColor = c;
+  renderColors();
+}
+
+function render() {
+  const jobs = getJobs();
+  const emps = getDB(KEYS.employees);
+  const grid = document.getElementById('jobsGrid');
+  if (jobs.length === 0) {
+    grid.innerHTML = `<div class="card" style="grid-column:1/-1;padding:48px;text-align:center;color:var(--text-muted)"><i class="fa-solid fa-briefcase" style="font-size:36px;margin-bottom:12px;display:block;color:var(--text-light)"></i><p>No job positions yet. Add one to get started.</p></div>`;
+    return;
+  }
+  grid.innerHTML = jobs.map(j => {
+    const count = emps.filter(e => e.jobId === j.id && e.status === 'active').length;
+    return `
+    <div class="job-card">
+      <div class="job-card-header">
+        <div class="job-dot" style="background:${j.color}"></div>
+        <div>
+          <div class="job-title">${j.title}</div>
+          <div class="job-dept">${j.department}</div>
+        </div>
+      </div>
+      <div class="job-count"><i class="fa-solid fa-user" style="margin-right:4px;color:var(--text-light)"></i>${count} employee${count !== 1 ? 's' : ''} in this role</div>
+      <div class="job-actions">
+        <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+        <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="openDelete('${j.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openJobModal(id) {
+  const job = id ? getJob(id) : null;
+  document.getElementById('jobModalTitle').textContent = job ? 'Edit Position' : 'Add Position';
+  document.getElementById('jobId').value = job ? job.id : '';
+  document.getElementById('jobTitle').value = job ? job.title : '';
+  document.getElementById('jobDept').value = job ? job.department : '';
+  selectedColor = job ? job.color : COLORS[0];
+  renderColors();
+  document.getElementById('jobModal').classList.add('open');
+}
+
+function saveJob() {
+  const title = document.getElementById('jobTitle').value.trim();
+  const dept  = document.getElementById('jobDept').value.trim();
+  if (!title) { alert('Please enter a job title.'); return; }
+  const id = document.getElementById('jobId').value;
+  const jobs = getJobs();
+  if (id) {
+    const j = jobs.find(x => x.id === id);
+    if (j) { j.title = title; j.department = dept; j.color = selectedColor; }
+  } else {
+    jobs.push({ id: generateId(), title, department: dept, color: selectedColor });
+  }
+  saveJobs(jobs);
+  closeModal('jobModal');
+  render();
+}
+
+function openDelete(id) {
+  deleteId = id;
+  const j = getJob(id);
+  document.getElementById('deleteJobName').textContent = j ? j.title : '';
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+function confirmDelete() {
+  if (!deleteId) return;
+  saveJobs(getJobs().filter(j => j.id !== deleteId));
+  closeModal('deleteModal');
+  render();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+render();
+</script>
+</body>
+</html>

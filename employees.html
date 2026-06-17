@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employees — Domcub</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div>
+        <div class="brand-name">Domcub</div>
+        <div class="brand-sub">Employee Portal</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+    <a href="employees.html"     class="nav-link active"><i class="fa-solid fa-users"></i><span>Employees</span></a>
+    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
+    <div class="nav-section-label">Time</div>
+    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
+    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
+    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <select class="store-selector" id="storeFilter" onchange="changeStore(this.value)">
+      <option value="all">All Stores</option>
+      <option value="1">Store 1</option>
+      <option value="2">Store 2</option>
+    </select>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Employees</h1>
+      <p>Manage your team across Store 1 and Store 2.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openHireModal()"><i class="fa-solid fa-user-plus"></i> Hire Employee</button>
+  </div>
+
+  <div class="tabs" id="storeTabs">
+    <button class="tab-btn active" onclick="filterStore('all',this)">All Stores</button>
+    <button class="tab-btn" onclick="filterStore('1',this)">Store 1</button>
+    <button class="tab-btn" onclick="filterStore('2',this)">Store 2</button>
+    <button class="tab-btn" onclick="filterStore('inactive',this)">Inactive</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title" id="tableTitle">All Employees</span>
+      <span class="badge badge-blue" id="empCount">0 employees</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Position</th>
+            <th>Store</th>
+            <th>Hire Date</th>
+            <th>Rate / hr</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="empTable"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Hire / Edit Modal -->
+<div class="modal-overlay" id="empModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="empModalTitle">Hire Employee</h3>
+      <button class="modal-close" onclick="closeModal('empModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="empId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="empName" placeholder="First Last">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="empEmail" placeholder="email@domcub.com">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" id="empPhone" placeholder="(787) 555-0000">
+        </div>
+        <div class="form-group">
+          <label>Store *</label>
+          <select id="empStore">
+            <option value="1">Store 1</option>
+            <option value="2">Store 2</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Job Position *</label>
+          <select id="empJob"></select>
+        </div>
+        <div class="form-group">
+          <label>Hourly Rate ($)</label>
+          <input type="number" id="empRate" placeholder="15.00" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Hire Date</label>
+          <input type="date" id="empHire">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('empModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEmployee()">Save Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Employee Modal -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Employee Profile</h3>
+      <button class="modal-close" onclick="closeModal('viewModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="viewModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('viewModal')">Close</button>
+      <button class="btn btn-primary" id="viewEditBtn">Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fire Modal -->
+<div class="modal-overlay" id="fireModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Terminate Employee</h3>
+      <button class="modal-close" onclick="closeModal('fireModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-muted);font-size:14px">Are you sure you want to terminate <strong id="fireEmpName"></strong>? They will be marked inactive.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('fireModal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmFire()">Terminate</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+let currentFilter = 'all';
+let fireEmpId = null;
+
+document.getElementById('storeFilter').value = getSelectedStore();
+function changeStore(v) { setSelectedStore(v); render(); }
+
+function filterStore(val, btn) {
+  currentFilter = val;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  let emps = getDB(KEYS.employees);
+  const jobs = getJobs();
+  const store = getSelectedStore();
+
+  if (currentFilter === 'inactive') {
+    emps = emps.filter(e => e.status === 'inactive');
+  } else {
+    emps = emps.filter(e => e.status === 'active');
+    if (currentFilter !== 'all') emps = emps.filter(e => e.store === currentFilter);
+    else if (store !== 'all') emps = emps.filter(e => e.store === store);
+  }
+
+  document.getElementById('empCount').textContent = emps.length + ' employee' + (emps.length !== 1 ? 's' : '');
+  const titles = { all:'All Employees', '1':'Store 1 Employees', '2':'Store 2 Employees', inactive:'Inactive Employees' };
+  document.getElementById('tableTitle').textContent = titles[currentFilter] || 'Employees';
+
+  const tb = document.getElementById('empTable');
+  if (emps.length === 0) {
+    tb.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-users"></i><p>No employees found.</p></div></td></tr>`;
+    return;
+  }
+  tb.innerHTML = emps.map(e => {
+    const job = jobs.find(j => j.id === e.jobId);
+    return `<tr>
+      <td>
+        <div class="employee-info">
+          ${avatarHtml(e.name)}
+          <div>
+            <div class="employee-name">${e.name}</div>
+            <div class="employee-sub">${e.email || ''}</div>
+          </div>
+        </div>
+      </td>
+      <td>${job ? `<span class="badge" style="background:${job.color}22;color:${job.color}">${job.title}</span>` : '—'}</td>
+      <td><span class="badge badge-gray">Store ${e.store}</span></td>
+      <td>${formatDate(e.hireDate)}</td>
+      <td>$${Number(e.hourlyRate).toFixed(2)}</td>
+      <td><span class="badge ${e.status==='active'?'badge-green':'badge-red'}">${e.status==='active'?'Active':'Inactive'}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="btn-icon" title="View" onclick="openView('${e.id}')"><i class="fa-solid fa-eye"></i></button>
+          <button class="btn-icon" title="Edit" onclick="openEditModal('${e.id}')"><i class="fa-solid fa-pen"></i></button>
+          ${e.status==='active'
+            ? `<button class="btn-icon" title="Terminate" style="color:var(--danger)" onclick="openFire('${e.id}')"><i class="fa-solid fa-user-xmark"></i></button>`
+            : `<button class="btn-icon" title="Rehire" style="color:var(--success)" onclick="rehire('${e.id}')"><i class="fa-solid fa-user-check"></i></button>`
+          }
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function populateJobSelect() {
+  document.getElementById('empJob').innerHTML = getJobs().map(j => `<option value="${j.id}">${j.title} — ${j.department}</option>`).join('');
+}
+
+function openHireModal() {
+  populateJobSelect();
+  document.getElementById('empModalTitle').textContent = 'Hire Employee';
+  document.getElementById('empId').value = '';
+  ['empName','empEmail','empPhone','empRate'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('empStore').value = '1';
+  document.getElementById('empHire').value = todayStr();
+  document.getElementById('empModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  populateJobSelect();
+  const e = getEmployee(id);
+  if (!e) return;
+  document.getElementById('empModalTitle').textContent = 'Edit Employee';
+  document.getElementById('empId').value = e.id;
+  document.getElementById('empName').value = e.name;
+  document.getElementById('empEmail').value = e.email || '';
+  document.getElementById('empPhone').value = e.phone || '';
+  document.getElementById('empStore').value = e.store;
+  document.getElementById('empJob').value = e.jobId;
+  document.getElementById('empRate').value = e.hourlyRate;
+  document.getElementById('empHire').value = e.hireDate || '';
+  document.getElementById('empModal').classList.add('open');
+}
+
+function saveEmployee() {
+  const name = document.getElementById('empName').value.trim();
+  if (!name) { alert('Name is required.'); return; }
+  const data = {
+    name,
+    email: document.getElementById('empEmail').value.trim(),
+    phone: document.getElementById('empPhone').value.trim(),
+    store: document.getElementById('empStore').value,
+    jobId: document.getElementById('empJob').value,
+    hourlyRate: parseFloat(document.getElementById('empRate').value) || 0,
+    hireDate: document.getElementById('empHire').value,
+  };
+  const id = document.getElementById('empId').value;
+  const emps = getDB(KEYS.employees);
+  if (id) {
+    const idx = emps.findIndex(e => e.id === id);
+    if (idx > -1) emps[idx] = { ...emps[idx], ...data };
+  } else {
+    emps.push({ id: generateId(), status: 'active', ...data });
+  }
+  saveEmployees(emps);
+  closeModal('empModal');
+  render();
+}
+
+function openView(id) {
+  const e = getEmployee(id);
+  if (!e) return;
+  const job = getJob(e.jobId);
+  const cur = getCurrentPeriod();
+  const hrs = getTotalHoursForPeriod(id, cur).toFixed(1);
+  document.getElementById('viewModalBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+      ${avatarHtml(e.name, 52)}
+      <div>
+        <div style="font-size:18px;font-weight:700">${e.name}</div>
+        <div style="color:var(--text-muted);margin-top:2px">${job ? job.title : '—'}</div>
+      </div>
+      <span class="badge ${e.status==='active'?'badge-green':'badge-red'}" style="margin-left:auto">${e.status==='active'?'Active':'Inactive'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${infoRow('Store', 'Store ' + e.store)}
+      ${infoRow('Hourly Rate', '$' + Number(e.hourlyRate).toFixed(2))}
+      ${infoRow('Hire Date', formatDate(e.hireDate))}
+      ${infoRow('Email', e.email || '—')}
+      ${infoRow('Phone', e.phone || '—')}
+      ${infoRow('Current Period Hours', hrs + 'h')}
+    </div>
+  `;
+  document.getElementById('viewEditBtn').onclick = () => { closeModal('viewModal'); openEditModal(id); };
+  document.getElementById('viewModal').classList.add('open');
+}
+
+function infoRow(label, value) {
+  return `<div style="background:#f8fafc;border-radius:6px;padding:12px">
+    <div style="font-size:11px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${label}</div>
+    <div style="font-weight:500">${value}</div>
+  </div>`;
+}
+
+function openFire(id) {
+  fireEmpId = id;
+  const e = getEmployee(id);
+  document.getElementById('fireEmpName').textContent = e ? e.name : '';
+  document.getElementById('fireModal').classList.add('open');
+}
+
+function confirmFire() {
+  if (!fireEmpId) return;
+  const emps = getDB(KEYS.employees);
+  const e = emps.find(x => x.id === fireEmpId);
+  if (e) e.status = 'inactive';
+  saveEmployees(emps);
+  closeModal('fireModal');
+  render();
+}
+
+function rehire(id) {
+  const emps = getDB(KEYS.employees);
+  const e = emps.find(x => x.id === id);
+  if (e) e.status = 'active';
+  saveEmployees(emps);
+  render();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+render();
+</script>
+</body>
+</html>
