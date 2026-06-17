@@ -13,10 +13,7 @@
   <div class="sidebar-brand">
     <div class="brand-logo">
       <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-      <div>
-        <div class="brand-name">Domcub</div>
-        <div class="brand-sub">Employee Portal</div>
-      </div>
+      <div><div class="brand-name">Domcub</div><div class="brand-sub">Employee Portal</div></div>
     </div>
   </div>
   <nav class="sidebar-nav">
@@ -30,11 +27,10 @@
     <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
   </nav>
   <div class="sidebar-footer">
-    <select class="store-selector" id="storeFilter" onchange="changeStore(this.value)">
-      <option value="all">All Stores</option>
-      <option value="1">Store 1</option>
-      <option value="2">Store 2</option>
-    </select>
+    <div id="sidebarUser" style="margin-bottom:12px"></div>
+    <button onclick="signOut()" style="width:100%;padding:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(255,255,255,0.6);font-family:Inter,sans-serif;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+    </button>
   </div>
 </aside>
 
@@ -47,7 +43,11 @@
     <button class="btn btn-primary" onclick="openJobModal()"><i class="fa-solid fa-plus"></i> Add Position</button>
   </div>
 
-  <div class="jobs-grid" id="jobsGrid"></div>
+  <div class="jobs-grid" id="jobsGrid">
+    <div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted)">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size:24px"></i>
+    </div>
+  </div>
 </main>
 
 <!-- Add/Edit Modal -->
@@ -58,9 +58,9 @@
       <button class="modal-close" onclick="closeModal('jobModal')">&times;</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="jobId">
+      <input type="hidden" id="jobDocId">
       <div class="form-group">
-        <label>Job Title</label>
+        <label>Job Title *</label>
         <input type="text" id="jobTitle" placeholder="e.g. Sales Associate">
       </div>
       <div class="form-group">
@@ -74,7 +74,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('jobModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveJob()">Save Position</button>
+      <button class="btn btn-primary" id="saveJobBtn" onclick="doSaveJob()">Save Position</button>
     </div>
   </div>
 </div>
@@ -91,104 +91,119 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn" onclick="doDelete()">Delete</button>
     </div>
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="app.js"></script>
 <script>
 const COLORS = ['#4f46e5','#059669','#0891b2','#d97706','#dc2626','#7c3aed','#be185d','#0284c7'];
 let selectedColor = COLORS[0];
-let deleteId = null;
+let deleteDocId   = null;
 
-document.getElementById('storeFilter').value = getSelectedStore();
-function changeStore(v) { setSelectedStore(v); }
+requireAuth(() => render());
 
 function renderColors() {
   document.getElementById('colorOptions').innerHTML = COLORS.map(c =>
-    `<div class="color-opt ${c === selectedColor ? 'selected' : ''}" style="background:${c}" onclick="selectColor('${c}')" title="${c}"></div>`
+    `<div class="color-opt ${c === selectedColor ? 'selected' : ''}" style="background:${c}" onclick="selectColor('${c}')"></div>`
   ).join('');
 }
 
-function selectColor(c) {
-  selectedColor = c;
-  renderColors();
-}
+function selectColor(c) { selectedColor = c; renderColors(); }
 
-function render() {
-  const jobs = getJobs();
-  const emps = getDB(KEYS.employees);
+async function render() {
   const grid = document.getElementById('jobsGrid');
-  if (jobs.length === 0) {
-    grid.innerHTML = `<div class="card" style="grid-column:1/-1;padding:48px;text-align:center;color:var(--text-muted)"><i class="fa-solid fa-briefcase" style="font-size:36px;margin-bottom:12px;display:block;color:var(--text-light)"></i><p>No job positions yet. Add one to get started.</p></div>`;
-    return;
-  }
-  grid.innerHTML = jobs.map(j => {
-    const count = emps.filter(e => e.jobId === j.id && e.status === 'active').length;
-    return `
-    <div class="job-card">
-      <div class="job-card-header">
-        <div class="job-dot" style="background:${j.color}"></div>
-        <div>
-          <div class="job-title">${j.title}</div>
-          <div class="job-dept">${j.department}</div>
+  try {
+    const jobs = await getJobs();
+    const emps = await getEmployees();
+
+    if (jobs.length === 0) {
+      grid.innerHTML = `<div class="card" style="grid-column:1/-1;padding:48px;text-align:center;color:var(--text-muted)">
+        <i class="fa-solid fa-briefcase" style="font-size:36px;margin-bottom:12px;display:block;color:var(--text-light)"></i>
+        <p>No job positions yet. Add one to get started.</p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = jobs.map(j => {
+      const count = emps.filter(e => e.jobId === j.id && e.status === 'active').length;
+      return `<div class="job-card">
+        <div class="job-card-header">
+          <div class="job-dot" style="background:${j.color}"></div>
+          <div>
+            <div class="job-title">${j.title}</div>
+            <div class="job-dept">${j.department || '—'}</div>
+          </div>
         </div>
-      </div>
-      <div class="job-count"><i class="fa-solid fa-user" style="margin-right:4px;color:var(--text-light)"></i>${count} employee${count !== 1 ? 's' : ''} in this role</div>
-      <div class="job-actions">
-        <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
-        <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="openDelete('${j.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
-      </div>
-    </div>`;
-  }).join('');
+        <div class="job-count"><i class="fa-solid fa-user" style="margin-right:4px;color:var(--text-light)"></i>${count} employee${count!==1?'s':''} in this role</div>
+        <div class="job-actions">
+          <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+          <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="openDelete('${j.id}','${j.title.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i> Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    grid.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:24px">Error loading jobs: ${err.message}</div>`;
+  }
 }
 
-function openJobModal(id) {
-  const job = id ? getJob(id) : null;
+async function openJobModal(id) {
+  let job = null;
+  if (id) {
+    job = await getJob(id);
+  }
   document.getElementById('jobModalTitle').textContent = job ? 'Edit Position' : 'Add Position';
-  document.getElementById('jobId').value = job ? job.id : '';
-  document.getElementById('jobTitle').value = job ? job.title : '';
-  document.getElementById('jobDept').value = job ? job.department : '';
-  selectedColor = job ? job.color : COLORS[0];
+  document.getElementById('jobDocId').value  = job ? job.id : '';
+  document.getElementById('jobTitle').value  = job ? job.title : '';
+  document.getElementById('jobDept').value   = job ? (job.department || '') : '';
+  selectedColor = job ? (job.color || COLORS[0]) : COLORS[0];
   renderColors();
-  document.getElementById('jobModal').classList.add('open');
+  openModal('jobModal');
 }
 
-function saveJob() {
+async function doSaveJob() {
   const title = document.getElementById('jobTitle').value.trim();
   const dept  = document.getElementById('jobDept').value.trim();
   if (!title) { alert('Please enter a job title.'); return; }
-  const id = document.getElementById('jobId').value;
-  const jobs = getJobs();
-  if (id) {
-    const j = jobs.find(x => x.id === id);
-    if (j) { j.title = title; j.department = dept; j.color = selectedColor; }
-  } else {
-    jobs.push({ id: generateId(), title, department: dept, color: selectedColor });
+  const docId = document.getElementById('jobDocId').value;
+  const btn   = document.getElementById('saveJobBtn');
+  btn.disabled = true;
+  try {
+    await saveJob({ title, department: dept, color: selectedColor }, docId || null);
+    closeModal('jobModal');
+    render();
+  } catch (err) {
+    alert('Error saving: ' + err.message);
+  } finally {
+    btn.disabled = false;
   }
-  saveJobs(jobs);
-  closeModal('jobModal');
-  render();
 }
 
-function openDelete(id) {
-  deleteId = id;
-  const j = getJob(id);
-  document.getElementById('deleteJobName').textContent = j ? j.title : '';
-  document.getElementById('deleteModal').classList.add('open');
+function openDelete(id, title) {
+  deleteDocId = id;
+  document.getElementById('deleteJobName').textContent = title;
+  openModal('deleteModal');
 }
 
-function confirmDelete() {
-  if (!deleteId) return;
-  saveJobs(getJobs().filter(j => j.id !== deleteId));
-  closeModal('deleteModal');
-  render();
+async function doDelete() {
+  if (!deleteDocId) return;
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true;
+  try {
+    await deleteJob(deleteDocId);
+    closeModal('deleteModal');
+    render();
+  } catch (err) {
+    alert('Error deleting: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
 }
-
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-render();
 </script>
 </body>
 </html>

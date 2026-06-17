@@ -1,41 +1,47 @@
-// ── Storage Helpers ──
-function getDB(key) {
-  try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
+// ── Auth Guard ──
+// Call on every protected page. Redirects to login if not signed in.
+function requireAuth(callback) {
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = 'login.html';
+      return;
+    }
+    // Load user profile from Main collection
+    db.collection('Main').doc(user.uid).get().then(doc => {
+      const profile = doc.exists ? doc.data() : { name: user.email, role: 'manager' };
+      window.currentUser = { uid: user.uid, email: user.email, ...profile };
+      updateSidebarUser(window.currentUser);
+      if (callback) callback(window.currentUser);
+    });
+  });
 }
-function setDB(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
+
+function updateSidebarUser(user) {
+  const el = document.getElementById('sidebarUser');
+  if (el) {
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;flex-shrink:0">${initials(user.name || user.email)}</div>
+        <div style="overflow:hidden">
+          <div style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.name || 'Manager'}</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.role || 'Manager'}</div>
+        </div>
+      </div>
+    `;
+  }
 }
+
+function signOut() {
+  auth.signOut().then(() => window.location.href = 'login.html');
+}
+
+// ── Utilities ──
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-// ── Keys ──
-const KEYS = {
-  jobs: 'domcub_jobs',
-  employees: 'domcub_employees',
-  clockins: 'domcub_clockins',
-  periods: 'domcub_periods',
-  paystatements: 'domcub_paystatements',
-  timeoff: 'domcub_timeoff'
-};
-
-// ── Date / Time Helpers ──
-function formatDate(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatDateShort(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function formatTime(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+function generatePin() {
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 function toDateStr(date) {
@@ -45,20 +51,37 @@ function toDateStr(date) {
 
 function todayStr() { return toDateStr(new Date()); }
 
-function calculateHours(clockIn, clockOut) {
-  if (!clockIn || !clockOut) return 0;
-  const diff = (new Date(clockOut) - new Date(clockIn)) / 3600000;
-  return Math.round(diff * 100) / 100;
+function formatDate(val) {
+  if (!val) return '—';
+  const d = new Date(val + (val.includes('T') ? '' : 'T00:00:00'));
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// ── Period Logic (2-week periods starting Jan 1, 2024) ──
-const PERIOD_ORIGIN = new Date('2024-01-01');
+function formatDateShort(val) {
+  if (!val) return '—';
+  const d = new Date(val + (val.includes('T') ? '' : 'T00:00:00'));
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatTime(iso) {
+  if (!iso) return '—';
+  const d = iso.toDate ? iso.toDate() : new Date(iso);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function calculateHours(clockIn, clockOut) {
+  const i = clockIn  && clockIn.toDate  ? clockIn.toDate()  : new Date(clockIn);
+  const o = clockOut && clockOut.toDate ? clockOut.toDate() : new Date(clockOut);
+  if (!i || !o) return 0;
+  return Math.round(((o - i) / 3600000) * 100) / 100;
+}
+
+// ── Period Logic (2-week periods anchored Jan 1, 2024) ──
+const PERIOD_ORIGIN = new Date('2024-01-01T00:00:00');
 
 function getPeriodIndex(date) {
-  const d = new Date(date);
-  d.setHours(0,0,0,0);
-  const origin = new Date(PERIOD_ORIGIN);
-  const days = Math.floor((d - origin) / 86400000);
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const days = Math.floor((d - PERIOD_ORIGIN) / 86400000);
   return Math.floor(days / 14);
 }
 
@@ -70,35 +93,27 @@ function getPeriodByIndex(idx) {
   return { index: idx, start: toDateStr(start), end: toDateStr(end) };
 }
 
-function getCurrentPeriod() {
-  return getPeriodByIndex(getPeriodIndex(new Date()));
-}
-
-function getPeriodByDate(date) {
-  return getPeriodByIndex(getPeriodIndex(date));
-}
+function getCurrentPeriod() { return getPeriodByIndex(getPeriodIndex(new Date())); }
 
 function formatPeriodLabel(period) {
   const s = new Date(period.start + 'T00:00:00');
-  const e = new Date(period.end + 'T00:00:00');
-  const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const yr = e.getFullYear();
-  return `${fmt(s)} – ${fmt(e)}, ${yr}`;
+  const e = new Date(period.end   + 'T00:00:00');
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${fmt(s)} – ${fmt(e)}, ${e.getFullYear()}`;
 }
 
-// ── Avatar Colors ──
+// ── Avatar ──
 const AVATAR_COLORS = ['#4f46e5','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#0284c7','#be185d'];
+
 function avatarColor(name) {
   let h = 0;
-  for (let c of (name||'')) h = (h * 31 + c.charCodeAt(0)) % AVATAR_COLORS.length;
+  for (let c of (name || '')) h = (h * 31 + c.charCodeAt(0)) % AVATAR_COLORS.length;
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 }
 
 function initials(name) {
-  const parts = (name || '').trim().split(' ');
-  return parts.length >= 2
-    ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
-    : (name || '?').slice(0, 2).toUpperCase();
+  const p = (name || '').trim().split(' ');
+  return p.length >= 2 ? (p[0][0] + p[p.length-1][0]).toUpperCase() : (name||'?').slice(0,2).toUpperCase();
 }
 
 function avatarHtml(name, size) {
@@ -106,156 +121,167 @@ function avatarHtml(name, size) {
   return `<div class="avatar" style="background:${avatarColor(name)};width:${s}px;height:${s}px">${initials(name)}</div>`;
 }
 
-// ── CRUD ──
+// ── Store Filter (UI preference, stays in localStorage) ──
+function getSelectedStore() { return localStorage.getItem('domcub_store') || 'all'; }
+function setSelectedStore(v) { localStorage.setItem('domcub_store', v); }
+
+// ── Firestore Helpers ──
+
 // Jobs
-function getJobs() { return getDB(KEYS.jobs); }
-function saveJobs(j) { setDB(KEYS.jobs, j); }
-function getJob(id) { return getJobs().find(j => j.id === id); }
+async function getJobs() {
+  const snap = await db.collection('Jobs').orderBy('title').get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function getJob(id) {
+  const doc = await db.collection('Jobs').doc(id).get();
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
+}
+
+async function saveJob(data, id) {
+  if (id) {
+    await db.collection('Jobs').doc(id).update(data);
+  } else {
+    await db.collection('Jobs').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  }
+}
+
+async function deleteJob(id) {
+  await db.collection('Jobs').doc(id).delete();
+}
 
 // Employees
-function getEmployees(store) {
-  const all = getDB(KEYS.employees);
-  if (!store || store === 'all') return all;
-  return all.filter(e => e.store === store);
+async function getEmployees(store) {
+  let q = db.collection('Employees').orderBy('name');
+  const snap = await q.get();
+  let emps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (store && store !== 'all') emps = emps.filter(e => e.store === store);
+  return emps;
 }
-function saveEmployees(e) { setDB(KEYS.employees, e); }
-function getEmployee(id) { return getDB(KEYS.employees).find(e => e.id === id); }
+
+async function getEmployee(id) {
+  const doc = await db.collection('Employees').doc(id).get();
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
+}
+
+async function hireEmployee(data) {
+  const pin = generatePin();
+  const ref = await db.collection('Employees').add({
+    ...data,
+    pin,
+    status: 'active',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  return { id: ref.id, pin };
+}
+
+async function updateEmployee(id, data) {
+  await db.collection('Employees').doc(id).update(data);
+}
 
 // Clock-ins
-function getClockIns() { return getDB(KEYS.clockins); }
-function saveClockIns(c) { setDB(KEYS.clockins, c); }
-
-function clockInEmployee(employeeId, store) {
-  const cis = getClockIns();
-  const now = new Date().toISOString();
-  cis.push({ id: generateId(), employeeId, clockIn: now, clockOut: null, date: todayStr(), store });
-  saveClockIns(cis);
+async function getClockIns(filters) {
+  let q = db.collection('ClockIns');
+  if (filters && filters.date) q = q.where('date', '==', filters.date);
+  if (filters && filters.employeeId) q = q.where('employeeId', '==', filters.employeeId);
+  const snap = await q.get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-function clockOutEmployee(employeeId) {
-  const cis = getClockIns();
-  const entry = cis.slice().reverse().find(c => c.employeeId === employeeId && !c.clockOut);
-  if (entry) {
-    const now = new Date().toISOString();
-    entry.clockOut = now;
-    entry.hours = calculateHours(entry.clockIn, entry.clockOut);
-    saveClockIns(cis);
-    return entry;
+async function getClockInsRange(start, end) {
+  const snap = await db.collection('ClockIns')
+    .where('date', '>=', start)
+    .where('date', '<=', end)
+    .get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function clockIn(employeeId, store) {
+  const now = firebase.firestore.Timestamp.now();
+  const ref = await db.collection('ClockIns').add({
+    employeeId,
+    store,
+    clockIn: now,
+    clockOut: null,
+    date: todayStr(),
+    hours: null
+  });
+  return ref.id;
+}
+
+async function clockOut(clockInId) {
+  const now = firebase.firestore.Timestamp.now();
+  const doc = await db.collection('ClockIns').doc(clockInId).get();
+  if (!doc.exists) return;
+  const data = doc.data();
+  const hours = calculateHours(data.clockIn.toDate(), now.toDate());
+  await db.collection('ClockIns').doc(clockInId).update({ clockOut: now, hours });
+  return hours;
+}
+
+async function getActiveClockIn(employeeId) {
+  const snap = await db.collection('ClockIns')
+    .where('employeeId', '==', employeeId)
+    .where('date', '==', todayStr())
+    .where('clockOut', '==', null)
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  return { id: snap.docs[0].id, ...snap.docs[0].data() };
+}
+
+async function deleteClockIn(id) {
+  await db.collection('ClockIns').doc(id).delete();
+}
+
+// Time Off
+async function getTimeOff() {
+  const snap = await db.collection('TimeOff').orderBy('startDate', 'desc').get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function addTimeOff(data) {
+  await db.collection('TimeOff').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+
+async function updateTimeOff(id, data) {
+  await db.collection('TimeOff').doc(id).update(data);
+}
+
+async function deleteTimeOff(id) {
+  await db.collection('TimeOff').doc(id).delete();
+}
+
+// Pay Statements
+async function getPayStatements(periodStart) {
+  let q = db.collection('PayStatements');
+  if (periodStart) q = q.where('periodStart', '==', periodStart);
+  const snap = await q.get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function savePayStatement(data, id) {
+  if (id) {
+    await db.collection('PayStatements').doc(id).update(data);
+  } else {
+    await db.collection('PayStatements').add({ ...data, savedAt: firebase.firestore.FieldValue.serverTimestamp() });
   }
-  return null;
 }
 
-function isClocked(employeeId) {
-  return getClockIns().slice().reverse().find(c => c.employeeId === employeeId && !c.clockOut) || null;
+async function updatePayStatement(id, data) {
+  await db.collection('PayStatements').doc(id).update(data);
 }
 
-function getHoursForPeriod(employeeId, period) {
-  return getClockIns().filter(c =>
-    c.employeeId === employeeId &&
-    c.clockOut &&
-    c.date >= period.start &&
-    c.date <= period.end
-  );
+// ── Loading State ──
+function showLoading(containerId) {
+  const el = document.getElementById(containerId);
+  if (el) el.innerHTML = `<tr><td colspan="99"><div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin" style="font-size:20px;margin-bottom:10px;display:block"></i>Loading...</div></td></tr>`;
 }
 
-function getTotalHoursForPeriod(employeeId, period) {
-  return getHoursForPeriod(employeeId, period).reduce((s, c) => s + (c.hours || 0), 0);
+function showError(msg) {
+  console.error(msg);
 }
 
-// Time off
-function getTimeOff() { return getDB(KEYS.timeoff); }
-function saveTimeOff(t) { setDB(KEYS.timeoff, t); }
-
-// Pay statements
-function getPayStatements() { return getDB(KEYS.paystatements); }
-function savePayStatements(p) { setDB(KEYS.paystatements, p); }
-
-// ── Sidebar store filter ──
-function getSelectedStore() {
-  return localStorage.getItem('domcub_store') || 'all';
-}
-function setSelectedStore(val) {
-  localStorage.setItem('domcub_store', val);
-}
-
-// ── Seed Demo Data ──
-function seedDemoData() {
-  if (getDB(KEYS.jobs).length > 0) return;
-
-  const jobs = [
-    { id: 'j1', title: 'Store Manager',      department: 'Management', color: '#4f46e5' },
-    { id: 'j2', title: 'Sales Associate',    department: 'Sales',      color: '#059669' },
-    { id: 'j3', title: 'Tech Repair Spec.',  department: 'Tech',       color: '#0891b2' },
-    { id: 'j4', title: 'Cashier',            department: 'Operations', color: '#d97706' },
-    { id: 'j5', title: 'Inventory Clerk',    department: 'Operations', color: '#7c3aed' },
-  ];
-  saveJobs(jobs);
-
-  const employees = [
-    { id: 'e1', name: 'Carlos Reyes',      jobId: 'j1', store: '1', status: 'active', hireDate: '2022-03-15', hourlyRate: 22, phone: '(787) 555-0101', email: 'carlos@domcub.com' },
-    { id: 'e2', name: 'Maria Santos',      jobId: 'j2', store: '1', status: 'active', hireDate: '2023-01-10', hourlyRate: 16, phone: '(787) 555-0102', email: 'maria@domcub.com' },
-    { id: 'e3', name: 'Luis Fernandez',    jobId: 'j3', store: '1', status: 'active', hireDate: '2023-06-20', hourlyRate: 18, phone: '(787) 555-0103', email: 'luis@domcub.com' },
-    { id: 'e4', name: 'Ana Rodriguez',     jobId: 'j4', store: '1', status: 'active', hireDate: '2024-02-01', hourlyRate: 15, phone: '(787) 555-0104', email: 'ana@domcub.com' },
-    { id: 'e5', name: 'Diego Morales',     jobId: 'j1', store: '2', status: 'active', hireDate: '2022-08-05', hourlyRate: 22, phone: '(787) 555-0201', email: 'diego@domcub.com' },
-    { id: 'e6', name: 'Sofia Perez',       jobId: 'j2', store: '2', status: 'active', hireDate: '2023-04-18', hourlyRate: 16, phone: '(787) 555-0202', email: 'sofia@domcub.com' },
-    { id: 'e7', name: 'Miguel Torres',     jobId: 'j3', store: '2', status: 'active', hireDate: '2023-09-12', hourlyRate: 18, phone: '(787) 555-0203', email: 'miguel@domcub.com' },
-    { id: 'e8', name: 'Isabella Cruz',     jobId: 'j5', store: '2', status: 'active', hireDate: '2024-05-07', hourlyRate: 15, phone: '(787) 555-0204', email: 'isabella@domcub.com' },
-  ];
-  saveEmployees(employees);
-
-  // Seed some clock-in data for current and previous period
-  const cur = getCurrentPeriod();
-  const prev = getPeriodByIndex(getPeriodIndex(new Date()) - 1);
-  const clockins = [];
-
-  const workDays = (period) => {
-    const days = [];
-    let d = new Date(period.start + 'T00:00:00');
-    const end = new Date(period.end + 'T00:00:00');
-    while (d <= end) {
-      const dow = d.getDay();
-      if (dow !== 0 && dow !== 6) days.push(toDateStr(d));
-      d.setDate(d.getDate() + 1);
-    }
-    return days;
-  };
-
-  const addShifts = (period, empIds) => {
-    workDays(period).forEach(dateStr => {
-      if (dateStr >= todayStr()) return;
-      empIds.forEach(eid => {
-        const hr = 8 + Math.floor(Math.random() * 2);
-        const clockIn = new Date(`${dateStr}T0${hr}:00:00`);
-        const shiftLen = 7 + Math.random() * 2;
-        const clockOut = new Date(clockIn.getTime() + shiftLen * 3600000);
-        const hours = calculateHours(clockIn.toISOString(), clockOut.toISOString());
-        clockins.push({ id: generateId(), employeeId: eid, clockIn: clockIn.toISOString(), clockOut: clockOut.toISOString(), date: dateStr, store: employees.find(e=>e.id===eid).store, hours });
-      });
-    });
-  };
-
-  addShifts(prev, ['e1','e2','e3','e4','e5','e6','e7','e8']);
-  addShifts(cur,  ['e1','e2','e3','e4','e5','e6','e7','e8']);
-
-  // Clock in e1 and e5 right now (no clockOut)
-  const nowIso = new Date().toISOString();
-  clockins.push({ id: generateId(), employeeId: 'e1', clockIn: nowIso, clockOut: null, date: todayStr(), store: '1', hours: null });
-  clockins.push({ id: generateId(), employeeId: 'e5', clockIn: nowIso, clockOut: null, date: todayStr(), store: '2', hours: null });
-
-  saveClockIns(clockins);
-
-  // Seed time off
-  const today = new Date();
-  const m = today.getMonth();
-  const y = today.getFullYear();
-  const pad = n => String(n).padStart(2,'0');
-  const timeoff = [
-    { id: generateId(), employeeId: 'e2', startDate: `${y}-${pad(m+1)}-${pad(10)}`, endDate: `${y}-${pad(m+1)}-${pad(12)}`, type: 'vacation', status: 'approved', note: 'Family trip' },
-    { id: generateId(), employeeId: 'e4', startDate: `${y}-${pad(m+1)}-${pad(18)}`, endDate: `${y}-${pad(m+1)}-${pad(18)}`, type: 'sick', status: 'pending', note: 'Doctor appointment' },
-    { id: generateId(), employeeId: 'e6', startDate: `${y}-${pad(m+1)}-${pad(22)}`, endDate: `${y}-${pad(m+1)}-${pad(25)}`, type: 'personal', status: 'approved', note: '' },
-  ];
-  saveTimeOff(timeoff);
-}
-
-// Init
-seedDemoData();
+// ── Modal Helpers ──
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
