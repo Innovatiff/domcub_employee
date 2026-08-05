@@ -33,8 +33,8 @@
       <option value="1">Store 1</option>
       <option value="2">Store 2</option>
     </select>
-    <button onclick="signOut()" style="margin-top:10px;width:100%;padding:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(255,255,255,0.6);font-family:Inter,sans-serif;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+    <button class="sidebar-signout" onclick="signOut()">
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Sign Out</span>
     </button>
   </div>
 </aside>
@@ -49,17 +49,18 @@
   </div>
 
   <!-- Period selector -->
-  <div class="card" style="padding:16px 20px;margin-bottom:22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-    <div style="display:flex;align-items:center;gap:10px;flex:1">
-      <label style="margin:0;white-space:nowrap;font-weight:500;font-size:13.5px"><i class="fa-solid fa-calendar-week" style="margin-right:6px;color:var(--primary)"></i>Pay Period</label>
-      <select id="periodSelect" onchange="render()" style="width:auto;min-width:260px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:Inter,sans-serif;font-size:13.5px;outline:none"></select>
+  <div class="card" style="padding:15px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:11px;flex:1">
+      <label style="margin:0;white-space:nowrap;font-size:13.5px"><i class="fa-solid fa-calendar-week" style="margin-right:7px;color:var(--primary)"></i>Pay Period</label>
+      <select id="periodSelect" onchange="render()" style="width:auto;min-width:260px"></select>
     </div>
     <button class="btn btn-outline btn-sm" onclick="markAllPaid()"><i class="fa-solid fa-check-double"></i> Mark All Paid</button>
   </div>
 
   <!-- Stats -->
-  <div class="stats-grid" id="payStats" style="margin-bottom:22px">
-    <div class="stat-card"><div class="stat-label">Loading...</div></div>
+  <div class="stats-grid" id="payStats" style="margin-bottom:20px">
+    <div class="skeleton-card"></div><div class="skeleton-card"></div>
+    <div class="skeleton-card"></div><div class="skeleton-card"></div>
   </div>
 
   <!-- Table -->
@@ -83,9 +84,7 @@
             <th>Actions</th>
           </tr>
         </thead>
-        <tbody id="stmtTable">
-          <tr><td colspan="9"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin"></i></div></td></tr>
-        </tbody>
+        <tbody id="stmtTable"></tbody>
       </table>
     </div>
   </div>
@@ -101,7 +100,7 @@
     <div class="modal-body">
       <div class="form-group">
         <label>Select Period</label>
-        <select id="genPeriodSelect" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:Inter,sans-serif;font-size:13.5px;outline:none"></select>
+        <select id="genPeriodSelect"></select>
       </div>
       <p style="font-size:13px;color:var(--text-muted);margin-top:8px">Creates pay statements for all active employees based on their clocked hours. Existing statements for the period will be replaced.</p>
     </div>
@@ -138,6 +137,7 @@ async function render() {
   const periodStart = document.getElementById('periodSelect').value;
   if (!periodStart) return;
 
+  document.getElementById('stmtTable').innerHTML = skeletonRows(9, 4);
   const store  = getSelectedStore();
   const [allStmts, allEmps, jobs] = await Promise.all([
     getPayStatements(periodStart),
@@ -164,6 +164,7 @@ async function render() {
     <div class="stat-card"><div class="stat-icon yellow"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-label">Pending</div><div class="stat-value">${pending.length}</div><div class="stat-sub">$${pending.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
     <div class="stat-card"><div class="stat-icon cyan"><i class="fa-solid fa-clock"></i></div><div class="stat-label">Total Hours</div><div class="stat-value">${stmts.reduce((s,x)=>s+(x.hours||0),0).toFixed(1)}</div></div>
   `;
+  animateValues('payStats');
 
   const tb = document.getElementById('stmtTable');
   if (stmts.length === 0) {
@@ -199,11 +200,13 @@ async function render() {
 
 async function doMarkPaid(id) {
   await updatePayStatement(id, { status: 'paid', paidDate: todayStr() });
+  toast('Marked as paid', 'success');
   render();
 }
 
 async function doMarkUnpaid(id) {
   await updatePayStatement(id, { status: 'pending', paidDate: null });
+  toast('Reverted to pending', 'info');
   render();
 }
 
@@ -211,9 +214,10 @@ async function markAllPaid() {
   const periodStart = document.getElementById('periodSelect').value;
   const stmts = await getPayStatements(periodStart);
   const pending = stmts.filter(s => s.status !== 'paid');
-  if (pending.length === 0) { alert('All statements are already marked as paid.'); return; }
+  if (pending.length === 0) { toast('All statements are already paid.', 'info'); return; }
   if (!confirm(`Mark ${pending.length} statement(s) as paid?`)) return;
   await Promise.all(pending.map(s => updatePayStatement(s.id, { status: 'paid', paidDate: todayStr() })));
+  toast(`${pending.length} statement${pending.length !== 1 ? 's' : ''} marked paid`, 'success');
   render();
 }
 
@@ -254,9 +258,10 @@ async function doGenerate() {
     }));
     document.getElementById('periodSelect').value = periodStart;
     closeModal('generateModal');
+    toast(`Payroll generated for ${active.length} employee${active.length !== 1 ? 's' : ''}`, 'success');
     render();
   } catch (err) {
-    alert('Error: ' + err.message);
+    toast('Error: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
