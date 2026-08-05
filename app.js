@@ -18,17 +18,15 @@ function requireAuth(callback) {
 
 function updateSidebarUser(user) {
   const el = document.getElementById('sidebarUser');
-  if (el) {
-    el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;flex-shrink:0">${initials(user.name || user.email)}</div>
-        <div style="overflow:hidden">
-          <div style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.name || 'Manager'}</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.role || 'Manager'}</div>
-        </div>
-      </div>
-    `;
-  }
+  if (!el) return;
+  el.className = 'sidebar-user';
+  el.innerHTML = `
+    <div class="avatar" style="width:31px;height:31px;background:${avatarColor(user.name || user.email)}">${initials(user.name || user.email)}</div>
+    <div style="overflow:hidden;min-width:0">
+      <div style="color:rgba(255,255,255,0.92);font-size:12.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.name || 'Manager'}</div>
+      <div style="color:rgba(255,255,255,0.38);font-size:10.5px;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.role || 'Manager'}</div>
+    </div>
+  `;
 }
 
 function signOut() {
@@ -273,15 +271,108 @@ async function updatePayStatement(id, data) {
 }
 
 // ── Loading State ──
-function showLoading(containerId) {
-  const el = document.getElementById(containerId);
-  if (el) el.innerHTML = `<tr><td colspan="99"><div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin" style="font-size:20px;margin-bottom:10px;display:block"></i>Loading...</div></td></tr>`;
+function skeletonRows(cols, rows) {
+  const n = rows || 4;
+  let html = '';
+  for (let r = 0; r < n; r++) {
+    html += '<tr>';
+    for (let c = 0; c < cols; c++) {
+      const w = c === 0 ? '68%' : ['52%','42%','60%','48%'][c % 4];
+      html += `<td><div class="skeleton" style="width:${w}"></div></td>`;
+    }
+    html += '</tr>';
+  }
+  return html;
 }
 
-function showError(msg) {
-  console.error(msg);
+function skeletonCards(n) {
+  return Array.from({ length: n || 4 }, () => `<div class="skeleton-card"></div>`).join('');
+}
+
+// ── Toast Notifications ──
+function toast(message, type) {
+  let host = document.querySelector('.toast-host');
+  if (!host) {
+    host = document.createElement('div');
+    host.className = 'toast-host';
+    document.body.appendChild(host);
+  }
+  const icons = {
+    success: 'fa-solid fa-circle-check',
+    error:   'fa-solid fa-circle-exclamation',
+    info:    'fa-solid fa-circle-info'
+  };
+  const kind = type || 'info';
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.innerHTML = `<i class="${icons[kind]}"></i><span>${message}</span>`;
+  host.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('hide');
+    setTimeout(() => el.remove(), 240);
+  }, 3400);
+}
+
+// ── Animated Counters ──
+// Scans .stat-value elements and counts them up from zero.
+function animateValues(scope) {
+  const root = scope ? document.getElementById(scope) : document;
+  if (!root) return;
+  root.querySelectorAll('.stat-value').forEach(el => {
+    const raw = el.textContent.trim();
+    const match = raw.match(/^(\$?)([\d,]+\.?\d*)(.*)$/);
+    if (!match) return;
+    const [, prefix, numStr, suffix] = match;
+    const target   = parseFloat(numStr.replace(/,/g, ''));
+    if (isNaN(target)) return;
+    const decimals = (numStr.split('.')[1] || '').length;
+    const duration = 620;
+    const start    = performance.now();
+
+    const step = now => {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);           // easeOutCubic
+      const val = (target * eased).toFixed(decimals);
+      el.textContent = prefix + Number(val).toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      }) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    el.textContent = prefix + (0).toFixed(decimals) + suffix;
+    requestAnimationFrame(step);
+  });
 }
 
 // ── Modal Helpers ──
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('open');
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+}
+
+// Close modals on overlay click and Escape key
+document.addEventListener('click', e => {
+  if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+    e.target.classList.remove('open');
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+// Track pointer position on buttons so the hover sheen follows the cursor
+document.addEventListener('pointermove', e => {
+  const btn = e.target.closest && e.target.closest('.btn');
+  if (!btn) return;
+  const r = btn.getBoundingClientRect();
+  btn.style.setProperty('--x', `${((e.clientX - r.left) / r.width) * 100}%`);
+  btn.style.setProperty('--y', `${((e.clientY - r.top) / r.height) * 100}%`);
+});
