@@ -28,8 +28,8 @@
   </nav>
   <div class="sidebar-footer">
     <div id="sidebarUser" style="margin-bottom:12px"></div>
-    <button onclick="signOut()" style="width:100%;padding:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(255,255,255,0.6);font-family:Inter,sans-serif;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+    <button class="sidebar-signout" onclick="signOut()">
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Sign Out</span>
     </button>
   </div>
 </aside>
@@ -60,7 +60,7 @@
         <thead>
           <tr><th>Employee</th><th>Position</th><th>Store</th><th>Hire Date</th><th>Rate / hr</th><th>PIN</th><th>Status</th><th>Actions</th></tr>
         </thead>
-        <tbody id="empTable"><tr><td colspan="8"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin"></i></div></td></tr></tbody>
+        <tbody id="empTable"></tbody>
       </table>
     </div>
   </div>
@@ -115,10 +115,17 @@
         </div>
       </div>
       <!-- PIN display (hire only) -->
-      <div id="pinPreview" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin-top:4px">
-        <div style="font-size:12px;color:#065f46;font-weight:500;margin-bottom:4px"><i class="fa-solid fa-key" style="margin-right:6px"></i>Employee PIN (auto-generated)</div>
-        <div style="font-size:28px;font-weight:700;letter-spacing:6px;color:#14532d" id="pinDisplay"></div>
-        <div style="font-size:11.5px;color:#166534;margin-top:4px">Share this PIN with the employee. It will be saved to their profile.</div>
+      <div class="pin-box" id="pinPreview" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <div style="font-size:11.5px;color:#065f46;font-weight:650;text-transform:uppercase;letter-spacing:0.05em">
+              <i class="fa-solid fa-key" style="margin-right:6px"></i>Employee PIN
+            </div>
+            <div class="pin-digits" id="pinDisplay"></div>
+            <div style="font-size:11.5px;color:#047857">Share this PIN with the employee — it is saved to their profile.</div>
+          </div>
+          <button type="button" class="btn-icon" title="Generate a new PIN" onclick="regeneratePin()"><i class="fa-solid fa-rotate"></i></button>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -174,6 +181,7 @@ let isHiring      = true;
 requireAuth(() => render());
 
 async function render() {
+  document.getElementById('empTable').innerHTML = skeletonRows(8, 4);
   try {
     const [allEmps, jobs] = await Promise.all([getEmployees(), getJobs()]);
     jobsCache = jobs;
@@ -212,9 +220,7 @@ async function render() {
         <td><span class="badge badge-gray">Store ${e.store}</span></td>
         <td>${formatDate(e.hireDate)}</td>
         <td>$${Number(e.hourlyRate || 0).toFixed(2)}</td>
-        <td>
-          <span style="font-family:monospace;font-size:13px;letter-spacing:2px;color:var(--text-muted)">${e.pin || '——'}</span>
-        </td>
+        <td><span class="pin-cell">${e.pin || '——'}</span></td>
         <td><span class="badge ${e.status==='active'?'badge-green':'badge-red'}">${e.status==='active'?'Active':'Inactive'}</span></td>
         <td>
           <div class="td-actions">
@@ -230,7 +236,18 @@ async function render() {
     }).join('');
   } catch (err) {
     document.getElementById('empTable').innerHTML = `<tr><td colspan="8" style="color:var(--danger);padding:24px">Error: ${err.message}</td></tr>`;
+    toast('Could not load employees.', 'error');
   }
+}
+
+function regeneratePin() {
+  const pin = generatePin();
+  const box = document.getElementById('pinPreview');
+  document.getElementById('pinDisplay').textContent = pin;
+  box.dataset.pin = pin;
+  box.style.animation = 'none';
+  void box.offsetWidth;
+  box.style.animation = '';
 }
 
 function filterStore(val, btn) {
@@ -287,9 +304,9 @@ async function openEditModal(id) {
 
 async function doSaveEmployee() {
   const name = document.getElementById('empName').value.trim();
-  if (!name) { alert('Name is required.'); return; }
+  if (!name) { toast('Name is required.', 'error'); return; }
   const jobId = document.getElementById('empJob').value;
-  if (!jobId) { alert('Please select a job position.'); return; }
+  if (!jobId) { toast('Please select a job position.', 'error'); return; }
 
   const data = {
     name,
@@ -308,15 +325,17 @@ async function doSaveEmployee() {
     const docId = document.getElementById('empDocId').value;
     if (docId) {
       await updateEmployee(docId, data);
+      toast(`${name} updated`, 'success');
     } else {
       const pin = document.getElementById('pinPreview').dataset.pin;
       data.pin = pin;
       await hireEmployee(data);
+      toast(`${name} hired · PIN ${pin}`, 'success');
     }
     closeModal('empModal');
     render();
   } catch (err) {
-    alert('Error saving employee: ' + err.message);
+    toast('Error saving employee: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -346,7 +365,7 @@ async function openView(id) {
       ${infoBlock('Email', emp.email || '—')}
       ${infoBlock('Phone', emp.phone || '—')}
       ${infoBlock('Current Period Hours', hrs.toFixed(2) + 'h')}
-      ${infoBlock('Employee PIN', `<span style="font-family:monospace;font-size:18px;letter-spacing:4px;font-weight:700">${emp.pin || '——'}</span>`)}
+      ${infoBlock('Employee PIN', `<span class="pin-cell" style="font-size:15px;font-weight:700">${emp.pin || '——'}</span>`)}
     </div>
   `;
   document.getElementById('viewEditBtn').onclick = () => { closeModal('viewModal'); openEditModal(id); };
@@ -354,9 +373,9 @@ async function openView(id) {
 }
 
 function infoBlock(label, value) {
-  return `<div style="background:#f8fafc;border-radius:8px;padding:12px 14px">
-    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">${label}</div>
-    <div style="font-weight:500">${value}</div>
+  return `<div class="info-block">
+    <div class="info-block-label">${label}</div>
+    <div class="info-block-value">${value}</div>
   </div>`;
 }
 
@@ -373,17 +392,18 @@ async function doFire() {
   try {
     await updateEmployee(fireEmpId, { status: 'inactive' });
     closeModal('fireModal');
+    toast('Employee terminated', 'info');
     render();
   } catch (err) {
-    alert('Error: ' + err.message);
+    toast('Error: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
 }
 
 async function doRehire(id) {
-  if (!confirm('Rehire this employee?')) return;
   await updateEmployee(id, { status: 'active' });
+  toast('Employee reactivated', 'success');
   render();
 }
 </script>
