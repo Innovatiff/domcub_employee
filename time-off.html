@@ -7,11 +7,10 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-.cal-cell { min-height: 80px; }
-.cal-cell.empty { background: transparent; border-color: transparent; }
 .type-vacation { background: #dbeafe; color: #1e40af; }
-.type-sick     { background: #fee2e2; color: #991b1b; }
+.type-sick     { background: #ffe4e6; color: #9f1239; }
 .type-personal { background: #fef3c7; color: #92400e; }
+.legend-dot { width: 11px; height: 11px; border-radius: 4px; display: inline-block; }
 </style>
 </head>
 <body>
@@ -35,8 +34,8 @@
   </nav>
   <div class="sidebar-footer">
     <div id="sidebarUser" style="margin-bottom:12px"></div>
-    <button onclick="signOut()" style="width:100%;padding:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(255,255,255,0.6);font-family:Inter,sans-serif;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+    <button class="sidebar-signout" onclick="signOut()">
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Sign Out</span>
     </button>
   </div>
 </aside>
@@ -62,10 +61,11 @@
     <div class="cal-grid" id="calGrid">
       <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin"></i></div>
     </div>
-    <div style="display:flex;gap:20px;margin-top:16px;flex-wrap:wrap">
-      <span style="font-size:12.5px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#dbeafe;display:inline-block"></span>Vacation</span>
-      <span style="font-size:12.5px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#fee2e2;display:inline-block"></span>Sick Leave</span>
-      <span style="font-size:12.5px;display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#fef3c7;display:inline-block"></span>Personal</span>
+    <div style="display:flex;gap:20px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap">
+      <span style="font-size:12.5px;color:var(--text-muted);display:flex;align-items:center;gap:7px"><span class="legend-dot" style="background:#dbeafe"></span>Vacation</span>
+      <span style="font-size:12.5px;color:var(--text-muted);display:flex;align-items:center;gap:7px"><span class="legend-dot" style="background:#ffe4e6"></span>Sick Leave</span>
+      <span style="font-size:12.5px;color:var(--text-muted);display:flex;align-items:center;gap:7px"><span class="legend-dot" style="background:#fef3c7"></span>Personal</span>
+      <span style="font-size:12.5px;color:var(--text-muted);display:flex;align-items:center;gap:7px;margin-left:auto"><span class="legend-dot" style="background:var(--primary-soft);box-shadow:inset 0 0 0 1.5px var(--primary)"></span>Today</span>
     </div>
   </div>
 
@@ -88,9 +88,7 @@
         <thead>
           <tr><th>Employee</th><th>Type</th><th>Start</th><th>End</th><th>Days</th><th>Note</th><th>Status</th><th>Actions</th></tr>
         </thead>
-        <tbody id="toTable">
-          <tr><td colspan="8"><div style="text-align:center;padding:32px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin"></i></div></td></tr>
-        </tbody>
+        <tbody id="toTable"></tbody>
       </table>
     </div>
   </div>
@@ -157,11 +155,16 @@ const DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 requireAuth(() => loadAll());
 
 async function loadAll() {
-  const [emps, tos] = await Promise.all([getEmployees(), getTimeOff()]);
-  allEmpsCache = emps;
-  allTOCache   = tos;
-  renderCalendar();
-  renderList();
+  document.getElementById('toTable').innerHTML = skeletonRows(8, 3);
+  try {
+    const [emps, tos] = await Promise.all([getEmployees(), getTimeOff()]);
+    allEmpsCache = emps;
+    allTOCache   = tos;
+    renderCalendar();
+    renderList();
+  } catch (err) {
+    toast('Could not load time off data.', 'error');
+  }
 }
 
 function shiftMonth(dir) {
@@ -191,13 +194,14 @@ function renderCalendar() {
     const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const isToday = ds === todayStr2;
     const events  = approvedTOs.filter(t => ds >= t.startDate && ds <= t.endDate);
+    const delay   = ((firstDow + day - 1) * 0.008).toFixed(3);
 
     const chips = events.slice(0,2).map(t => {
       const emp = allEmpsCache.find(e => e.id === t.employeeId);
-      return `<div class="cal-event-chip ${typeClass(t.type)}">${emp ? emp.name.split(' ')[0] : '?'}</div>`;
-    }).join('') + (events.length > 2 ? `<div class="cal-event-chip badge-gray">+${events.length-2}</div>` : '');
+      return `<div class="cal-event-chip ${typeClass(t.type)}" title="${emp ? emp.name : ''} — ${t.type}">${emp ? emp.name.split(' ')[0] : '?'}</div>`;
+    }).join('') + (events.length > 2 ? `<div class="cal-event-chip badge-gray">+${events.length-2} more</div>` : '');
 
-    html += `<div class="cal-cell ${isToday?'today':''}">
+    html += `<div class="cal-cell ${isToday?'today':''}" style="animation-delay:${delay}s">
       <div class="cal-cell-num">${day}</div>
       ${chips}
     </div>`;
@@ -259,6 +263,8 @@ function filterStatus(val, btn) {
 async function doUpdateStatus(id, status) {
   await updateTimeOff(id, { status });
   allTOCache = await getTimeOff();
+  const labels = { approved: 'Request approved', denied: 'Request denied', pending: 'Request reset to pending' };
+  toast(labels[status], status === 'denied' ? 'info' : status === 'approved' ? 'success' : 'info');
   renderCalendar();
   renderList();
 }
@@ -267,6 +273,7 @@ async function doDelete(id) {
   if (!confirm('Delete this time off request?')) return;
   await deleteTimeOff(id);
   allTOCache = allTOCache.filter(t => t.id !== id);
+  toast('Request deleted', 'info');
   renderCalendar();
   renderList();
 }
@@ -289,18 +296,19 @@ async function doSaveRequest() {
   const end   = document.getElementById('toEnd').value;
   const type  = document.getElementById('toType').value;
   const note  = document.getElementById('toNote').value.trim();
-  if (!empId || !start || !end) { alert('Please fill all required fields.'); return; }
-  if (end < start) { alert('End date cannot be before start date.'); return; }
+  if (!empId || !start || !end) { toast('Please fill all required fields.', 'error'); return; }
+  if (end < start) { toast('End date cannot be before start date.', 'error'); return; }
   const btn = document.getElementById('saveToBtn');
   btn.disabled = true;
   try {
     await addTimeOff({ employeeId: empId, startDate: start, endDate: end, type, note, status: 'pending' });
     allTOCache = await getTimeOff();
     closeModal('requestModal');
+    toast('Time off request submitted', 'success');
     renderCalendar();
     renderList();
   } catch (err) {
-    alert('Error: ' + err.message);
+    toast('Error: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
