@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Domcub — Sign In</title>
+<title>El Águila — Iniciar Sesión</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -359,19 +359,19 @@
     <div class="brand-icon-wrap">
       <i class="fa-solid fa-mobile-screen-button"></i>
     </div>
-    <div class="brand-name">Domcub</div>
-    <div class="brand-tagline">Employee Management Portal</div>
+    <div class="brand-name">El Águila</div>
+    <div class="brand-tagline">Portal de Gestión de Empleados</div>
   </div>
 
   <ul class="feature-list">
-    <li><i class="fa-solid fa-clock"></i> Real-time hour tracking</li>
-    <li><i class="fa-solid fa-users"></i> Multi-store employee management</li>
-    <li><i class="fa-solid fa-file-invoice-dollar"></i> Automated pay statements</li>
-    <li><i class="fa-solid fa-calendar-days"></i> Time off management</li>
-    <li><i class="fa-solid fa-shield-halved"></i> Secure &amp; role-based access</li>
+    <li><i class="fa-solid fa-clock"></i> Control de horas en tiempo real</li>
+    <li><i class="fa-solid fa-users"></i> Gestión de empleados en varias tiendas</li>
+    <li><i class="fa-solid fa-file-invoice-dollar"></i> Nómina automatizada</li>
+    <li><i class="fa-solid fa-calendar-days"></i> Gestión de permisos</li>
+    <li><i class="fa-solid fa-shield-halved"></i> Acceso seguro y por roles</li>
   </ul>
 
-  <div class="version-tag">Domcub v2.0 · All Stores</div>
+  <div class="version-tag">El Águila v2.0 · Todas las Tiendas</div>
 </div>
 
 <!-- Right auth panel -->
@@ -379,14 +379,14 @@
   <div class="auth-card">
 
     <div class="auth-header">
-      <h2 id="authHeading">Welcome back</h2>
-      <p id="authSubheading">Sign in to your Domcub account to continue.</p>
+      <h2 id="authHeading">Bienvenido de nuevo</h2>
+      <p id="authSubheading">Inicia sesión en tu cuenta de El Águila para continuar.</p>
     </div>
 
     <!-- Tabs -->
     <div class="auth-tabs" id="authTabs">
-      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
-      <button class="auth-tab" onclick="switchTab('register')">Create Account</button>
+      <button class="auth-tab active" onclick="switchTab('login')">Iniciar Sesión</button>
+      <button class="auth-tab" onclick="switchTab('register')">Crear Cuenta</button>
     </div>
 
     <!-- Alert -->
@@ -398,23 +398,23 @@
     <!-- ── LOGIN FORM ── -->
     <form id="loginForm" onsubmit="doLogin(event)">
       <div class="form-group">
-        <label>Email Address</label>
+        <label>Correo Electrónico</label>
         <div class="input-wrap">
           <i class="fa-solid fa-envelope"></i>
-          <input type="email" id="loginEmail" placeholder="you@domcub.com" required autocomplete="email">
+          <input type="email" id="loginEmail" placeholder="tu@elaguila.com" required autocomplete="email">
         </div>
       </div>
       <div class="form-group">
-        <label>Password</label>
+        <label>Contraseña</label>
         <div class="input-wrap">
           <i class="fa-solid fa-lock"></i>
-          <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password">
+          <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
           <button type="button" class="toggle-pw" onclick="togglePw('loginPassword', this)"><i class="fa-solid fa-eye"></i></button>
         </div>
       </div>
       <button type="submit" class="btn-auth" id="loginBtn">
         <i class="fa-solid fa-arrow-right-to-bracket"></i>
-        Sign In
+        Iniciar Sesión
       </button>
     </form>
 
@@ -422,58 +422,58 @@
     <form id="registerForm" onsubmit="doRegister(event)" style="display:none">
       <div class="form-row">
         <div class="form-group">
-          <label>First Name</label>
+          <label>Nombre</label>
           <div class="input-wrap">
             <i class="fa-solid fa-user"></i>
-            <input type="text" id="regFirstName" placeholder="First" required>
+            <input type="text" id="regFirstName" placeholder="Nombre" required>
           </div>
         </div>
         <div class="form-group">
-          <label>Last Name</label>
+          <label>Apellido</label>
           <div class="input-wrap">
             <i class="fa-solid fa-user"></i>
-            <input type="text" id="regLastName" placeholder="Last" required>
+            <input type="text" id="regLastName" placeholder="Apellido" required>
           </div>
         </div>
       </div>
       <div class="form-group">
-        <label>Email Address</label>
+        <label>Correo Electrónico</label>
         <div class="input-wrap">
           <i class="fa-solid fa-envelope"></i>
-          <input type="email" id="regEmail" placeholder="you@domcub.com" required autocomplete="email">
+          <input type="email" id="regEmail" placeholder="tu@elaguila.com" required autocomplete="email">
         </div>
       </div>
       <div class="form-group">
-        <label>Role</label>
+        <label>Rol</label>
         <select class="auth-select" id="regRole">
-          <option value="owner">Owner</option>
-          <option value="manager" selected>Manager</option>
+          <option value="owner">Propietario</option>
+          <option value="manager" selected>Gerente</option>
         </select>
       </div>
       <div class="form-group">
-        <label>Password</label>
+        <label>Contraseña</label>
         <div class="input-wrap">
           <i class="fa-solid fa-lock"></i>
-          <input type="password" id="regPassword" placeholder="Min. 8 characters" required autocomplete="new-password" oninput="updateStrength()">
+          <input type="password" id="regPassword" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" oninput="updateStrength()">
           <button type="button" class="toggle-pw" onclick="togglePw('regPassword', this)"><i class="fa-solid fa-eye"></i></button>
         </div>
         <div class="pw-strength">
           <div class="pw-bar"></div><div class="pw-bar"></div>
           <div class="pw-bar"></div><div class="pw-bar"></div>
         </div>
-        <div class="pw-hint" id="pwHint">Use 8+ characters with letters and numbers.</div>
+        <div class="pw-hint" id="pwHint">Usa 8 o más caracteres con letras y números.</div>
       </div>
       <div class="form-group">
-        <label>Confirm Password</label>
+        <label>Confirmar Contraseña</label>
         <div class="input-wrap">
           <i class="fa-solid fa-lock"></i>
-          <input type="password" id="regConfirm" placeholder="Re-enter password" required autocomplete="new-password">
+          <input type="password" id="regConfirm" placeholder="Repite la contraseña" required autocomplete="new-password">
           <button type="button" class="toggle-pw" onclick="togglePw('regConfirm', this)"><i class="fa-solid fa-eye"></i></button>
         </div>
       </div>
       <button type="submit" class="btn-auth" id="registerBtn">
         <i class="fa-solid fa-user-plus"></i>
-        Create Account
+        Crear Cuenta
       </button>
     </form>
 
@@ -506,9 +506,9 @@ function switchTab(tab) {
   void shown.offsetWidth;
   shown.style.animation = '';
 
-  document.getElementById('authHeading').textContent    = isLogin ? 'Welcome back' : 'Create your account';
+  document.getElementById('authHeading').textContent    = isLogin ? 'Bienvenido de nuevo' : 'Crea tu cuenta';
   document.getElementById('authSubheading').textContent = isLogin
-    ? 'Sign in to your Domcub account to continue.'
+    ? 'Inicia sesión en tu cuenta de El Águila para continuar.'
     : 'Set up your manager or owner account below.';
 
   document.getElementById('authTabs').classList.toggle('register-active', !isLogin);
@@ -531,7 +531,7 @@ function updateStrength() {
   if (!pw) score = 0;
 
   const colors = ['#e11d48', '#f59e0b', '#0891b2', '#059669'];
-  const labels = ['Weak password', 'Fair password', 'Good password', 'Strong password'];
+  const labels = ['Contraseña débil', 'Contraseña aceptable', 'Contraseña buena', 'Contraseña segura'];
 
   bars.forEach((bar, i) => {
     bar.style.background = i < score ? colors[score - 1] : '#e8ebf3';
@@ -539,7 +539,7 @@ function updateStrength() {
 
   hint.textContent = pw
     ? labels[Math.max(score - 1, 0)]
-    : 'Use 8+ characters with letters and numbers.';
+    : 'Usa 8 o más caracteres con letras y números.';
   hint.style.color = pw ? colors[Math.max(score - 1, 0)] : 'var(--muted)';
 }
 
@@ -571,7 +571,7 @@ function setLoading(btnId, loading, label, icon) {
   const btn = document.getElementById(btnId);
   btn.disabled = loading;
   btn.innerHTML = loading
-    ? `<i class="fa-solid fa-spinner fa-spin"></i> Please wait...`
+    ? `<i class="fa-solid fa-spinner fa-spin"></i> Espera un momento...`
     : `<i class="${icon}"></i> ${label}`;
 }
 
@@ -585,13 +585,13 @@ async function doLogin(e) {
     await auth.signInWithEmailAndPassword(email, password);
     // onAuthStateChanged will redirect
   } catch (err) {
-    setLoading('loginBtn', false, 'Sign In', 'fa-solid fa-arrow-right-to-bracket');
+    setLoading('loginBtn', false, 'Iniciar Sesión', 'fa-solid fa-arrow-right-to-bracket');
     const msgs = {
-      'auth/user-not-found': 'No account found with this email.',
-      'auth/wrong-password': 'Incorrect password. Please try again.',
-      'auth/invalid-credential': 'Invalid email or password.',
-      'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
-      'auth/invalid-email': 'Please enter a valid email address.',
+      'auth/user-not-found': 'No existe ninguna cuenta con este correo.',
+      'auth/wrong-password': 'Contraseña incorrecta. Inténtalo de nuevo.',
+      'auth/invalid-credential': 'Correo o contraseña inválidos.',
+      'auth/too-many-requests': 'Demasiados intentos fallidos. Inténtalo más tarde.',
+      'auth/invalid-email': 'Ingresa un correo electrónico válido.',
     };
     showAlert(msgs[err.code] || err.message, 'error');
   }
@@ -608,10 +608,10 @@ async function doRegister(e) {
   const confirm = document.getElementById('regConfirm').value;
 
   if (pw.length < 8) {
-    showAlert('Password must be at least 8 characters.', 'error'); return;
+    showAlert('La contraseña debe tener al menos 8 caracteres.', 'error'); return;
   }
   if (pw !== confirm) {
-    showAlert('Passwords do not match.', 'error'); return;
+    showAlert('Las contraseñas no coinciden.', 'error'); return;
   }
 
   setLoading('registerBtn', true);
@@ -628,11 +628,11 @@ async function doRegister(e) {
     });
     // onAuthStateChanged will redirect
   } catch (err) {
-    setLoading('registerBtn', false, 'Create Account', 'fa-solid fa-user-plus');
+    setLoading('registerBtn', false, 'Crear Cuenta', 'fa-solid fa-user-plus');
     const msgs = {
-      'auth/email-already-in-use': 'An account with this email already exists.',
-      'auth/weak-password': 'Password is too weak. Use at least 8 characters.',
-      'auth/invalid-email': 'Please enter a valid email address.',
+      'auth/email-already-in-use': 'Ya existe una cuenta con este correo.',
+      'auth/weak-password': 'La contraseña es muy débil. Usa al menos 8 caracteres.',
+      'auth/invalid-email': 'Ingresa un correo electrónico válido.',
     };
     showAlert(msgs[err.code] || err.message, 'error');
   }
