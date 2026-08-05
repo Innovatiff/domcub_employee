@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pay Statements — Domcub</title>
+<title>Nómina — El Aguila</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -13,28 +13,28 @@
   <div class="sidebar-brand">
     <div class="brand-logo">
       <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-      <div><div class="brand-name">Domcub</div><div class="brand-sub">Employee Portal</div></div>
+      <div><div class="brand-name">El Aguila</div><div class="brand-sub">Portal de Empleados</div></div>
     </div>
   </div>
   <nav class="sidebar-nav">
-    <div class="nav-section-label">Main</div>
-    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
-    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Employees</span></a>
-    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
-    <div class="nav-section-label">Time</div>
-    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
-    <a href="pay-statement.html" class="nav-link active"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
-    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+    <div class="nav-section-label">Principal</div>
+    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
+    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Empleados</span></a>
+    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <div class="nav-section-label">Tiempo</div>
+    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
+    <a href="pay-statement.html" class="nav-link active"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
+    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
   </nav>
   <div class="sidebar-footer">
     <div id="sidebarUser" style="margin-bottom:12px"></div>
     <select class="store-selector" id="storeFilter" onchange="onStoreChange(this.value)">
-      <option value="all">All Stores</option>
-      <option value="1">Store 1</option>
-      <option value="2">Store 2</option>
+      <option value="all">Todas las Tiendas</option>
+      <option value="1">Tienda 1</option>
+      <option value="2">Tienda 2</option>
     </select>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Sign Out</span>
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -42,46 +42,46 @@
 <main class="main">
   <div class="page-header-row">
     <div class="page-header">
-      <h1>Pay Statements</h1>
-      <p>View and manage payroll for each pay period.</p>
+      <h1>Nómina</h1>
+      <p>Consulta y administra los pagos de cada período.</p>
     </div>
-    <button class="btn btn-primary" onclick="openGenerateModal()"><i class="fa-solid fa-calculator"></i> Generate Payroll</button>
+    <button class="btn btn-primary" onclick="openGenerateModal()"><i class="fa-solid fa-calculator"></i> Generar Nómina</button>
   </div>
 
-  <!-- Period selector -->
+  <!-- Selector de Período -->
   <div class="card" style="padding:15px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
     <div style="display:flex;align-items:center;gap:11px;flex:1">
-      <label style="margin:0;white-space:nowrap;font-size:13.5px"><i class="fa-solid fa-calendar-week" style="margin-right:7px;color:var(--primary)"></i>Pay Period</label>
+      <label style="margin:0;white-space:nowrap;font-size:13.5px"><i class="fa-solid fa-calendar-week" style="margin-right:7px;color:var(--primary)"></i>Período de Pago</label>
       <select id="periodSelect" onchange="render()" style="width:auto;min-width:260px"></select>
     </div>
-    <button class="btn btn-outline btn-sm" onclick="markAllPaid()"><i class="fa-solid fa-check-double"></i> Mark All Paid</button>
+    <button class="btn btn-outline btn-sm" onclick="markAllPaid()"><i class="fa-solid fa-check-double"></i> Marcar Todo Pagado</button>
   </div>
 
-  <!-- Stats -->
+  <!-- Estadísticas -->
   <div class="stats-grid" id="payStats" style="margin-bottom:20px">
     <div class="skeleton-card"></div><div class="skeleton-card"></div>
     <div class="skeleton-card"></div><div class="skeleton-card"></div>
   </div>
 
-  <!-- Table -->
+  <!-- Tabla -->
   <div class="card">
     <div class="card-header">
-      <span class="card-title">Payroll Detail</span>
+      <span class="card-title">Detalle de Nómina</span>
       <span class="badge badge-blue" id="stmtCount">—</span>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Employee</th>
-            <th>Position</th>
-            <th>Store</th>
-            <th>Hours</th>
-            <th>Rate / hr</th>
-            <th>Gross Pay</th>
-            <th>Status</th>
-            <th>Paid On</th>
-            <th>Actions</th>
+            <th>Empleado</th>
+            <th>Puesto</th>
+            <th>Tienda</th>
+            <th>Horas</th>
+            <th>Tarifa/hora</th>
+            <th>Pago Bruto</th>
+            <th>Estado</th>
+            <th>Pagado el</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="stmtTable"></tbody>
@@ -90,23 +90,23 @@
   </div>
 </main>
 
-<!-- Generate Modal -->
+<!-- Modal Generar -->
 <div class="modal-overlay" id="generateModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <h3>Generate Payroll</h3>
+      <h3>Generar Nómina</h3>
       <button class="modal-close" onclick="closeModal('generateModal')">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Select Period</label>
+        <label>Selecciona el Período</label>
         <select id="genPeriodSelect"></select>
       </div>
-      <p style="font-size:13px;color:var(--text-muted);margin-top:8px">Creates pay statements for all active employees based on their clocked hours. Existing statements for the period will be replaced.</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:8px">Crea los recibos de pago de todos los empleados activos según las horas registradas. Se reemplazarán los recibos existentes del período.</p>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('generateModal')">Cancel</button>
-      <button class="btn btn-primary" id="genBtn" onclick="doGenerate()">Generate</button>
+      <button class="btn btn-outline" onclick="closeModal('generateModal')">Cancelar</button>
+      <button class="btn btn-primary" id="genBtn" onclick="doGenerate()">Generar</button>
     </div>
   </div>
 </div>
@@ -127,7 +127,7 @@ function buildPeriodOptions() {
   const options = [];
   for (let i = cur.index; i >= cur.index - 13; i--) {
     const p = getPeriodByIndex(i);
-    options.push(`<option value="${p.start}">${formatPeriodLabel(p)}${i===cur.index?' (Current)':''}</option>`);
+    options.push(`<option value="${p.start}">${formatPeriodLabel(p)}${i===cur.index?' (Actual)':''}</option>`);
   }
   document.getElementById('periodSelect').innerHTML     = options.join('');
   document.getElementById('genPeriodSelect').innerHTML  = options.join('');
@@ -157,18 +157,18 @@ async function render() {
   const paid       = stmts.filter(s => s.status === 'paid');
   const pending    = stmts.filter(s => s.status !== 'paid');
 
-  document.getElementById('stmtCount').textContent = stmts.length + ' records';
+  document.getElementById('stmtCount').textContent = stmts.length + (stmts.length === 1 ? ' registro' : ' registros');
   document.getElementById('payStats').innerHTML = `
-    <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-dollar-sign"></i></div><div class="stat-label">Total Payroll</div><div class="stat-value">$${totalGross.toFixed(2)}</div></div>
-    <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div><div class="stat-label">Paid</div><div class="stat-value">${paid.length}</div><div class="stat-sub">$${paid.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
-    <div class="stat-card"><div class="stat-icon yellow"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-label">Pending</div><div class="stat-value">${pending.length}</div><div class="stat-sub">$${pending.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
-    <div class="stat-card"><div class="stat-icon cyan"><i class="fa-solid fa-clock"></i></div><div class="stat-label">Total Hours</div><div class="stat-value">${stmts.reduce((s,x)=>s+(x.hours||0),0).toFixed(1)}</div></div>
+    <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-dollar-sign"></i></div><div class="stat-label">Nómina Total</div><div class="stat-value">$${totalGross.toFixed(2)}</div></div>
+    <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div><div class="stat-label">Pagados</div><div class="stat-value">${paid.length}</div><div class="stat-sub">$${paid.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
+    <div class="stat-card"><div class="stat-icon yellow"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-label">Pendientes</div><div class="stat-value">${pending.length}</div><div class="stat-sub">$${pending.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
+    <div class="stat-card"><div class="stat-icon cyan"><i class="fa-solid fa-clock"></i></div><div class="stat-label">Horas Totales</div><div class="stat-value">${stmts.reduce((s,x)=>s+(x.hours||0),0).toFixed(1)}</div></div>
   `;
   animateValues('payStats');
 
   const tb = document.getElementById('stmtTable');
   if (stmts.length === 0) {
-    tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-file-invoice-dollar"></i><p>No pay statements for this period. <a href="#" onclick="openGenerateModal();return false">Generate payroll</a> to get started.</p></div></td></tr>`;
+    tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-file-invoice-dollar"></i><p>No hay recibos para este período. <a href="#" onclick="openGenerateModal();return false">Genera la nómina</a> para comenzar.</p></div></td></tr>`;
     return;
   }
 
@@ -180,17 +180,17 @@ async function render() {
     return `<tr>
       <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}</div></div></td>
       <td>${job ? job.title : '—'}</td>
-      <td><span class="badge badge-gray">Store ${emp.store}</span></td>
+      <td><span class="badge badge-gray">Tienda ${emp.store}</span></td>
       <td>${(s.hours||0).toFixed(2)}h</td>
       <td>$${(s.rate||0).toFixed(2)}</td>
       <td><strong>$${(s.gross||0).toFixed(2)}</strong></td>
-      <td><span class="badge ${isPaid?'badge-green':'badge-yellow'}">${isPaid?'Paid':'Pending'}</span></td>
+      <td><span class="badge ${isPaid?'badge-green':'badge-yellow'}">${isPaid?'Pagado':'Pendiente'}</span></td>
       <td>${s.paidDate ? formatDate(s.paidDate) : '—'}</td>
       <td>
         <div class="td-actions">
           ${!isPaid
-            ? `<button class="btn btn-sm btn-success" onclick="doMarkPaid('${s.id}')"><i class="fa-solid fa-check"></i> Mark Paid</button>`
-            : `<button class="btn btn-sm btn-outline" onclick="doMarkUnpaid('${s.id}')">Undo</button>`
+            ? `<button class="btn btn-sm btn-success" onclick="doMarkPaid('${s.id}')"><i class="fa-solid fa-check"></i> Marcar Pagado</button>`
+            : `<button class="btn btn-sm btn-outline" onclick="doMarkUnpaid('${s.id}')">Deshacer</button>`
           }
         </div>
       </td>
@@ -200,13 +200,13 @@ async function render() {
 
 async function doMarkPaid(id) {
   await updatePayStatement(id, { status: 'paid', paidDate: todayStr() });
-  toast('Marked as paid', 'success');
+  toast('Marcado como pagado', 'success');
   render();
 }
 
 async function doMarkUnpaid(id) {
   await updatePayStatement(id, { status: 'pending', paidDate: null });
-  toast('Reverted to pending', 'info');
+  toast('Revertido a pendiente', 'info');
   render();
 }
 
@@ -214,10 +214,10 @@ async function markAllPaid() {
   const periodStart = document.getElementById('periodSelect').value;
   const stmts = await getPayStatements(periodStart);
   const pending = stmts.filter(s => s.status !== 'paid');
-  if (pending.length === 0) { toast('All statements are already paid.', 'info'); return; }
-  if (!confirm(`Mark ${pending.length} statement(s) as paid?`)) return;
+  if (pending.length === 0) { toast('Todos los recibos ya están pagados.', 'info'); return; }
+  if (!confirm(`¿Marcar ${pending.length} recibo(s) como pagados?`)) return;
   await Promise.all(pending.map(s => updatePayStatement(s.id, { status: 'paid', paidDate: todayStr() })));
-  toast(`${pending.length} statement${pending.length !== 1 ? 's' : ''} marked paid`, 'success');
+  toast(`${pending.length} ${pending.length === 1 ? 'recibo marcado' : 'recibos marcados'} como pagados`, 'success');
   render();
 }
 
@@ -258,7 +258,7 @@ async function doGenerate() {
     }));
     document.getElementById('periodSelect').value = periodStart;
     closeModal('generateModal');
-    toast(`Payroll generated for ${active.length} employee${active.length !== 1 ? 's' : ''}`, 'success');
+    toast(`Nómina generada para ${active.length} ${active.length === 1 ? 'empleado' : 'empleados'}`, 'success');
     render();
   } catch (err) {
     toast('Error: ' + err.message, 'error');

@@ -1,12 +1,12 @@
-// ── Auth Guard ──
-// Call on every protected page. Redirects to login if not signed in.
+// ── Guardia de Autenticación ──
+// Se llama en cada página protegida. Redirige al login si no hay sesión.
 function requireAuth(callback) {
   auth.onAuthStateChanged(user => {
     if (!user) {
       window.location.href = 'login.html';
       return;
     }
-    // Load user profile from Main collection
+    // Carga el perfil del usuario desde la colección Main
     db.collection('Main').doc(user.uid).get().then(doc => {
       const profile = doc.exists ? doc.data() : { name: user.email, role: 'manager' };
       window.currentUser = { uid: user.uid, email: user.email, ...profile };
@@ -16,6 +16,11 @@ function requireAuth(callback) {
   });
 }
 
+// Traduce el rol guardado en Firestore a su etiqueta en español
+function roleLabel(role) {
+  return { owner: 'Propietario', manager: 'Gerente' }[role] || 'Gerente';
+}
+
 function updateSidebarUser(user) {
   const el = document.getElementById('sidebarUser');
   if (!el) return;
@@ -23,8 +28,8 @@ function updateSidebarUser(user) {
   el.innerHTML = `
     <div class="avatar" style="width:31px;height:31px;background:${avatarColor(user.name || user.email)}">${initials(user.name || user.email)}</div>
     <div style="overflow:hidden;min-width:0">
-      <div style="color:rgba(255,255,255,0.92);font-size:12.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.name || 'Manager'}</div>
-      <div style="color:rgba(255,255,255,0.38);font-size:10.5px;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.role || 'Manager'}</div>
+      <div style="color:rgba(255,255,255,0.92);font-size:12.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${user.name || 'Gerente'}</div>
+      <div style="color:rgba(255,255,255,0.38);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${roleLabel(user.role)}</div>
     </div>
   `;
 }
@@ -33,7 +38,7 @@ function signOut() {
   auth.signOut().then(() => window.location.href = 'login.html');
 }
 
-// ── Utilities ──
+// ── Utilidades ──
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -49,22 +54,49 @@ function toDateStr(date) {
 
 function todayStr() { return toDateStr(new Date()); }
 
+// ── Nombres en Español ──
+const MESES = ['enero','febrero','marzo','abril','mayo','junio',
+               'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MESES_CORTOS = ['ene','feb','mar','abr','may','jun',
+                      'jul','ago','sep','oct','nov','dic'];
+const DIAS       = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const DIAS_CORTOS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+function parseLocalDate(val) {
+  if (!val) return null;
+  return new Date(String(val).includes('T') ? val : val + 'T00:00:00');
+}
+
+// 5 ago 2026
 function formatDate(val) {
-  if (!val) return '—';
-  const d = new Date(val + (val.includes('T') ? '' : 'T00:00:00'));
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const d = parseLocalDate(val);
+  if (!d || isNaN(d)) return '—';
+  return `${d.getDate()} ${MESES_CORTOS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// 5 ago
 function formatDateShort(val) {
-  if (!val) return '—';
-  const d = new Date(val + (val.includes('T') ? '' : 'T00:00:00'));
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const d = parseLocalDate(val);
+  if (!d || isNaN(d)) return '—';
+  return `${d.getDate()} ${MESES_CORTOS[d.getMonth()]}`;
 }
 
+// miércoles, 5 de agosto de 2026
+function formatDateLong(date) {
+  const d = new Date(date);
+  return `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+// 8:30 a. m.
 function formatTime(iso) {
   if (!iso) return '—';
   const d = iso.toDate ? iso.toDate() : new Date(iso);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (isNaN(d)) return '—';
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const sufijo = h < 12 ? 'a. m.' : 'p. m.';
+  h = h % 12 || 12;
+  return `${h}:${m} ${sufijo}`;
 }
 
 function calculateHours(clockIn, clockOut) {
@@ -74,7 +106,7 @@ function calculateHours(clockIn, clockOut) {
   return Math.round(((o - i) / 3600000) * 100) / 100;
 }
 
-// ── Period Logic (2-week periods anchored Jan 1, 2024) ──
+// ── Períodos de Pago (quincenales, anclados al 1 de enero de 2024) ──
 const PERIOD_ORIGIN = new Date('2024-01-01T00:00:00');
 
 function getPeriodIndex(date) {
@@ -93,14 +125,14 @@ function getPeriodByIndex(idx) {
 
 function getCurrentPeriod() { return getPeriodByIndex(getPeriodIndex(new Date())); }
 
+// 1 ago – 14 ago, 2026
 function formatPeriodLabel(period) {
-  const s = new Date(period.start + 'T00:00:00');
-  const e = new Date(period.end   + 'T00:00:00');
-  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return `${fmt(s)} – ${fmt(e)}, ${e.getFullYear()}`;
+  const s = parseLocalDate(period.start);
+  const e = parseLocalDate(period.end);
+  return `${s.getDate()} ${MESES_CORTOS[s.getMonth()]} – ${e.getDate()} ${MESES_CORTOS[e.getMonth()]}, ${e.getFullYear()}`;
 }
 
-// ── Avatar ──
+// ── Avatares ──
 const AVATAR_COLORS = ['#4f46e5','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#0284c7','#be185d'];
 
 function avatarColor(name) {
@@ -119,13 +151,18 @@ function avatarHtml(name, size) {
   return `<div class="avatar" style="background:${avatarColor(name)};width:${s}px;height:${s}px">${initials(name)}</div>`;
 }
 
-// ── Store Filter (UI preference, stays in localStorage) ──
-function getSelectedStore() { return localStorage.getItem('domcub_store') || 'all'; }
-function setSelectedStore(v) { localStorage.setItem('domcub_store', v); }
+// ── Filtro de Tienda (preferencia de interfaz) ──
+function getSelectedStore() { return localStorage.getItem('elaguila_store') || 'all'; }
+function setSelectedStore(v) { localStorage.setItem('elaguila_store', v); }
 
-// ── Firestore Helpers ──
+// ══════════════════════════════════════════════════════════
+//  Firestore
+//  NOTA: los nombres de las colecciones se mantienen en inglés
+//  (Employees, Jobs, Main, ClockIns, TimeOff, PayStatements)
+//  para no romper los datos ya guardados.
+// ══════════════════════════════════════════════════════════
 
-// Jobs
+// Puestos
 async function getJobs() {
   const snap = await db.collection('Jobs').orderBy('title').get();
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -148,10 +185,9 @@ async function deleteJob(id) {
   await db.collection('Jobs').doc(id).delete();
 }
 
-// Employees
+// Empleados
 async function getEmployees(store) {
-  let q = db.collection('Employees').orderBy('name');
-  const snap = await q.get();
+  const snap = await db.collection('Employees').orderBy('name').get();
   let emps = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   if (store && store !== 'all') emps = emps.filter(e => e.store === store);
   return emps;
@@ -163,7 +199,7 @@ async function getEmployee(id) {
 }
 
 async function hireEmployee(data) {
-  const pin = generatePin();
+  const pin = data.pin || generatePin();
   const ref = await db.collection('Employees').add({
     ...data,
     pin,
@@ -177,10 +213,10 @@ async function updateEmployee(id, data) {
   await db.collection('Employees').doc(id).update(data);
 }
 
-// Clock-ins
+// Registros de entrada/salida
 async function getClockIns(filters) {
   let q = db.collection('ClockIns');
-  if (filters && filters.date) q = q.where('date', '==', filters.date);
+  if (filters && filters.date)       q = q.where('date', '==', filters.date);
   if (filters && filters.employeeId) q = q.where('employeeId', '==', filters.employeeId);
   const snap = await q.get();
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -197,8 +233,7 @@ async function getClockInsRange(start, end) {
 async function clockIn(employeeId, store) {
   const now = firebase.firestore.Timestamp.now();
   const ref = await db.collection('ClockIns').add({
-    employeeId,
-    store,
+    employeeId, store,
     clockIn: now,
     clockOut: null,
     date: todayStr(),
@@ -211,7 +246,7 @@ async function clockOut(clockInId) {
   const now = firebase.firestore.Timestamp.now();
   const doc = await db.collection('ClockIns').doc(clockInId).get();
   if (!doc.exists) return;
-  const data = doc.data();
+  const data  = doc.data();
   const hours = calculateHours(data.clockIn.toDate(), now.toDate());
   await db.collection('ClockIns').doc(clockInId).update({ clockOut: now, hours });
   return hours;
@@ -232,7 +267,7 @@ async function deleteClockIn(id) {
   await db.collection('ClockIns').doc(id).delete();
 }
 
-// Time Off
+// Permisos / Tiempo libre
 async function getTimeOff() {
   const snap = await db.collection('TimeOff').orderBy('startDate', 'desc').get();
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -250,7 +285,7 @@ async function deleteTimeOff(id) {
   await db.collection('TimeOff').doc(id).delete();
 }
 
-// Pay Statements
+// Nómina
 async function getPayStatements(periodStart) {
   let q = db.collection('PayStatements');
   if (periodStart) q = q.where('periodStart', '==', periodStart);
@@ -270,7 +305,7 @@ async function updatePayStatement(id, data) {
   await db.collection('PayStatements').doc(id).update(data);
 }
 
-// ── Loading State ──
+// ── Estados de Carga ──
 function skeletonRows(cols, rows) {
   const n = rows || 4;
   let html = '';
@@ -289,7 +324,7 @@ function skeletonCards(n) {
   return Array.from({ length: n || 4 }, () => `<div class="skeleton-card"></div>`).join('');
 }
 
-// ── Toast Notifications ──
+// ── Notificaciones ──
 function toast(message, type) {
   let host = document.querySelector('.toast-host');
   if (!host) {
@@ -313,8 +348,8 @@ function toast(message, type) {
   }, 3400);
 }
 
-// ── Animated Counters ──
-// Scans .stat-value elements and counts them up from zero.
+// ── Contadores Animados ──
+// Recorre los .stat-value y los anima desde cero.
 function animateValues(scope) {
   const root = scope ? document.getElementById(scope) : document;
   if (!root) return;
@@ -323,7 +358,7 @@ function animateValues(scope) {
     const match = raw.match(/^(\$?)([\d,]+\.?\d*)(.*)$/);
     if (!match) return;
     const [, prefix, numStr, suffix] = match;
-    const target   = parseFloat(numStr.replace(/,/g, ''));
+    const target = parseFloat(numStr.replace(/,/g, ''));
     if (isNaN(target)) return;
     const decimals = (numStr.split('.')[1] || '').length;
     const duration = 620;
@@ -333,7 +368,7 @@ function animateValues(scope) {
       const p = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);           // easeOutCubic
       const val = (target * eased).toFixed(decimals);
-      el.textContent = prefix + Number(val).toLocaleString('en-US', {
+      el.textContent = prefix + Number(val).toLocaleString('es', {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals
       }) + suffix;
@@ -344,7 +379,7 @@ function animateValues(scope) {
   });
 }
 
-// ── Modal Helpers ──
+// ── Modales ──
 function openModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('open');
@@ -355,7 +390,7 @@ function closeModal(id) {
   if (el) el.classList.remove('open');
 }
 
-// Close modals on overlay click and Escape key
+// Cerrar modales al hacer clic fuera o con la tecla Escape
 document.addEventListener('click', e => {
   if (e.target.classList && e.target.classList.contains('modal-overlay')) {
     e.target.classList.remove('open');
@@ -368,7 +403,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Track pointer position on buttons so the hover sheen follows the cursor
+// Sigue el cursor sobre los botones para el brillo del hover
 document.addEventListener('pointermove', e => {
   const btn = e.target.closest && e.target.closest('.btn');
   if (!btn) return;

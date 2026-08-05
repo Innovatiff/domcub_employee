@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Job Positions — Domcub</title>
+<title>Puestos — El Aguila</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -13,23 +13,23 @@
   <div class="sidebar-brand">
     <div class="brand-logo">
       <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-      <div><div class="brand-name">Domcub</div><div class="brand-sub">Employee Portal</div></div>
+      <div><div class="brand-name">El Aguila</div><div class="brand-sub">Portal de Empleados</div></div>
     </div>
   </div>
   <nav class="sidebar-nav">
-    <div class="nav-section-label">Main</div>
-    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
-    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Employees</span></a>
-    <a href="jobs.html"          class="nav-link active"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
-    <div class="nav-section-label">Time</div>
-    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
-    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
-    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+    <div class="nav-section-label">Principal</div>
+    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
+    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Empleados</span></a>
+    <a href="jobs.html"          class="nav-link active"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <div class="nav-section-label">Tiempo</div>
+    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
+    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
+    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
   </nav>
   <div class="sidebar-footer">
     <div id="sidebarUser" style="margin-bottom:12px"></div>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Sign Out</span>
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -37,10 +37,10 @@
 <main class="main">
   <div class="page-header-row">
     <div class="page-header">
-      <h1>Job Positions</h1>
-      <p>Manage the roles available across both Domcub stores.</p>
+      <h1>Puestos de Trabajo</h1>
+      <p>Administra los puestos disponibles en ambas tiendas de El Aguila.</p>
     </div>
-    <button class="btn btn-primary" onclick="openJobModal()"><i class="fa-solid fa-plus"></i> Add Position</button>
+    <button class="btn btn-primary" onclick="openJobModal()"><i class="fa-solid fa-plus"></i> Agregar Puesto</button>
   </div>
 
   <div class="jobs-grid" id="jobsGrid">
@@ -50,48 +50,48 @@
   </div>
 </main>
 
-<!-- Add/Edit Modal -->
+<!-- Modal Agregar/Editar -->
 <div class="modal-overlay" id="jobModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <h3 id="jobModalTitle">Add Position</h3>
+      <h3 id="jobModalTitle">Agregar Puesto</h3>
       <button class="modal-close" onclick="closeModal('jobModal')">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="jobDocId">
       <div class="form-group">
-        <label>Job Title *</label>
-        <input type="text" id="jobTitle" placeholder="e.g. Sales Associate">
+        <label>Nombre del Puesto *</label>
+        <input type="text" id="jobTitle" placeholder="ej. Vendedor">
       </div>
       <div class="form-group">
-        <label>Department</label>
-        <input type="text" id="jobDept" placeholder="e.g. Sales">
+        <label>Departamento</label>
+        <input type="text" id="jobDept" placeholder="ej. Ventas">
       </div>
       <div class="form-group">
-        <label>Color Label</label>
+        <label>Color de Etiqueta</label>
         <div class="color-options" id="colorOptions"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('jobModal')">Cancel</button>
-      <button class="btn btn-primary" id="saveJobBtn" onclick="doSaveJob()">Save Position</button>
+      <button class="btn btn-outline" onclick="closeModal('jobModal')">Cancelar</button>
+      <button class="btn btn-primary" id="saveJobBtn" onclick="doSaveJob()">Guardar Puesto</button>
     </div>
   </div>
 </div>
 
-<!-- Delete Confirm -->
+<!-- Confirmar Eliminación -->
 <div class="modal-overlay" id="deleteModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <h3>Delete Position</h3>
+      <h3>Eliminar Puesto</h3>
       <button class="modal-close" onclick="closeModal('deleteModal')">&times;</button>
     </div>
     <div class="modal-body">
-      <p style="color:var(--text-muted);font-size:14px">Are you sure you want to delete <strong id="deleteJobName"></strong>? This cannot be undone.</p>
+      <p style="color:var(--text-muted);font-size:14px">¿Seguro que deseas eliminar <strong id="deleteJobName"></strong>? Esta acción no se puede deshacer.</p>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
-      <button class="btn btn-danger" id="confirmDeleteBtn" onclick="doDelete()">Delete</button>
+      <button class="btn btn-outline" onclick="closeModal('deleteModal')">Cancelar</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn" onclick="doDelete()">Eliminar</button>
     </div>
   </div>
 </div>
@@ -125,7 +125,7 @@ async function render() {
     if (jobs.length === 0) {
       grid.innerHTML = `<div class="card" style="grid-column:1/-1;padding:48px;text-align:center;color:var(--text-muted)">
         <i class="fa-solid fa-briefcase" style="font-size:36px;margin-bottom:12px;display:block;color:var(--text-light)"></i>
-        <p>No job positions yet. Add one to get started.</p>
+        <p>Aún no hay puestos. Agrega uno para comenzar.</p>
       </div>`;
       return;
     }
@@ -140,16 +140,16 @@ async function render() {
             <div class="job-dept">${j.department || '—'}</div>
           </div>
         </div>
-        <div class="job-count"><i class="fa-solid fa-user" style="color:var(--text-light)"></i>${count} employee${count!==1?'s':''} in this role</div>
+        <div class="job-count"><i class="fa-solid fa-user" style="color:var(--text-light)"></i>${count} ${count === 1 ? 'empleado' : 'empleados'} en este puesto</div>
         <div class="job-actions">
-          <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
-          <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="openDelete('${j.id}','${j.title.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i> Delete</button>
+          <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
+          <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="openDelete('${j.id}','${j.title.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i> Eliminar</button>
         </div>
       </div>`;
     }).join('');
   } catch (err) {
-    grid.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:24px">Error loading jobs: ${err.message}</div>`;
-    toast('Could not load positions.', 'error');
+    grid.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:24px">Error al cargar los puestos: ${err.message}</div>`;
+    toast('No se pudieron cargar los puestos.', 'error');
   }
 }
 
@@ -158,7 +158,7 @@ async function openJobModal(id) {
   if (id) {
     job = await getJob(id);
   }
-  document.getElementById('jobModalTitle').textContent = job ? 'Edit Position' : 'Add Position';
+  document.getElementById('jobModalTitle').textContent = job ? 'Editar Puesto' : 'Agregar Puesto';
   document.getElementById('jobDocId').value  = job ? job.id : '';
   document.getElementById('jobTitle').value  = job ? job.title : '';
   document.getElementById('jobDept').value   = job ? (job.department || '') : '';
@@ -170,17 +170,17 @@ async function openJobModal(id) {
 async function doSaveJob() {
   const title = document.getElementById('jobTitle').value.trim();
   const dept  = document.getElementById('jobDept').value.trim();
-  if (!title) { toast('Please enter a job title.', 'error'); return; }
+  if (!title) { toast('Escribe el nombre del puesto.', 'error'); return; }
   const docId = document.getElementById('jobDocId').value;
   const btn   = document.getElementById('saveJobBtn');
   btn.disabled = true;
   try {
     await saveJob({ title, department: dept, color: selectedColor }, docId || null);
     closeModal('jobModal');
-    toast(docId ? 'Position updated' : `"${title}" added`, 'success');
+    toast(docId ? 'Puesto actualizado' : `"${title}" agregado`, 'success');
     render();
   } catch (err) {
-    toast('Error saving: ' + err.message, 'error');
+    toast('Error al guardar: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -199,10 +199,10 @@ async function doDelete() {
   try {
     await deleteJob(deleteDocId);
     closeModal('deleteModal');
-    toast('Position deleted', 'success');
+    toast('Puesto eliminado', 'success');
     render();
   } catch (err) {
-    toast('Error deleting: ' + err.message, 'error');
+    toast('Error al eliminar: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
