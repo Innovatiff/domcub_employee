@@ -509,7 +509,7 @@ function switchTab(tab) {
   document.getElementById('authHeading').textContent    = isLogin ? 'Bienvenido de nuevo' : 'Crea tu cuenta';
   document.getElementById('authSubheading').textContent = isLogin
     ? 'Inicia sesión en tu cuenta de El Águila para continuar.'
-    : 'Set up your manager or owner account below.';
+    : 'Configura tu cuenta de gerente o propietario a continuación.';
 
   document.getElementById('authTabs').classList.toggle('register-active', !isLogin);
   document.querySelectorAll('.auth-tab').forEach((btn, i) => {
