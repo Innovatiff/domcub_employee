@@ -137,9 +137,15 @@ body {
   border-radius: 10px;
   display: grid; place-items: center;
   color: #fff;
-  font-size: 16px;
   box-shadow: 0 4px 12px rgba(79,70,229,0.4);
   transition: transform var(--t) var(--ease-back);
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 21px; height: 21px;
+  fill: currentColor;
+  display: block;
 }
 
 .sidebar-brand:hover .brand-icon { transform: rotate(-8deg) scale(1.06); }
