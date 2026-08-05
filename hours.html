@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hours — Domcub</title>
+<title>Horas — El Águila</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -13,28 +13,28 @@
   <div class="sidebar-brand">
     <div class="brand-logo">
       <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-      <div><div class="brand-name">Domcub</div><div class="brand-sub">Employee Portal</div></div>
+      <div><div class="brand-name">El Águila</div><div class="brand-sub">Portal de Empleados</div></div>
     </div>
   </div>
   <nav class="sidebar-nav">
-    <div class="nav-section-label">Main</div>
-    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
-    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Employees</span></a>
-    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
-    <div class="nav-section-label">Time</div>
-    <a href="hours.html"         class="nav-link active"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
-    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
-    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+    <div class="nav-section-label">Principal</div>
+    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
+    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Empleados</span></a>
+    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <div class="nav-section-label">Tiempo</div>
+    <a href="hours.html"         class="nav-link active"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
+    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
+    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
   </nav>
   <div class="sidebar-footer">
     <div id="sidebarUser" style="margin-bottom:12px"></div>
     <select class="store-selector" id="storeFilter" onchange="onStoreChange(this.value)">
-      <option value="all">All Stores</option>
-      <option value="1">Store 1</option>
-      <option value="2">Store 2</option>
+      <option value="all">Todas las Tiendas</option>
+      <option value="1">Tienda 1</option>
+      <option value="2">Tienda 2</option>
     </select>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Sign Out</span>
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -42,16 +42,16 @@
 <main class="main">
   <div class="page-header-row">
     <div class="page-header">
-      <h1>Hours Tracking</h1>
-      <p>View and manage employee hours by pay period.</p>
+      <h1>Control de Horas</h1>
+      <p>Consulta y administra las horas de los empleados por período de pago.</p>
     </div>
     <div style="display:flex;gap:10px">
-      <button class="btn btn-outline" onclick="openAddEntry()"><i class="fa-solid fa-plus"></i> Add Entry</button>
-      <button class="btn btn-primary" onclick="openSavePeriod()"><i class="fa-solid fa-floppy-disk"></i> Save Period</button>
+      <button class="btn btn-outline" onclick="openAddEntry()"><i class="fa-solid fa-plus"></i> Agregar Registro</button>
+      <button class="btn btn-primary" onclick="openSavePeriod()"><i class="fa-solid fa-floppy-disk"></i> Guardar Período</button>
     </div>
   </div>
 
-  <!-- Period Nav -->
+  <!-- Navegación de Período -->
   <div class="period-nav">
     <button class="btn-icon" onclick="shiftPeriod(-1)"><i class="fa-solid fa-chevron-left"></i></button>
     <div style="flex:1;text-align:center">
@@ -61,17 +61,17 @@
     <button class="btn-icon" onclick="shiftPeriod(1)"><i class="fa-solid fa-chevron-right"></i></button>
   </div>
 
-  <!-- Store tabs -->
+  <!-- Pestañas de Tienda -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="filterStore('all',this)">All Stores</button>
-    <button class="tab-btn" onclick="filterStore('1',this)">Store 1</button>
-    <button class="tab-btn" onclick="filterStore('2',this)">Store 2</button>
+    <button class="tab-btn active" onclick="filterStore('all',this)">Todas</button>
+    <button class="tab-btn" onclick="filterStore('1',this)">Tienda 1</button>
+    <button class="tab-btn" onclick="filterStore('2',this)">Tienda 2</button>
   </div>
 
-  <!-- Summary -->
+  <!-- Resumen -->
   <div id="periodSummary" style="display:flex;gap:12px;margin-bottom:22px;flex-wrap:wrap"></div>
 
-  <!-- Accordion -->
+  <!-- Acordeón -->
   <div id="hoursAccordion">
     <div class="skeleton-card" style="height:66px;margin-bottom:11px"></div>
     <div class="skeleton-card" style="height:66px;margin-bottom:11px"></div>
@@ -79,55 +79,55 @@
   </div>
 </main>
 
-<!-- Add Entry Modal -->
+<!-- Modal Agregar Registro -->
 <div class="modal-overlay" id="addEntryModal">
   <div class="modal">
     <div class="modal-header">
-      <h3>Add Hours Entry</h3>
+      <h3>Agregar Registro de Horas</h3>
       <button class="modal-close" onclick="closeModal('addEntryModal')">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Employee</label>
+        <label>Empleado</label>
         <select id="entryEmp"></select>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Date</label>
+          <label>Fecha</label>
           <input type="date" id="entryDate">
         </div>
         <div class="form-group">
-          <label>Clock In</label>
+          <label>Entrada</label>
           <input type="time" id="entryIn" value="08:00">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Clock Out</label>
+          <label>Salida</label>
           <input type="time" id="entryOut" value="16:00">
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('addEntryModal')">Cancel</button>
-      <button class="btn btn-primary" id="saveEntryBtn" onclick="doSaveEntry()">Add Entry</button>
+      <button class="btn btn-outline" onclick="closeModal('addEntryModal')">Cancelar</button>
+      <button class="btn btn-primary" id="saveEntryBtn" onclick="doSaveEntry()">Agregar Registro</button>
     </div>
   </div>
 </div>
 
-<!-- Save Period Modal -->
+<!-- Modal Guardar Período -->
 <div class="modal-overlay" id="savePeriodModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <h3>Save Period & Generate Payroll</h3>
+      <h3>Guardar Período y Generar Nómina</h3>
       <button class="modal-close" onclick="closeModal('savePeriodModal')">&times;</button>
     </div>
     <div class="modal-body">
       <p style="color:var(--text-muted);font-size:14px" id="savePeriodText"></p>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('savePeriodModal')">Cancel</button>
-      <button class="btn btn-primary" id="confirmSaveBtn" onclick="doSavePeriod()">Confirm & Save</button>
+      <button class="btn btn-outline" onclick="closeModal('savePeriodModal')">Cancelar</button>
+      <button class="btn btn-primary" id="confirmSaveBtn" onclick="doSavePeriod()">Confirmar y Guardar</button>
     </div>
   </div>
 </div>
@@ -140,7 +140,7 @@
 <script>
 let periodIndex = getPeriodIndex(new Date());
 let storeFilter = 'all';
-const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_NAMES = DIAS_CORTOS;
 
 document.getElementById('storeFilter').value = getSelectedStore();
 requireAuth(() => render());
@@ -162,8 +162,8 @@ async function render() {
 
   document.getElementById('periodLabel').textContent = formatPeriodLabel(period);
   document.getElementById('periodSub').textContent   =
-    periodIndex === cur.index ? 'Current period' :
-    periodIndex  < cur.index ? 'Past period' : 'Future period';
+    periodIndex === cur.index ? 'Período actual' :
+    periodIndex  < cur.index ? 'Período anterior' : 'Período futuro';
 
   const store = getSelectedStore();
   const [allEmps, jobs, cis] = await Promise.all([
@@ -183,15 +183,15 @@ async function render() {
 
   document.getElementById('periodSummary').innerHTML = `
     <div class="stat-card" style="flex:1;min-width:140px">
-      <div class="stat-label">Total Hours</div>
+      <div class="stat-label">Horas Totales</div>
       <div class="stat-value">${totalHrs.toFixed(1)}</div>
     </div>
     <div class="stat-card" style="flex:1;min-width:140px">
-      <div class="stat-label">Employees</div>
+      <div class="stat-label">Empleados</div>
       <div class="stat-value">${emps.length}</div>
     </div>
     <div class="stat-card" style="flex:1;min-width:140px">
-      <div class="stat-label">Avg Hours / Employee</div>
+      <div class="stat-label">Promedio por Empleado</div>
       <div class="stat-value">${emps.length ? (totalHrs/emps.length).toFixed(1) : '0'}</div>
     </div>
   `;
@@ -205,7 +205,7 @@ async function render() {
 
   const acc = document.getElementById('hoursAccordion');
   if (emps.length === 0) {
-    acc.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><i class="fa-solid fa-clock"></i><p>No employees to display.</p></div></div></div>`;
+    acc.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><i class="fa-solid fa-clock"></i><p>No hay empleados para mostrar.</p></div></div></div>`;
     return;
   }
 
@@ -225,9 +225,9 @@ async function render() {
         return `<tr style="${isWeekend?'color:var(--text-light);background:#fafbfd':''}">
           <td>${formatDateShort(dateStr)}</td>
           <td>${DAY_NAMES[d2.getDay()]}</td>
-          <td colspan="2" style="color:var(--text-light)">${future?'—':isWeekend?'Weekend':'No record'}</td>
+          <td colspan="2" style="color:var(--text-light)">${future?'—':isWeekend?'Fin de semana':'Sin registro'}</td>
           <td>—</td>
-          <td><span class="badge badge-gray">${future?'upcoming':isWeekend?'—':'absent'}</span></td>
+          <td><span class="badge badge-gray">${future?'próximo':isWeekend?'—':'ausente'}</span></td>
           <td></td>
         </tr>`;
       }
@@ -236,10 +236,10 @@ async function render() {
         <td>${formatDateShort(ci.date)}</td>
         <td>${DAY_NAMES[d2.getDay()]}</td>
         <td>${formatTime(ci.clockIn)}</td>
-        <td>${ci.clockOut ? formatTime(ci.clockOut) : '<span class="badge badge-green">Active</span>'}</td>
+        <td>${ci.clockOut ? formatTime(ci.clockOut) : '<span class="badge badge-green">En curso</span>'}</td>
         <td><strong>${ci.clockOut ? (ci.hours||0).toFixed(2)+'h' : '—'}</strong></td>
-        <td>${ci.clockOut ? '<span class="badge badge-green">Complete</span>' : '<span class="badge badge-yellow">In Progress</span>'}</td>
-        <td><button class="btn-icon btn-sm" onclick="doDeleteEntry('${ci.id}')" title="Remove"><i class="fa-solid fa-xmark" style="font-size:11px"></i></button></td>
+        <td>${ci.clockOut ? '<span class="badge badge-green">Completo</span>' : '<span class="badge badge-yellow">En curso</span>'}</td>
+        <td><button class="btn-icon btn-sm" onclick="doDeleteEntry('${ci.id}')" title="Eliminar"><i class="fa-solid fa-xmark" style="font-size:11px"></i></button></td>
       </tr>`).join('');
     }).join('');
 
@@ -250,19 +250,19 @@ async function render() {
           ${avatarHtml(emp.name)}
           <div>
             <div class="employee-name">${emp.name}</div>
-            <div class="employee-sub">${job ? job.title : '—'} · Store ${emp.store}</div>
+            <div class="employee-sub">${job ? job.title : '—'} · Tienda ${emp.store}</div>
           </div>
         </div>
         <div class="hours-emp-right">
-          <div class="hours-total">${totalH.toFixed(2)}h total</div>
-          <span class="badge badge-gray">$${estPay} est.</span>
+          <div class="hours-total">${totalH.toFixed(2)} h en total</div>
+          <span class="badge badge-gray">$${estPay} aprox.</span>
           <i class="fa-solid fa-chevron-down" style="color:var(--text-muted);font-size:12px;transition:transform 0.2s"></i>
         </div>
       </div>
       <div class="hours-emp-body">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Day</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Día</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Estado</th><th></th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
@@ -284,7 +284,7 @@ async function openAddEntry() {
   empsCache = await getEmployees();
   const active = empsCache.filter(e => e.status === 'active');
   document.getElementById('entryEmp').innerHTML = active.map(e =>
-    `<option value="${e.id}">${e.name} — Store ${e.store}</option>`
+    `<option value="${e.id}">${e.name} — Tienda ${e.store}</option>`
   ).join('');
   document.getElementById('entryDate').value = todayStr();
   openModal('addEntryModal');
@@ -295,8 +295,8 @@ async function doSaveEntry() {
   const dateStr = document.getElementById('entryDate').value;
   const inTime  = document.getElementById('entryIn').value;
   const outTime = document.getElementById('entryOut').value;
-  if (!empId || !dateStr || !inTime || !outTime) { toast('Please fill all fields.', 'error'); return; }
-  if (outTime <= inTime) { toast('Clock-out must be after clock-in.', 'error'); return; }
+  if (!empId || !dateStr || !inTime || !outTime) { toast('Completa todos los campos.', 'error'); return; }
+  if (outTime <= inTime) { toast('La salida debe ser posterior a la entrada.', 'error'); return; }
 
   const emp = empsCache.find(e => e.id === empId);
   const ciTime  = new Date(`${dateStr}T${inTime}:00`);
@@ -315,26 +315,26 @@ async function doSaveEntry() {
       hours
     });
     closeModal('addEntryModal');
-    toast(`Entry added · ${hours.toFixed(2)}h`, 'success');
+    toast(`Registro agregado · ${hours.toFixed(2)} h`, 'success');
     render();
   } catch (err) {
-    toast('Error saving: ' + err.message, 'error');
+    toast('Error al guardar: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
 }
 
 async function doDeleteEntry(id) {
-  if (!confirm('Remove this entry?')) return;
+  if (!confirm('¿Eliminar este registro?')) return;
   await deleteClockIn(id);
-  toast('Entry removed', 'info');
+  toast('Registro eliminado', 'info');
   render();
 }
 
 function openSavePeriod() {
   const period = getPeriodByIndex(periodIndex);
   document.getElementById('savePeriodText').textContent =
-    `Save and generate pay statements for ${formatPeriodLabel(period)}? Existing statements for this period will be replaced.`;
+    `¿Guardar y generar la nómina de ${formatPeriodLabel(period)}? Se reemplazarán los recibos existentes de este período.`;
   openModal('savePeriodModal');
 }
 
@@ -372,7 +372,7 @@ async function doSavePeriod() {
     }));
 
     closeModal('savePeriodModal');
-    toast(`Period saved · ${active.length} pay statement${active.length !== 1 ? 's' : ''} generated`, 'success');
+    toast(`Período guardado · ${active.length} ${active.length === 1 ? 'recibo generado' : 'recibos generados'}`, 'success');
   } catch (err) {
     toast('Error: ' + err.message, 'error');
   } finally {
