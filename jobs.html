@@ -28,8 +28,8 @@
   </nav>
   <div class="sidebar-footer">
     <div id="sidebarUser" style="margin-bottom:12px"></div>
-    <button onclick="signOut()" style="width:100%;padding:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:rgba(255,255,255,0.6);font-family:Inter,sans-serif;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-      <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+    <button class="sidebar-signout" onclick="signOut()">
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Sign Out</span>
     </button>
   </div>
 </aside>
@@ -44,9 +44,9 @@
   </div>
 
   <div class="jobs-grid" id="jobsGrid">
-    <div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-muted)">
-      <i class="fa-solid fa-spinner fa-spin" style="font-size:24px"></i>
-    </div>
+    <div class="skeleton-card" style="height:158px"></div>
+    <div class="skeleton-card" style="height:158px"></div>
+    <div class="skeleton-card" style="height:158px"></div>
   </div>
 </main>
 
@@ -110,7 +110,7 @@ requireAuth(() => render());
 
 function renderColors() {
   document.getElementById('colorOptions').innerHTML = COLORS.map(c =>
-    `<div class="color-opt ${c === selectedColor ? 'selected' : ''}" style="background:${c}" onclick="selectColor('${c}')"></div>`
+    `<div class="color-opt ${c === selectedColor ? 'selected' : ''}" style="background:${c};color:${c}" onclick="selectColor('${c}')"></div>`
   ).join('');
 }
 
@@ -130,9 +130,9 @@ async function render() {
       return;
     }
 
-    grid.innerHTML = jobs.map(j => {
+    grid.innerHTML = jobs.map((j, i) => {
       const count = emps.filter(e => e.jobId === j.id && e.status === 'active').length;
-      return `<div class="job-card">
+      return `<div class="job-card" style="--job-color:${j.color};animation-delay:${(i * 0.05).toFixed(2)}s">
         <div class="job-card-header">
           <div class="job-dot" style="background:${j.color}"></div>
           <div>
@@ -140,15 +140,16 @@ async function render() {
             <div class="job-dept">${j.department || '—'}</div>
           </div>
         </div>
-        <div class="job-count"><i class="fa-solid fa-user" style="margin-right:4px;color:var(--text-light)"></i>${count} employee${count!==1?'s':''} in this role</div>
+        <div class="job-count"><i class="fa-solid fa-user" style="color:var(--text-light)"></i>${count} employee${count!==1?'s':''} in this role</div>
         <div class="job-actions">
           <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
-          <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="openDelete('${j.id}','${j.title.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i> Delete</button>
+          <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="openDelete('${j.id}','${j.title.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i> Delete</button>
         </div>
       </div>`;
     }).join('');
   } catch (err) {
     grid.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:24px">Error loading jobs: ${err.message}</div>`;
+    toast('Could not load positions.', 'error');
   }
 }
 
@@ -169,16 +170,17 @@ async function openJobModal(id) {
 async function doSaveJob() {
   const title = document.getElementById('jobTitle').value.trim();
   const dept  = document.getElementById('jobDept').value.trim();
-  if (!title) { alert('Please enter a job title.'); return; }
+  if (!title) { toast('Please enter a job title.', 'error'); return; }
   const docId = document.getElementById('jobDocId').value;
   const btn   = document.getElementById('saveJobBtn');
   btn.disabled = true;
   try {
     await saveJob({ title, department: dept, color: selectedColor }, docId || null);
     closeModal('jobModal');
+    toast(docId ? 'Position updated' : `"${title}" added`, 'success');
     render();
   } catch (err) {
-    alert('Error saving: ' + err.message);
+    toast('Error saving: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -197,9 +199,10 @@ async function doDelete() {
   try {
     await deleteJob(deleteDocId);
     closeModal('deleteModal');
+    toast('Position deleted', 'success');
     render();
   } catch (err) {
-    alert('Error deleting: ' + err.message);
+    toast('Error deleting: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
