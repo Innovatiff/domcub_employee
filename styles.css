@@ -1466,6 +1466,17 @@ select {
 @media print {
   @page { margin: 13mm 12mm; size: A4; }
 
+  /* Las filas de tabla de la interfaz llevan `animation: fadeInUp ... both`,
+     y ese keyframe arranca en opacity 0. Al imprimir el navegador no ejecuta
+     las animaciones, así que los elementos se quedan en su primer fotograma
+     y las filas salían en blanco. Aquí se anula todo el movimiento. */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
   .sidebar, .main, .modal-overlay, .toast-host { display: none !important; }
 
   html, body { background: #fff !important; }
