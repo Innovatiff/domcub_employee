@@ -109,11 +109,22 @@ service cloud.firestore {
       allow write: if isManager();
     }
 
-    // ── Datos laborales: sólo gerencia ──
-    // Un colaborador no puede ver horas, sueldos ni permisos de nadie.
+    // ── Datos laborales ──
+    // Un colaborador no puede ver horas ni sueldos de nadie.
     match /ClockIns/{id}      { allow read, write: if isManager(); }
     match /PayStatements/{id} { allow read, write: if isManager(); }
-    match /TimeOff/{id}       { allow read, write: if isManager(); }
+
+    // Permisos: cada colaborador ve SÓLO los suyos (incluido el motivo
+    // del rechazo) y puede solicitar. Aprobar o denegar es de gerencia.
+    match /TimeOff/{id} {
+      allow read: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow create: if isManager()
+        || (haveIndex()
+            && ('emp:' + request.resource.data.employeeId) == myPid()
+            && request.resource.data.status == 'pending');
+      allow update, delete: if isManager();
+    }
 
     // ── Pedidos ──
     match /Pedidos/{id} {

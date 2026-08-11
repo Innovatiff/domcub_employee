@@ -457,9 +457,15 @@ async function getActiveClockIn(employeeId) {
 async function deleteClockIn(id) { await db.collection('ClockIns').doc(id).delete(); }
 
 // Permisos
+// Las reglas sólo dejan a un colaborador leer sus propios permisos, así
+// que la consulta debe venir acotada o Firestore la rechaza entera.
+// Se ordena en el cliente para no exigir un índice compuesto.
 async function getTimeOff() {
-  const snap = await db.collection('TimeOff').orderBy('startDate','desc').get();
-  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  let q = db.collection('TimeOff');
+  if (isColaborador()) q = q.where('employeeId','==',SESSION.employeeId);
+  const snap = await q.get();
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }))
+    .sort((a,b) => String(b.startDate||'').localeCompare(String(a.startDate||'')));
 }
 async function addTimeOff(data) {
   await db.collection('TimeOff').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -573,10 +579,27 @@ function listenMessages(chatId, cb) {
     }, err => { console.error('listenMessages:', err); toast('Error en el chat: '+err.message,'error'); });
 }
 
+// Igual que arriba: escuchar toda la colección Chats se rechaza, porque
+// las reglas limitan la lectura a las conversaciones propias. Se abren
+// dos escuchas: las mías, y el canal de anuncios (que es público).
 function listenChats(cb) {
-  return db.collection('Chats').onSnapshot(snap => {
-    cb(snap.docs.map(d => ({ id:d.id, ...d.data() })));
-  }, err => console.error('listenChats:', err));
+  const state = { mine: [], anuncios: null };
+  const emit = () => cb(state.anuncios ? state.mine.concat([state.anuncios]) : state.mine);
+
+  const unsubMine = db.collection('Chats')
+    .where('participants','array-contains', SESSION.pid)
+    .onSnapshot(snap => {
+      state.mine = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      emit();
+    }, err => console.error('listenChats(mine):', err));
+
+  const unsubAnuncios = db.collection('Chats').doc(ANUNCIOS_ID)
+    .onSnapshot(doc => {
+      state.anuncios = doc.exists ? { id:doc.id, ...doc.data() } : null;
+      emit();
+    }, err => console.error('listenChats(anuncios):', err));
+
+  return () => { unsubMine(); unsubAnuncios(); };
 }
 
 // ── Estados de carga ──
