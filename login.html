@@ -575,14 +575,23 @@ async function doPinLogin(e) {
   try {
     // Firestore exige sesión iniciada, así que primero entramos como anónimos
     await auth.signInAnonymously();
-    const snap = await db.collection('Employees').where('pin','==',pin).limit(1).get();
-    if (snap.empty) {
+    // Pins/{pin} sólo se puede leer si ya conoces el PIN exacto:
+    // la colección no permite listar, así que no se puede enumerar.
+    const pinDoc = await db.collection('Pins').doc(pin).get();
+    if (!pinDoc.exists) {
       await auth.signOut();
       setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
       showAlert('PIN no reconocido. Verifícalo con tu gerente.', 'error');
       return;
     }
-    const emp = { id: snap.docs[0].id, ...snap.docs[0].data() };
+    const empDoc = await db.collection('Employees').doc(pinDoc.data().employeeId).get();
+    if (!empDoc.exists) {
+      await auth.signOut();
+      setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+      showAlert('PIN no reconocido. Verifícalo con tu gerente.', 'error');
+      return;
+    }
+    const emp = { id: empDoc.id, ...empDoc.data() };
     if (emp.status !== 'active') {
       await auth.signOut();
       setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
@@ -590,6 +599,7 @@ async function doPinLogin(e) {
       return;
     }
     localStorage.setItem('elaguila_emp', emp.id);
+    localStorage.setItem('elaguila_key', pin);
     window.location.href = 'grupo.html';
   } catch (err) {
     setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');

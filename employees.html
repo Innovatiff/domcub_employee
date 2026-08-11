@@ -242,7 +242,7 @@ async function render() {
         <td>${storeBadge(e.store)}</td>
         <td>${formatDate(e.hireDate)}</td>
         <td>$${Number(e.hourlyRate || 0).toFixed(2)}</td>
-        <td><span class="pin-cell">${e.pin || '——'}</span></td>
+        <td><span class="pin-cell" id="pin-${e.id}">···</span></td>
         <td>${e.canPedidos
           ? '<span class="badge badge-purple"><i class="fa-solid fa-clipboard-check" style="font-size:9px"></i>Encargado</span>'
           : '<span style="color:var(--text-light)">—</span>'}</td>
@@ -259,6 +259,14 @@ async function render() {
         </td>
       </tr>`;
     }).join('');
+
+    // Los PIN viven en una subcolección que sólo la gerencia puede leer
+    emps.forEach(async e => {
+      const cell = document.getElementById('pin-' + e.id);
+      if (!cell) return;
+      const pin = await getEmployeePin(e.id);
+      cell.textContent = pin || '——';
+    });
   } catch (err) {
     document.getElementById('empTable').innerHTML = `<tr><td colspan="9" style="color:var(--danger);padding:24px">Error: ${err.message}</td></tr>`;
     toast('No se pudieron cargar los colaboradores.', 'error');
@@ -300,6 +308,7 @@ function openHireModal() {
   document.getElementById('pinDisplay').textContent = pin;
   document.getElementById('pinPreview').style.display = 'block';
   document.getElementById('pinPreview').dataset.pin = pin;
+  document.getElementById('pinPreview').dataset.old = '';
 
   document.getElementById('empJob').innerHTML = jobsCache.map(j =>
     `<option value="${j.id}">${j.title} — ${j.department || ''}</option>`
@@ -322,7 +331,12 @@ async function openEditModal(id) {
   document.getElementById('empRate').value   = emp.hourlyRate || '';
   document.getElementById('empHire').value   = emp.hireDate || '';
   document.getElementById('empPedidos').checked = !!emp.canPedidos;
-  document.getElementById('pinPreview').style.display = 'none';
+  const box = document.getElementById('pinPreview');
+  box.style.display = 'block';
+  const curPin = await getEmployeePin(emp.id);
+  document.getElementById('pinDisplay').textContent = curPin || '——';
+  box.dataset.pin = curPin || '';
+  box.dataset.old = curPin || '';
   document.getElementById('empJob').innerHTML = jobsCache.map(j =>
     `<option value="${j.id}" ${j.id===emp.jobId?'selected':''}>${j.title} — ${j.department||''}</option>`
   ).join('');
@@ -353,6 +367,11 @@ async function doSaveEmployee() {
     const docId = document.getElementById('empDocId').value;
     if (docId) {
       await updateEmployee(docId, data);
+      const box = document.getElementById('pinPreview');
+      if (box.dataset.pin && box.dataset.pin !== box.dataset.old) {
+        await setEmployeePin(docId, box.dataset.pin, box.dataset.old || null);
+        await releaseIdentity(docId);   // el PIN viejo deja de servir
+      }
       toast(`${name} actualizado`, 'success');
     } else {
       const pin = document.getElementById('pinPreview').dataset.pin;
@@ -394,9 +413,13 @@ async function openView(id) {
       ${infoBlock('Teléfono', emp.phone || '—')}
       ${infoBlock('Horas del Período Actual', hrs.toFixed(2) + ' h')}
       ${infoBlock('Encargado de pedidos', emp.canPedidos ? 'Sí' : 'No')}
-      ${infoBlock('PIN del Colaborador', `<span class="pin-cell" style="font-size:15px;font-weight:700">${emp.pin || '——'}</span>`)}
+      ${infoBlock('PIN del Colaborador', `<span class="pin-cell" id="viewPin" style="font-size:15px;font-weight:700">···</span>`)}
     </div>
   `;
+  getEmployeePin(id).then(p => {
+    const el = document.getElementById('viewPin');
+    if (el) el.textContent = p || '——';
+  });
   document.getElementById('viewEditBtn').onclick = () => { closeModal('viewModal'); openEditModal(id); };
   openModal('viewModal');
 }
