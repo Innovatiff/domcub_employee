@@ -173,6 +173,19 @@ service cloud.firestore {
         || (haveIndex() && ('emp:' + resource.data.createdBy) == myPid());
     }
 
+    // ── Dispositivos para notificaciones push ──
+    // Cada equipo guarda aquí su token al conceder el permiso, siempre a
+    // su propio nombre. No se pueden leer: la lista de tokens sólo la
+    // necesita la Cloud Function que envía, y las funciones no pasan por
+    // estas reglas. Así nadie puede averiguar los dispositivos de otro.
+    match /PushTokens/{token} {
+      allow read:   if false;
+      allow create, update: if signedIn() && haveIndex()
+        && request.resource.data.pid == myPid();
+      allow delete: if signedIn() && haveIndex()
+        && resource.data.pid == myPid();
+    }
+
     // ══ Chat ══
     // Una conversación privada sólo la ven sus dos participantes.
     match /Chats/{chatId} {
