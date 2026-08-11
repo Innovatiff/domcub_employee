@@ -471,40 +471,105 @@ async function updateEmployee(id, data) {
 }
 
 /**
- * Migración única de los PIN antiguos.
+ * Migración única de los colaboradores dados de alta antes de los cambios.
  *
- * Los colaboradores dados de alta antes del cambio tienen el PIN dentro
- * de su propio documento y no tienen Pins/{pin}. Sin ese documento las
- * reglas no dejan que el reloj cree su reclamo de identidad, así que
- * pasan la pantalla del PIN pero no pueden marcar entrada.
+ * Arregla dos cosas que no puede arreglar ni el reloj ni el portal:
  *
- * Sólo la gerencia puede escribir Pins, por eso la reparación va aquí.
+ *  1. El PIN. Antes vivía dentro del documento del colaborador y no
+ *     existía Pins/{pin}. Sin ese documento las reglas no dejan que el
+ *     reloj cree su reclamo de identidad, así que el colaborador pasa la
+ *     pantalla del PIN pero no puede marcar entrada.
+ *
+ *  2. La cuenta del portal. Sólo se crea al contratar, así que quien ya
+ *     estaba en la plantilla no tiene con qué entrar.
+ *
+ * Ambas cosas requieren permisos de gerencia, por eso viven aquí.
  * Es idempotente: correrla dos veces no hace daño.
  */
-async function pendingPinMigration() {
+async function pendingMigration() {
   const snap = await db.collection('Employees').get();
-  return snap.docs
-    .map(d => ({ id:d.id, ...d.data() }))
-    .filter(e => e.pin);          // el PIN sigue dentro del documento
+  const emps = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  return {
+    pin:   emps.filter(e => e.pin),                                            // el PIN sigue en el documento
+    portal: emps.filter(e => e.status === 'active' && e.email && !e.authUid),   // sin cuenta de portal
+    todos: emps
+  };
 }
 
-async function migratePins(onProgress) {
-  const pend = await pendingPinMigration();
-  let ok = 0, fail = 0;
-  for (const e of pend) {
-    try {
-      await db.collection('Pins').doc(String(e.pin)).set({ employeeId: e.id });
-      await db.collection('Employees').doc(e.id).collection('secure').doc('pin')
-        .set({ pin: String(e.pin) });
-      // Se retira el PIN del documento: cualquier sesión puede leerlo ahí.
-      await db.collection('Employees').doc(e.id).update({
-        pin: firebase.firestore.FieldValue.delete()
-      });
-      ok++;
-    } catch (err) { console.error('migratePins', e.id, err); fail++; }
-    if (onProgress) onProgress(ok + fail, pend.length);
+async function migrateAll(onProgress) {
+  const pend = await pendingMigration();
+
+  // Una sola instancia secundaria para todas las altas, de modo que la
+  // gerencia no pierda su propia sesión al crear cuentas ajenas.
+  const app2 = firebase.initializeApp(firebase.app().options, 'mig-' + Date.now());
+  const res  = { pinOk:0, pinFail:0, ctaOk:0, ctaExiste:0, ctaFail:0, sinCorreo:0 };
+
+  // Lista de trabajo: unión de los dos conjuntos, sin repetir
+  const ids = [...new Set([...pend.pin, ...pend.portal].map(e => e.id))];
+  const byId = {}; pend.todos.forEach(e => byId[e.id] = e);
+
+  try {
+    let hecho = 0;
+    for (const id of ids) {
+      const e = byId[id];
+
+      // ── 1. PIN ──
+      let pin = e.pin || null;
+      if (e.pin) {
+        try {
+          await setEmployeePin(id, e.pin);
+          await db.collection('Employees').doc(id).update({
+            pin: firebase.firestore.FieldValue.delete()
+          });
+          res.pinOk++;
+        } catch (err) { console.error('migrar PIN', id, err); res.pinFail++; }
+      }
+      // Si ya se había migrado, el PIN está en la subcolección
+      if (!pin) pin = await getEmployeePin(id);
+
+      // ── 2. Cuenta del portal ──
+      if (e.status === 'active' && e.email && !e.authUid) {
+        if (!pin) { res.ctaFail++; }
+        else {
+          try {
+            const cred = await app2.auth().createUserWithEmailAndPassword(e.email, pin);
+            await vincularCuenta(app2, cred.user.uid, id, e.email);
+            res.ctaOk++;
+          } catch (err) {
+            if (err.code === 'auth/email-already-in-use') {
+              // La cuenta ya existía (quizá de un intento anterior a medias).
+              // Se entra con el PIN para averiguar el uid y terminar el vínculo.
+              try {
+                const cred = await app2.auth().signInWithEmailAndPassword(e.email, pin);
+                await vincularCuenta(app2, cred.user.uid, id, e.email);
+                res.ctaExiste++;
+              } catch (e2) { console.error('vincular existente', id, e2); res.ctaFail++; }
+            } else {
+              console.error('crear cuenta', id, err); res.ctaFail++;
+            }
+          }
+        }
+      } else if (e.status === 'active' && !e.email && !e.authUid) {
+        res.sinCorreo++;
+      }
+
+      hecho++;
+      if (onProgress) onProgress(hecho, ids.length);
+    }
+  } finally {
+    try { await app2.auth().signOut(); } catch (e) {}
+    await app2.delete();
   }
-  return { ok, fail, total: pend.length };
+  return res;
+}
+
+async function vincularCuenta(app2, uid, employeeId, email) {
+  await app2.auth().signOut();
+  await db.collection('Colaboradores').doc(uid).set({
+    employeeId, email: String(email).toLowerCase(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await db.collection('Employees').doc(employeeId).update({ authUid: uid, portalReady: true });
 }
 
 // Libera la identidad para que el colaborador pueda entrar en otro equipo
