@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pedidos — El Águila</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">El Águila</div>
+        <div class="brand-sub">Portal de Colaboradores</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="store-switcher" id="storeSwitcher"></div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Principal</div>
+    <a href="index.html" data-manager-only class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <div class="nav-section-label">Operación</div>
+    <a href="pedidos.html" class="nav-link active"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
+    <div class="nav-section-label">Tiempo</div>
+    <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
+    <a href="time-off.html" data-manager-only class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div id="sidebarUser"></div>
+    <button class="sidebar-signout" onclick="signOut()">
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Pedidos</h1>
+      <p id="pedSubtitle">Listas de pedidos por tienda.</p>
+    </div>
+    <button class="btn btn-primary" id="newPedidoBtn" onclick="openPedido()" style="display:none">
+      <i class="fa-solid fa-plus"></i> Nuevo Pedido
+    </button>
+  </div>
+
+  <div id="noAccess" class="card" style="display:none">
+    <div class="card-body">
+      <div class="empty-state">
+        <i class="fa-solid fa-lock"></i>
+        <p>No estás asignado para gestionar pedidos.<br>
+        <span style="font-size:12.5px">Pídele a tu gerente que te asigne como encargado de pedidos.</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid" id="pedStats"></div>
+
+  <div class="tabs" id="pedTabs">
+    <button class="tab-btn active" onclick="filterEstado('all',this)">Todos</button>
+    <button class="tab-btn" onclick="filterEstado('borrador',this)">Borradores</button>
+    <button class="tab-btn" onclick="filterEstado('enviado',this)">Enviados</button>
+    <button class="tab-btn" onclick="filterEstado('recibido',this)">Recibidos</button>
+  </div>
+
+  <div id="pedList"></div>
+</main>
+
+<!-- Modal Pedido -->
+<div class="modal-overlay" id="pedModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="pedModalTitle">Nuevo Pedido</h3>
+      <button class="modal-close" onclick="closeModal('pedModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pedId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Título del pedido *</label>
+          <input type="text" id="pedTitle" placeholder="ej. Pedido semanal de abarrotes">
+        </div>
+        <div class="form-group">
+          <label>Fecha *</label>
+          <input type="date" id="pedDate">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tienda *</label>
+          <select id="pedStore"></select>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="pedEstado">
+            <option value="borrador">Borrador</option>
+            <option value="enviado">Enviado</option>
+            <option value="recibido">Recibido</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label style="display:flex;align-items:center;justify-content:space-between">
+          <span>Artículos</span>
+          <button type="button" class="btn btn-sm btn-outline" onclick="addItem()">
+            <i class="fa-solid fa-plus"></i> Agregar artículo
+          </button>
+        </label>
+        <div class="items-head">
+          <span>Artículo</span><span>Cantidad</span><span>Unidad</span><span>Nota</span><span></span>
+        </div>
+        <div id="itemsList"></div>
+        <div id="itemsEmpty" class="items-empty">Aún no hay artículos. Agrega el primero.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Nota general (opcional)</label>
+        <textarea id="pedNote" placeholder="Instrucciones para el proveedor..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('pedModal')">Cancelar</button>
+      <button class="btn btn-primary" id="savePedBtn" onclick="doSavePedido()">Guardar Pedido</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ver -->
+<div class="modal-overlay" id="viewPedModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Detalle del Pedido</h3>
+      <button class="modal-close" onclick="closeModal('viewPedModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="viewPedBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('viewPedModal')">Cerrar</button>
+      <button class="btn btn-outline" onclick="printPedido()"><i class="fa-solid fa-print"></i> Imprimir</button>
+      <button class="btn btn-primary" id="viewPedEdit">Editar</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea" class="print-only"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script>
+let estadoFilter = 'all';
+let pedidosCache = [];
+let currentPed   = null;
+
+requireAuth(() => {
+  const allowed = isManager() || SESSION.canPedidos;
+  document.getElementById('newPedidoBtn').style.display = allowed ? '' : 'none';
+  document.getElementById('noAccess').style.display     = allowed ? 'none' : '';
+  if (!allowed) {
+    document.getElementById('pedTabs').style.display = 'none';
+    return;
+  }
+  document.getElementById('pedSubtitle').textContent =
+    isManager() ? 'Listas de pedidos por tienda.' : 'Pedidos de ' + storeName(SESSION.store) + '.';
+  render();
+}, { allow: ['manager','colaborador'] });
+
+function filterEstado(v, btn) {
+  estadoFilter = v;
+  document.querySelectorAll('#pedTabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  paint();
+}
+
+async function render() {
+  document.getElementById('pedList').innerHTML =
+    '<div class="skeleton-card" style="height:78px;margin-bottom:11px"></div>'.repeat(3);
+  try {
+    pedidosCache = await getPedidos(getSelectedStore());
+    paint();
+  } catch (err) {
+    toast('No se pudieron cargar los pedidos: ' + err.message, 'error');
+    document.getElementById('pedList').innerHTML =
+      `<div class="card"><div class="card-body"><div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><p>Error al cargar.</p></div></div></div>`;
+  }
+}
+
+function paint() {
+  const all = pedidosCache;
+  const list = estadoFilter === 'all' ? all : all.filter(p => (p.status||'borrador') === estadoFilter);
+
+  document.getElementById('pedStats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-clipboard-list"></i></div>
+      <div class="stat-label">Pedidos</div><div class="stat-value">${all.length}</div>
+      <div class="stat-sub">${scopeLabel()}</div></div>
+    <div class="stat-card"><div class="stat-icon yellow"><i class="fa-solid fa-paper-plane"></i></div>
+      <div class="stat-label">Enviados</div><div class="stat-value">${all.filter(p=>p.status==='enviado').length}</div></div>
+    <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="stat-label">Recibidos</div><div class="stat-value">${all.filter(p=>p.status==='recibido').length}</div></div>
+    <div class="stat-card"><div class="stat-icon cyan"><i class="fa-solid fa-box"></i></div>
+      <div class="stat-label">Artículos totales</div>
+      <div class="stat-value">${all.reduce((s,p)=>s+((p.items||[]).length),0)}</div></div>`;
+  animateValues('pedStats');
+
+  const host = document.getElementById('pedList');
+  if (list.length === 0) {
+    host.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state">
+      <i class="fa-solid fa-clipboard-list"></i>
+      <p>No hay pedidos en esta vista.</p></div></div></div>`;
+    return;
+  }
+
+  host.innerHTML = list.map((p,i) => {
+    const est = PEDIDO_ESTADOS[p.status||'borrador'] || PEDIDO_ESTADOS.borrador;
+    const items = p.items || [];
+    const mine  = isManager() || p.createdBy === SESSION.employeeId;
+    return `<div class="pedido-card" style="animation-delay:${(i*0.04).toFixed(2)}s">
+      <div class="pedido-main" onclick="openView('${p.id}')">
+        <div class="pedido-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+        <div style="min-width:0;flex:1">
+          <div class="pedido-title">${escapeHtml(p.title || 'Pedido sin título')}</div>
+          <div class="pedido-meta">
+            ${storeBadge(p.store)}
+            <span><i class="fa-regular fa-calendar"></i> ${formatDate(p.date)}</span>
+            <span><i class="fa-solid fa-box"></i> ${items.length} ${items.length===1?'artículo':'artículos'}</span>
+            <span><i class="fa-regular fa-user"></i> ${escapeHtml(p.createdByName || '—')}</span>
+          </div>
+        </div>
+        <span class="badge ${est.badge}">${est.label}</span>
+      </div>
+      <div class="pedido-actions">
+        ${mine ? `<button class="btn-icon" title="Editar" onclick="openPedido('${p.id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
+        ${mine ? `<button class="btn-icon" title="Eliminar" onclick="askDelete('${p.id}')"><i class="fa-solid fa-trash" style="color:var(--danger)"></i></button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Artículos del formulario ──
+function itemRow(it) {
+  const v = it || { name:'', qty:'', unit:'', note:'' };
+  return `<div class="item-row">
+    <input type="text"   class="it-name" value="${escapeHtml(v.name)}" placeholder="Nombre">
+    <input type="number" class="it-qty"  value="${escapeHtml(v.qty)}"  placeholder="0" step="any" min="0">
+    <input type="text"   class="it-unit" value="${escapeHtml(v.unit)}" placeholder="uds / kg">
+    <input type="text"   class="it-note" value="${escapeHtml(v.note)}" placeholder="Opcional">
+    <button type="button" class="btn-icon" onclick="this.parentNode.remove();syncEmpty()" title="Quitar">
+      <i class="fa-solid fa-xmark"></i></button>
+  </div>`;
+}
+function addItem(it) {
+  document.getElementById('itemsList').insertAdjacentHTML('beforeend', itemRow(it));
+  syncEmpty();
+}
+function syncEmpty() {
+  const n = document.querySelectorAll('#itemsList .item-row').length;
+  document.getElementById('itemsEmpty').style.display = n ? 'none' : '';
+}
+function readItems() {
+  return [...document.querySelectorAll('#itemsList .item-row')].map(r => ({
+    name: r.querySelector('.it-name').value.trim(),
+    qty:  r.querySelector('.it-qty').value.trim(),
+    unit: r.querySelector('.it-unit').value.trim(),
+    note: r.querySelector('.it-note').value.trim()
+  })).filter(i => i.name);
+}
+
+async function openPedido(id) {
+  const p = id ? pedidosCache.find(x => x.id === id) : null;
+  document.getElementById('pedModalTitle').textContent = p ? 'Editar Pedido' : 'Nuevo Pedido';
+  document.getElementById('pedId').value    = p ? p.id : '';
+  document.getElementById('pedTitle').value = p ? (p.title||'') : '';
+  document.getElementById('pedDate').value  = p ? (p.date||todayStr()) : todayStr();
+  document.getElementById('pedNote').value  = p ? (p.note||'') : '';
+  document.getElementById('pedEstado').value = p ? (p.status||'borrador') : 'borrador';
+
+  // Un colaborador sólo puede crear pedidos de su propia tienda
+  const sel = document.getElementById('pedStore');
+  if (isColaborador()) {
+    sel.innerHTML = `<option value="${SESSION.store}">${storeName(SESSION.store)}</option>`;
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+    const cur = p ? p.store : (getSelectedStore() === 'all' ? '1' : getSelectedStore());
+    sel.innerHTML = storeOptions(cur);
+  }
+
+  document.getElementById('itemsList').innerHTML = '';
+  ((p && p.items) || []).forEach(addItem);
+  if (!p) addItem();
+  syncEmpty();
+  openModal('pedModal');
+}
+
+async function doSavePedido() {
+  const title = document.getElementById('pedTitle').value.trim();
+  const date  = document.getElementById('pedDate').value;
+  if (!title) { toast('Escribe un título para el pedido.', 'error'); return; }
+  if (!date)  { toast('Selecciona una fecha.', 'error'); return; }
+  const items = readItems();
+  if (!items.length) { toast('Agrega al menos un artículo.', 'error'); return; }
+
+  const btn = document.getElementById('savePedBtn');
+  btn.disabled = true;
+  try {
+    const id = document.getElementById('pedId').value;
+    const data = {
+      title, date, items,
+      store:  document.getElementById('pedStore').value,
+      status: document.getElementById('pedEstado').value,
+      note:   document.getElementById('pedNote').value.trim()
+    };
+    if (!id) {
+      data.createdBy     = isColaborador() ? SESSION.employeeId : SESSION.uid;
+      data.createdByName = SESSION.name;
+    }
+    await savePedido(data, id || null);
+    closeModal('pedModal');
+    toast(id ? 'Pedido actualizado' : 'Pedido creado', 'success');
+    render();
+  } catch (err) {
+    toast('Error al guardar: ' + err.message, 'error');
+  } finally { btn.disabled = false; }
+}
+
+function openView(id) {
+  const p = pedidosCache.find(x => x.id === id);
+  if (!p) return;
+  currentPed = p;
+  const est = PEDIDO_ESTADOS[p.status||'borrador'] || PEDIDO_ESTADOS.borrador;
+  const items = p.items || [];
+  document.getElementById('viewPedBody').innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:17px;font-weight:700">${escapeHtml(p.title||'')}</div>
+        <div style="color:var(--text-muted);font-size:13px;margin-top:3px">
+          ${storeName(p.store)} · ${formatDate(p.date)} · ${escapeHtml(p.createdByName||'—')}
+        </div>
+      </div>
+      <span class="badge ${est.badge}" style="margin-left:auto">${est.label}</span>
+    </div>
+    <div class="table-wrap" style="border:1px solid var(--border);border-radius:10px">
+      <table>
+        <thead><tr><th>#</th><th>Artículo</th><th>Cantidad</th><th>Unidad</th><th>Nota</th></tr></thead>
+        <tbody>${items.map((it,i) => `<tr>
+          <td style="color:var(--text-light)">${i+1}</td>
+          <td><strong>${escapeHtml(it.name)}</strong></td>
+          <td>${escapeHtml(it.qty)||'—'}</td>
+          <td>${escapeHtml(it.unit)||'—'}</td>
+          <td style="color:var(--text-muted)">${escapeHtml(it.note)||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    ${p.note ? `<div class="info-block" style="margin-top:16px">
+      <div class="info-block-label">Nota general</div>
+      <div class="info-block-value">${escapeHtml(p.note)}</div></div>` : ''}`;
+
+  const canEdit = isManager() || p.createdBy === SESSION.employeeId;
+  const eb = document.getElementById('viewPedEdit');
+  eb.style.display = canEdit ? '' : 'none';
+  eb.onclick = () => { closeModal('viewPedModal'); openPedido(p.id); };
+  openModal('viewPedModal');
+}
+
+function printPedido() {
+  const p = currentPed;
+  if (!p) return;
+  const items = p.items || [];
+  document.getElementById('printArea').innerHTML = `
+    <div class="rep-head">
+      <div><div class="rep-brand">El Águila</div>
+      <div class="rep-sub">${storeName(p.store)}</div></div>
+      <div class="rep-meta"><strong>Pedido</strong><br>${formatDate(p.date)}</div>
+    </div>
+    <h2 class="rep-title">${escapeHtml(p.title||'')}</h2>
+    <p class="rep-line">Elaborado por: ${escapeHtml(p.createdByName||'—')}</p>
+    <table class="rep-table">
+      <thead><tr><th>#</th><th>Artículo</th><th>Cantidad</th><th>Unidad</th><th>Nota</th></tr></thead>
+      <tbody>${items.map((it,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(it.name)}</td>
+        <td>${escapeHtml(it.qty)||''}</td><td>${escapeHtml(it.unit)||''}</td>
+        <td>${escapeHtml(it.note)||''}</td></tr>`).join('')}</tbody>
+    </table>
+    ${p.note ? `<p class="rep-line"><strong>Nota:</strong> ${escapeHtml(p.note)}</p>` : ''}
+    <div class="rep-sign"><div>Recibido por</div><div>Fecha</div></div>`;
+  window.print();
+}
+
+let delId = null;
+function askDelete(id) {
+  delId = id;
+  if (confirm('¿Eliminar este pedido? Esta acción no se puede deshacer.')) doDelete();
+}
+async function doDelete() {
+  try {
+    await deletePedido(delId);
+    toast('Pedido eliminado', 'info');
+    render();
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+}
+</script>
+</body>
+</html>
