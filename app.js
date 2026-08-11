@@ -470,6 +470,43 @@ async function updateEmployee(id, data) {
   await db.collection('Employees').doc(id).update(clean);
 }
 
+/**
+ * Migración única de los PIN antiguos.
+ *
+ * Los colaboradores dados de alta antes del cambio tienen el PIN dentro
+ * de su propio documento y no tienen Pins/{pin}. Sin ese documento las
+ * reglas no dejan que el reloj cree su reclamo de identidad, así que
+ * pasan la pantalla del PIN pero no pueden marcar entrada.
+ *
+ * Sólo la gerencia puede escribir Pins, por eso la reparación va aquí.
+ * Es idempotente: correrla dos veces no hace daño.
+ */
+async function pendingPinMigration() {
+  const snap = await db.collection('Employees').get();
+  return snap.docs
+    .map(d => ({ id:d.id, ...d.data() }))
+    .filter(e => e.pin);          // el PIN sigue dentro del documento
+}
+
+async function migratePins(onProgress) {
+  const pend = await pendingPinMigration();
+  let ok = 0, fail = 0;
+  for (const e of pend) {
+    try {
+      await db.collection('Pins').doc(String(e.pin)).set({ employeeId: e.id });
+      await db.collection('Employees').doc(e.id).collection('secure').doc('pin')
+        .set({ pin: String(e.pin) });
+      // Se retira el PIN del documento: cualquier sesión puede leerlo ahí.
+      await db.collection('Employees').doc(e.id).update({
+        pin: firebase.firestore.FieldValue.delete()
+      });
+      ok++;
+    } catch (err) { console.error('migratePins', e.id, err); fail++; }
+    if (onProgress) onProgress(ok + fail, pend.length);
+  }
+  return { ok, fail, total: pend.length };
+}
+
 // Libera la identidad para que el colaborador pueda entrar en otro equipo
 async function releaseIdentity(employeeId) {
   try { await db.collection('PidClaims').doc('emp:' + employeeId).delete(); } catch {}

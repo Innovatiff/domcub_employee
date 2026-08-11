@@ -54,6 +54,8 @@
     <button class="btn btn-primary" onclick="openHireModal()"><i class="fa-solid fa-user-plus"></i> Contratar Colaborador</button>
   </div>
 
+  <div id="migBanner" style="display:none"></div>
+
   <div class="tabs">
     <button class="tab-btn active" onclick="filterStore('all',this)">Activos</button>
     <button class="tab-btn" onclick="filterStore('inactive',this)">Inactivos</button>
@@ -200,7 +202,54 @@ let fireEmpId     = null;
 let jobsCache     = [];
 let isHiring      = true;
 
-requireAuth(() => render());
+requireAuth(() => { render(); checkMigration(); });
+
+// Aviso de PIN por migrar. Mientras no se migren, esos colaboradores
+// pasan la pantalla del reloj pero no pueden marcar entrada.
+async function checkMigration() {
+  try {
+    const pend = await pendingPinMigration();
+    const box = document.getElementById('migBanner');
+    if (!pend.length) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    box.innerHTML = `
+      <div class="card" style="border-color:#fde68a;background:var(--warning-soft);margin-bottom:16px">
+        <div class="card-body" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size:20px;color:var(--warning)"></i>
+          <div style="flex:1;min-width:220px">
+            <div style="font-weight:650;font-size:14px">
+              ${pend.length} ${pend.length===1?'colaborador necesita':'colaboradores necesitan'} migrar su PIN
+            </div>
+            <div style="font-size:12.5px;color:#92400e;margin-top:2px">
+              Su PIN quedó guardado a la manera antigua. Hasta migrarlo pueden
+              escribirlo en el reloj pero no marcar entrada.
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="migBtn" onclick="doMigrate()">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Migrar ahora
+          </button>
+        </div>
+      </div>`;
+  } catch (err) { console.error('checkMigration', err); }
+}
+
+async function doMigrate() {
+  const b = document.getElementById('migBtn');
+  b.disabled = true;
+  try {
+    const r = await migratePins((hecho, total) => {
+      b.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${hecho} de ${total}`;
+    });
+    if (r.fail) toast(`Migrados ${r.ok}; fallaron ${r.fail}. Revisa la consola.`, 'error');
+    else        toast(`${r.ok} ${r.ok===1?'PIN migrado':'PIN migrados'}. Ya pueden marcar entrada.`, 'success');
+    checkMigration();
+    render();
+  } catch (err) {
+    b.disabled = false;
+    b.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Migrar ahora';
+    toast('Error al migrar: ' + err.message, 'error');
+  }
+}
 
 async function render() {
   document.getElementById('empTable').innerHTML = skeletonRows(9, 4);
