@@ -74,6 +74,11 @@ function requireAuth(callback, opts) {
           name:p.name || user.email, role:p.role || 'manager', email:user.email
         };
       }
+      // Registra la identidad de esta sesión para que las reglas de
+      // Firestore puedan resolver uid -> persona. Sin esto, los chats
+      // privados quedan cerrados.
+      await registerIdentity(user.uid);
+
       if (!allow.includes(SESSION.kind)) {
         toast('No tienes acceso a esta sección.', 'error');
         setTimeout(() => window.location.href = isColaborador() ? 'grupo.html' : 'index.html', 900);
@@ -92,6 +97,55 @@ function requireAuth(callback, opts) {
 
 function goLogin() {
   if (!/login\.html$/.test(location.pathname)) window.location.href = 'login.html';
+}
+
+/**
+ * Escribe UserIndex/{uid} = { pid, name, role }.
+ * Las reglas de Firestore leen este documento para saber a qué persona
+ * pertenece la sesión, y así permitir sólo los chats donde participa.
+ * Cada usuario únicamente puede escribir su propio documento.
+ */
+async function registerIdentity(uid) {
+  try {
+    if (isManager()) {
+      // El pid de gerencia es 'mgr:<uid>', así que se verifica solo:
+      // nadie puede escribir un índice con el uid de otra persona.
+      await db.collection('UserIndex').doc(uid).set({
+        pid: SESSION.pid, name: SESSION.name, role: SESSION.role,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge:true });
+      return;
+    }
+
+    // Colaborador: la prueba de identidad es conocer el PIN.
+    // El reclamo se guarda BAJO el PIN (PidClaims/{pin}), de modo que las
+    // reglas puedan comprobar contra Pins/{pin} que ese PIN realmente
+    // corresponde a este colaborador. Sin el PIN no se puede reclamar.
+    const key = localStorage.getItem('elaguila_key');
+    if (!key) { await auth.signOut(); goLogin(); return; }
+
+    const claimRef = db.collection('PidClaims').doc(key);
+    const claim    = await claimRef.get();
+    if (!claim.exists) {
+      await claimRef.set({
+        uid, employeeId: SESSION.employeeId,
+        claimedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else if (claim.data().uid !== uid) {
+      // El PIN ya está vinculado a otro dispositivo.
+      await claimRef.set({ uid, employeeId: SESSION.employeeId,
+        claimedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+
+    await db.collection('UserIndex').doc(uid).set({
+      pid: SESSION.pid, name: SESSION.name, role: SESSION.role,
+      claimKey: key,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+  } catch (err) {
+    console.error('registerIdentity:', err);
+    toast('No se pudo registrar la sesión. El chat privado puede fallar.', 'error');
+  }
 }
 
 // Oculta del menú lo que un colaborador no debe ver
@@ -125,6 +179,7 @@ function updateSidebarUser(s) {
 
 function signOut() {
   localStorage.removeItem('elaguila_emp');
+  localStorage.removeItem('elaguila_key');
   auth.signOut().then(() => window.location.href = 'login.html');
 }
 
@@ -318,20 +373,52 @@ async function getEmployee(id) {
   const doc = await db.collection('Employees').doc(id).get();
   return doc.exists ? { id:doc.id, ...doc.data() } : null;
 }
+// El PIN NO se guarda en el documento del colaborador: cualquiera con
+// sesión puede leer Employees (lo necesita el chat), así que ahí sólo
+// queda información no sensible.
+//   Pins/{pin}                  -> { employeeId }   sólo get, nunca list
+//   Employees/{id}/secure/pin   -> { pin }          sólo lo lee la gerencia
 async function findEmployeeByPin(pin) {
-  const snap = await db.collection('Employees').where('pin','==',String(pin)).limit(1).get();
-  if (snap.empty) return null;
-  return { id:snap.docs[0].id, ...snap.docs[0].data() };
+  const doc = await db.collection('Pins').doc(String(pin)).get();
+  if (!doc.exists) return null;
+  return await getEmployee(doc.data().employeeId);
 }
+
+async function getEmployeePin(id) {
+  try {
+    const d = await db.collection('Employees').doc(id).collection('secure').doc('pin').get();
+    return d.exists ? d.data().pin : null;
+  } catch { return null; }
+}
+
+async function setEmployeePin(id, newPin, oldPin) {
+  if (oldPin) { try { await db.collection('Pins').doc(String(oldPin)).delete(); } catch {} }
+  await db.collection('Pins').doc(String(newPin)).set({ employeeId: id });
+  await db.collection('Employees').doc(id).collection('secure').doc('pin').set({ pin: String(newPin) });
+}
+
 async function hireEmployee(data) {
   const pin = data.pin || generatePin();
+  const clean = { ...data };
+  delete clean.pin;
   const ref = await db.collection('Employees').add({
-    ...data, pin, status:'active',
+    ...clean, status:'active',
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+  await setEmployeePin(ref.id, pin);
   return { id:ref.id, pin };
 }
-async function updateEmployee(id, data) { await db.collection('Employees').doc(id).update(data); }
+
+async function updateEmployee(id, data) {
+  const clean = { ...data };
+  delete clean.pin;
+  await db.collection('Employees').doc(id).update(clean);
+}
+
+// Libera la identidad para que el colaborador pueda entrar en otro equipo
+async function releaseIdentity(employeeId) {
+  try { await db.collection('PidClaims').doc('emp:' + employeeId).delete(); } catch {}
+}
 
 // Entradas y salidas
 async function getClockIns(filters) {
