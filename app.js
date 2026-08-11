@@ -1,10 +1,10 @@
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  El Águila — capa compartida
 //  NOTA: los nombres de las colecciones y de los campos se
 //  mantienen en inglés (Employees, Jobs, Main, ClockIns,
 //  TimeOff, PayStatements, Pedidos, Chats, Messages) para no
 //  romper los documentos ya guardados en Firestore.
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 
 // ── Tiendas ──
 // Los valores '1' y '2' se conservan en la base de datos; sólo
@@ -249,8 +249,15 @@ function escapeHtml(s) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// Formato monetario explícito: 1.234.567,89
+// No se usa toLocaleString porque en español el CLDR no agrupa los
+// números de cuatro cifras (3286 quedaría como "3286"), y en un
+// documento contable el separador de miles debe verse siempre.
 function money(n) {
-  return '$' + Number(n || 0).toLocaleString('es', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const num = Number(n) || 0;
+  const [ent, dec] = Math.abs(num).toFixed(2).split('.');
+  const miles = ent.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (num < 0 ? '-$' : '$') + miles + ',' + dec;
 }
 
 // ── Fechas en español ──
@@ -343,9 +350,9 @@ function avatarHtml(name, size) {
   return `<div class="avatar" style="background:${avatarColor(name)};width:${s}px;height:${s}px">${initials(name)}</div>`;
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  Firestore
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 
 // Puestos
 async function getJobs() {

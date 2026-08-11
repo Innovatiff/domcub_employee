@@ -317,25 +317,23 @@ async function buildReport() {
       getEmployees(), getJobs(), getClockInsRange(from, to)
     ]);
 
-    // Agrupa las horas por colaborador
     const rows = emps
       .filter(e => scope === 'all' || e.store === scope)
       .map(e => {
-        const mine = cis.filter(c => c.employeeId === e.id && c.clockOut);
+        const mine  = cis.filter(c => c.employeeId === e.id && c.clockOut);
         const horas = mine.reduce((s,c) => s + (c.hours || 0), 0);
-        const dias  = new Set(mine.map(c => c.date)).size;
+        const dias  = new Set(mine.map(c => c.date)).size;   // días únicos, no turnos
         const rate  = Number(e.hourlyRate || 0);
         return {
           nombre: e.name,
           puesto: (jobs.find(j => j.id === e.jobId) || {}).title || '—',
           tienda: e.store,
-          ingreso: e.hireDate,
-          dias, horas,
-          rate,
+          turnos: mine.length,
+          dias, horas, rate,
           bruto: Math.round(horas * rate * 100) / 100
         };
       })
-      .filter(r => r.horas > 0 || r.dias > 0)
+      .filter(r => r.horas > 0)
       .sort((a,b) => a.tienda.localeCompare(b.tienda) || a.nombre.localeCompare(b.nombre));
 
     if (!rows.length) {
@@ -343,135 +341,132 @@ async function buildReport() {
       btn.disabled = false; return;
     }
 
-    const tot = k => rows.reduce((s,r) => s + r[k], 0);
-    const porTienda = STORE_IDS
+    const sum = (arr, k) => arr.reduce((s,r) => s + r[k], 0);
+    const tiendas = STORE_IDS
       .filter(id => scope === 'all' || id === scope)
-      .map(id => {
-        const rs = rows.filter(r => r.tienda === id);
-        return { id, n: rs.length,
-                 horas: rs.reduce((s,r)=>s+r.horas,0),
-                 bruto: rs.reduce((s,r)=>s+r.bruto,0) };
-      }).filter(t => t.n > 0);
+      .map(id => ({ id, rows: rows.filter(r => r.tienda === id) }))
+      .filter(t => t.rows.length);
+
+    const ahora   = new Date();
+    const folio   = 'NOM-' + from.replace(/-/g,'') + '-' + to.replace(/-/g,'');
+    const dias    = Math.round((parseLocalDate(to) - parseLocalDate(from)) / 86400000) + 1;
+
+    // Bloque de una tienda: encabezado, filas y subtotal
+    const bloque = t => `
+      <tr class="rep-group">
+        <td colspan="8">${storeName(t.id).toUpperCase()}</td>
+      </tr>
+      ${t.rows.map((r,i) => `<tr>
+        <td class="c">${i+1}</td>
+        <td class="name">${escapeHtml(r.nombre)}</td>
+        <td>${escapeHtml(r.puesto)}</td>
+        <td class="c">${r.turnos}</td>
+        <td class="c">${r.dias}</td>
+        <td class="num">${r.horas.toFixed(2)}</td>
+        <td class="num">${money(r.rate)}</td>
+        <td class="num b">${money(r.bruto)}</td>
+      </tr>`).join('')}
+      <tr class="rep-sub">
+        <td colspan="3">Subtotal · ${storeShort(t.id)}</td>
+        <td class="c">${sum(t.rows,'turnos')}</td>
+        <td class="c">${sum(t.rows,'dias')}</td>
+        <td class="num">${sum(t.rows,'horas').toFixed(2)}</td>
+        <td></td>
+        <td class="num b">${money(sum(t.rows,'bruto'))}</td>
+      </tr>`;
 
     document.getElementById('printArea').innerHTML = `
-      <div class="rep-head">
-        <div>
-          <div class="rep-brand">El Águila</div>
-          <div class="rep-sub">Reporte de Nómina para Contabilidad</div>
+      <header class="rep-head">
+        <div class="rep-brand-row">
+          <div class="rep-logo">
+            <svg viewBox="7 0 44 44"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg>
+          </div>
+          <div>
+            <div class="rep-brand">El Águila</div>
+            <div class="rep-brand-sub">Despensas · Cocina</div>
+          </div>
+          <div class="rep-doc">
+            <div class="rep-doc-title">Reporte de Nómina</div>
+            <div class="rep-doc-sub">Documento para contabilidad</div>
+          </div>
         </div>
-        <div class="rep-meta">
-          <strong>Período</strong><br>${formatDate(from)} — ${formatDate(to)}<br>
-          <span>Alcance: ${scope === 'all' ? 'Ambas Tiendas' : storeName(scope)}</span><br>
-          <span>Emitido: ${formatDate(todayStr())}</span>
-        </div>
-      </div>
 
+        <table class="rep-meta">
+          <tr>
+            <th>Período</th>
+            <td>${formatDate(from)} al ${formatDate(to)} <span class="muted">(${dias} días)</span></td>
+            <th>Folio</th>
+            <td class="mono">${folio}</td>
+          </tr>
+          <tr>
+            <th>Alcance</th>
+            <td>${scope === 'all' ? 'Ambas tiendas' : storeName(scope)}</td>
+            <th>Emitido</th>
+            <td>${formatDate(todayStr())} · ${formatTime(ahora)}</td>
+          </tr>
+          <tr>
+            <th>Preparado por</th>
+            <td>${escapeHtml(SESSION.name)}</td>
+            <th>Colaboradores</th>
+            <td>${rows.length}</td>
+          </tr>
+        </table>
+      </header>
+
+      <section class="rep-kpis">
+        <div><span>Colaboradores</span><strong>${rows.length}</strong></div>
+        <div><span>Turnos</span><strong>${sum(rows,'turnos')}</strong></div>
+        <div><span>Días trabajados</span><strong>${sum(rows,'dias')}</strong></div>
+        <div><span>Horas totales</span><strong>${sum(rows,'horas').toFixed(2)}</strong></div>
+        <div class="hl"><span>Total a pagar</span><strong>${money(sum(rows,'bruto'))}</strong></div>
+      </section>
+
+      <h2 class="rep-h2">Detalle por colaborador</h2>
       <table class="rep-table">
         <thead>
           <tr>
-            <th>#</th><th>Colaborador</th><th>Puesto</th><th>Tienda</th>
-            <th class="num">Días</th><th class="num">Horas</th>
-            <th class="num">Tarifa/h</th><th class="num">Total a Pagar</th>
+            <th class="c">#</th><th>Colaborador</th><th>Puesto</th>
+            <th class="c">Turnos</th><th class="c">Días</th>
+            <th class="num">Horas</th><th class="num">Tarifa/h</th><th class="num">Total</th>
           </tr>
         </thead>
-        <tbody>
-          ${rows.map((r,i) => `<tr>
-            <td>${i+1}</td>
-            <td><strong>${escapeHtml(r.nombre)}</strong></td>
-            <td>${escapeHtml(r.puesto)}</td>
-            <td>${storeShort(r.tienda)}</td>
-            <td class="num">${r.dias}</td>
-            <td class="num">${r.horas.toFixed(2)}</td>
-            <td class="num">${money(r.rate)}</td>
-            <td class="num">${money(r.bruto)}</td>
-          </tr>`).join('')}
-        </tbody>
+        <tbody>${tiendas.map(bloque).join('')}</tbody>
         <tfoot>
           <tr>
-            <td colspan="4"><strong>TOTAL GENERAL</strong></td>
-            <td class="num"><strong>${tot('dias')}</strong></td>
-            <td class="num"><strong>${tot('horas').toFixed(2)}</strong></td>
+            <td colspan="3">TOTAL GENERAL</td>
+            <td class="c">${sum(rows,'turnos')}</td>
+            <td class="c">${sum(rows,'dias')}</td>
+            <td class="num">${sum(rows,'horas').toFixed(2)}</td>
             <td></td>
-            <td class="num"><strong>${money(tot('bruto'))}</strong></td>
+            <td class="num">${money(sum(rows,'bruto'))}</td>
           </tr>
         </tfoot>
       </table>
 
-      <h3 class="rep-h3">Resumen por tienda</h3>
-      <table class="rep-table rep-table-sm">
-        <thead><tr><th>Tienda</th><th class="num">Colaboradores</th>
-          <th class="num">Horas</th><th class="num">Total a Pagar</th></tr></thead>
-        <tbody>
-          ${porTienda.map(t => `<tr>
-            <td>${storeName(t.id)}</td>
-            <td class="num">${t.n}</td>
-            <td class="num">${t.horas.toFixed(2)}</td>
-            <td class="num">${money(t.bruto)}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-
       <p class="rep-note">
-        Las horas provienen de los registros de entrada y salida del sistema.
-        El total a pagar es el bruto (horas × tarifa) y no incluye deducciones,
-        impuestos ni retenciones.
+        <strong>Nota.</strong> Las horas provienen de los registros de entrada y salida
+        del sistema dentro del período indicado. Un mismo día con varios turnos suma
+        horas pero cuenta como un solo día trabajado. El total mostrado es el
+        <strong>bruto</strong> (horas × tarifa) y no incluye deducciones, impuestos,
+        retenciones, horas extra ni bonificaciones.
       </p>
 
-      <div class="rep-sign">
-        <div>Preparado por</div>
-        <div>Revisado por (Contabilidad)</div>
-        <div>Fecha</div>
-      </div>`;
+      <footer class="rep-foot">
+        <div class="rep-sign">
+          <div><span>Preparado por</span><em>${escapeHtml(SESSION.name)}</em></div>
+          <div><span>Revisado por</span><em>Contabilidad</em></div>
+          <div><span>Autorizado por</span><em>Gerencia</em></div>
+        </div>
+        <div class="rep-foot-line">
+          El Águila · Reporte generado automáticamente · Folio ${folio}
+        </div>
+      </footer>`;
 
     closeModal('reportModal');
     window.print();
   } catch (err) {
     toast('Error al generar el reporte: ' + err.message, 'error');
   } finally { btn.disabled = false; }
-}
-
-async function doGenerate() {
-  const periodStart = document.getElementById('genPeriodSelect').value;
-  const periodEnd   = (() => {
-    const s = new Date(periodStart + 'T00:00:00');
-    s.setDate(s.getDate() + 13);
-    return toDateStr(s);
-  })();
-  const btn = document.getElementById('genBtn');
-  btn.disabled = true;
-  try {
-    const [emps, cis, existing] = await Promise.all([
-      getEmployees(),
-      getClockInsRange(periodStart, periodEnd),
-      getPayStatements(periodStart)
-    ]);
-    // Remove existing
-    await Promise.all(existing.map(s => db.collection('PayStatements').doc(s.id).delete()));
-    // Create new
-    const active = emps.filter(e => e.status === 'active');
-    await Promise.all(active.map(emp => {
-      const hrs   = cis.filter(c => c.employeeId === emp.id && c.clockOut).reduce((s,c) => s+(c.hours||0), 0);
-      const gross = Math.round(hrs * (emp.hourlyRate||0) * 100) / 100;
-      return savePayStatement({
-        periodStart,
-        periodEnd,
-        employeeId: emp.id,
-        hours:      Math.round(hrs*100)/100,
-        rate:       emp.hourlyRate||0,
-        gross,
-        status:     'pending',
-        paidDate:   null
-      });
-    }));
-    document.getElementById('periodSelect').value = periodStart;
-    closeModal('generateModal');
-    toast(`Nómina generada para ${active.length} ${active.length === 1 ? 'colaborador' : 'colaboradores'}`, 'success');
-    render();
-  } catch (err) {
-    toast('Error: ' + err.message, 'error');
-  } finally {
-    btn.disabled = false;
-  }
 }
 </script>
 </body>
