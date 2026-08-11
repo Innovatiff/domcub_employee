@@ -1,0 +1,11 @@
+# Claude Code ephemeral agent worktrees.
+# These are nested git checkouts — committing one creates a broken submodule
+# gitlink with no .gitmodules entry, which fails clone/checkout on CI.
+.claude/worktrees/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/

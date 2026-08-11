@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Domcub — Sign In</title>
+<title>El Águila — Iniciar Sesión</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -94,7 +95,7 @@
     transition: transform 0.35s var(--ease-back);
   }
   .brand-icon-wrap:hover { transform: rotate(-8deg) scale(1.07); }
-  .brand-icon-wrap i { font-size: 31px; color: #fff; }
+  .brand-icon-wrap .brand-mark { width: 42px; height: 42px; fill: #fff; display: block; }
 
   .brand-name {
     font-size: 33px; font-weight: 800; color: #fff;
@@ -190,17 +191,39 @@
     margin-bottom: 26px;
   }
 
+  .auth-tabs { --tab-i: 0; --tab-n: 2; }
   .auth-tabs::before {
     content: '';
     position: absolute;
     top: 4px; left: 4px;
-    width: calc(50% - 4px); height: calc(100% - 8px);
+    width: calc((100% - 8px) / var(--tab-n)); height: calc(100% - 8px);
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 1px 4px rgba(16,24,40,0.11);
+    transform: translateX(calc(var(--tab-i) * 100%));
     transition: transform 0.34s var(--ease-back);
   }
-  .auth-tabs.register-active::before { transform: translateX(100%); }
+  .auth-tab { white-space: nowrap; }
+
+  /* Entrada de PIN */
+  .pin-entry { display: flex; justify-content: center; }
+  .pin-entry input {
+    width: 100%; max-width: 260px;
+    text-align: center;
+    font-size: 30px; font-weight: 700;
+    letter-spacing: 0.42em; text-indent: 0.42em;
+    padding: 14px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-family: inherit; color: var(--text);
+    background: #fff; outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .pin-entry input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(79,70,229,0.13);
+  }
+  .pin-entry input::placeholder { color: #cbd2e0; letter-spacing: 0.3em; }
 
   .auth-tab {
     position: relative; z-index: 1;
@@ -310,24 +333,6 @@
   .btn-auth:active:not(:disabled) { transform: scale(0.98); }
   .btn-auth:disabled { opacity: 0.62; cursor: not-allowed; }
 
-  /* Password strength */
-  .pw-strength {
-    display: flex; gap: 4px;
-    margin-top: 7px;
-    height: 3.5px;
-  }
-  .pw-bar {
-    flex: 1;
-    background: #e8ebf3;
-    border-radius: 2px;
-    transition: background 0.3s ease;
-  }
-  .pw-hint {
-    font-size: 11.5px;
-    color: var(--muted);
-    margin-top: 5px;
-    transition: color 0.2s ease;
-  }
 
   /* Alert */
   .auth-alert {
@@ -357,21 +362,22 @@
 <div class="left-panel">
   <div class="brand-block">
     <div class="brand-icon-wrap">
-      <i class="fa-solid fa-mobile-screen-button"></i>
+      <svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg>
     </div>
-    <div class="brand-name">Domcub</div>
-    <div class="brand-tagline">Employee Management Portal</div>
+    <div class="brand-name">El Águila</div>
+    <div class="brand-tagline">Portal de Gestión de Colaboradores</div>
   </div>
 
   <ul class="feature-list">
-    <li><i class="fa-solid fa-clock"></i> Real-time hour tracking</li>
-    <li><i class="fa-solid fa-users"></i> Multi-store employee management</li>
-    <li><i class="fa-solid fa-file-invoice-dollar"></i> Automated pay statements</li>
-    <li><i class="fa-solid fa-calendar-days"></i> Time off management</li>
-    <li><i class="fa-solid fa-shield-halved"></i> Secure &amp; role-based access</li>
+    <li><i class="fa-solid fa-clock"></i> Control de horas en tiempo real</li>
+    <li><i class="fa-solid fa-users"></i> Colaboradores en Despensas y Cocina</li>
+    <li><i class="fa-solid fa-file-invoice-dollar"></i> Nómina automatizada</li>
+    <li><i class="fa-solid fa-calendar-days"></i> Gestión de permisos</li>
+    <li><i class="fa-solid fa-comments"></i> Anuncios y mensajes privados</li>
+    <li><i class="fa-solid fa-shield-halved"></i> Acceso seguro y por roles</li>
   </ul>
 
-  <div class="version-tag">Domcub v2.0 · All Stores</div>
+  <div class="version-tag">El Águila v3.0 · Despensas · Cocina</div>
 </div>
 
 <!-- Right auth panel -->
@@ -379,14 +385,14 @@
   <div class="auth-card">
 
     <div class="auth-header">
-      <h2 id="authHeading">Welcome back</h2>
-      <p id="authSubheading">Sign in to your Domcub account to continue.</p>
+      <h2 id="authHeading">Bienvenido de nuevo</h2>
+      <p id="authSubheading">Inicia sesión en tu cuenta de El Águila para continuar.</p>
     </div>
 
     <!-- Tabs -->
     <div class="auth-tabs" id="authTabs">
-      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
-      <button class="auth-tab" onclick="switchTab('register')">Create Account</button>
+      <button class="auth-tab active" onclick="switchTab('login')">Gerencia</button>
+      <button class="auth-tab" onclick="switchTab('pin')">Colaborador</button>
     </div>
 
     <!-- Alert -->
@@ -398,82 +404,39 @@
     <!-- ── LOGIN FORM ── -->
     <form id="loginForm" onsubmit="doLogin(event)">
       <div class="form-group">
-        <label>Email Address</label>
+        <label>Correo Electrónico</label>
         <div class="input-wrap">
           <i class="fa-solid fa-envelope"></i>
-          <input type="email" id="loginEmail" placeholder="you@domcub.com" required autocomplete="email">
+          <input type="email" id="loginEmail" placeholder="tu@elaguila.com" required autocomplete="email">
         </div>
       </div>
       <div class="form-group">
-        <label>Password</label>
+        <label>Contraseña</label>
         <div class="input-wrap">
           <i class="fa-solid fa-lock"></i>
-          <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password">
+          <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
           <button type="button" class="toggle-pw" onclick="togglePw('loginPassword', this)"><i class="fa-solid fa-eye"></i></button>
         </div>
       </div>
       <button type="submit" class="btn-auth" id="loginBtn">
         <i class="fa-solid fa-arrow-right-to-bracket"></i>
-        Sign In
+        Iniciar Sesión
       </button>
     </form>
 
-    <!-- ── REGISTER FORM ── -->
-    <form id="registerForm" onsubmit="doRegister(event)" style="display:none">
-      <div class="form-row">
-        <div class="form-group">
-          <label>First Name</label>
-          <div class="input-wrap">
-            <i class="fa-solid fa-user"></i>
-            <input type="text" id="regFirstName" placeholder="First" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Last Name</label>
-          <div class="input-wrap">
-            <i class="fa-solid fa-user"></i>
-            <input type="text" id="regLastName" placeholder="Last" required>
-          </div>
-        </div>
-      </div>
+    <!-- ── ACCESO COLABORADOR (PIN) ── -->
+    <form id="pinForm" onsubmit="doPinLogin(event)" style="display:none">
       <div class="form-group">
-        <label>Email Address</label>
-        <div class="input-wrap">
-          <i class="fa-solid fa-envelope"></i>
-          <input type="email" id="regEmail" placeholder="you@domcub.com" required autocomplete="email">
+        <label>PIN de 6 dígitos</label>
+        <div class="pin-entry">
+          <input type="text" id="pinInput" inputmode="numeric" autocomplete="off"
+                 maxlength="6" placeholder="••••••" oninput="onPinInput(this)">
         </div>
+        <div class="pw-hint" style="text-align:center">Tu gerente te entregó este PIN al contratarte.</div>
       </div>
-      <div class="form-group">
-        <label>Role</label>
-        <select class="auth-select" id="regRole">
-          <option value="owner">Owner</option>
-          <option value="manager" selected>Manager</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <div class="input-wrap">
-          <i class="fa-solid fa-lock"></i>
-          <input type="password" id="regPassword" placeholder="Min. 8 characters" required autocomplete="new-password" oninput="updateStrength()">
-          <button type="button" class="toggle-pw" onclick="togglePw('regPassword', this)"><i class="fa-solid fa-eye"></i></button>
-        </div>
-        <div class="pw-strength">
-          <div class="pw-bar"></div><div class="pw-bar"></div>
-          <div class="pw-bar"></div><div class="pw-bar"></div>
-        </div>
-        <div class="pw-hint" id="pwHint">Use 8+ characters with letters and numbers.</div>
-      </div>
-      <div class="form-group">
-        <label>Confirm Password</label>
-        <div class="input-wrap">
-          <i class="fa-solid fa-lock"></i>
-          <input type="password" id="regConfirm" placeholder="Re-enter password" required autocomplete="new-password">
-          <button type="button" class="toggle-pw" onclick="togglePw('regConfirm', this)"><i class="fa-solid fa-eye"></i></button>
-        </div>
-      </div>
-      <button type="submit" class="btn-auth" id="registerBtn">
-        <i class="fa-solid fa-user-plus"></i>
-        Create Account
+      <button type="submit" class="btn-auth" id="pinBtn">
+        <i class="fa-solid fa-right-to-bracket"></i>
+        Entrar
       </button>
     </form>
 
@@ -489,59 +452,85 @@
 
 // If already signed in, redirect to dashboard
 auth.onAuthStateChanged(user => {
-  if (user) window.location.href = 'index.html';
+  if (!user) return;
+  // Los colaboradores entran con sesión anónima ligada a su PIN
+  if (user.isAnonymous) {
+    if (localStorage.getItem('elaguila_emp')) window.location.href = 'grupo.html';
+    return;
+  }
+  window.location.href = 'index.html';
 });
 
 function switchTab(tab) {
-  const isLogin = tab === 'login';
-  const loginF  = document.getElementById('loginForm');
-  const regF    = document.getElementById('registerForm');
-
-  loginF.style.display = isLogin ? '' : 'none';
-  regF.style.display   = isLogin ? 'none' : '';
-
-  // replay the entrance animation on the newly shown form
-  const shown = isLogin ? loginF : regF;
-  shown.style.animation = 'none';
-  void shown.offsetWidth;
-  shown.style.animation = '';
-
-  document.getElementById('authHeading').textContent    = isLogin ? 'Welcome back' : 'Create your account';
-  document.getElementById('authSubheading').textContent = isLogin
-    ? 'Sign in to your Domcub account to continue.'
-    : 'Set up your manager or owner account below.';
-
-  document.getElementById('authTabs').classList.toggle('register-active', !isLogin);
-  document.querySelectorAll('.auth-tab').forEach((btn, i) => {
-    btn.classList.toggle('active', (i === 0) === isLogin);
+  const forms = { login:'loginForm', pin:'pinForm' };
+  Object.entries(forms).forEach(([k,id]) => {
+    document.getElementById(id).style.display = (k === tab) ? '' : 'none';
   });
+  const shown = document.getElementById(forms[tab]);
+  shown.style.animation = 'none'; void shown.offsetWidth; shown.style.animation = '';
+
+  const copy = {
+    login: ['Bienvenido de nuevo', 'Inicia sesión para administrar El Águila.'],
+    pin:   ['Acceso de colaborador', 'Ingresa tu PIN de 6 dígitos.']
+  };
+  document.getElementById('authHeading').textContent    = copy[tab][0];
+  document.getElementById('authSubheading').textContent = copy[tab][1];
+
+  const idx = { login:0, pin:1 }[tab];
+  document.getElementById('authTabs').style.setProperty('--tab-i', idx);
+  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', i === idx));
   clearAlert();
 }
 
-function updateStrength() {
-  const pw   = document.getElementById('regPassword').value;
-  const bars = document.querySelectorAll('.pw-bar');
-  const hint = document.getElementById('pwHint');
-
-  let score = 0;
-  if (pw.length >= 8)            score++;
-  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
-  if (/\d/.test(pw))             score++;
-  if (/[^A-Za-z0-9]/.test(pw) || pw.length >= 14) score++;
-  if (!pw) score = 0;
-
-  const colors = ['#e11d48', '#f59e0b', '#0891b2', '#059669'];
-  const labels = ['Weak password', 'Fair password', 'Good password', 'Strong password'];
-
-  bars.forEach((bar, i) => {
-    bar.style.background = i < score ? colors[score - 1] : '#e8ebf3';
-  });
-
-  hint.textContent = pw
-    ? labels[Math.max(score - 1, 0)]
-    : 'Use 8+ characters with letters and numbers.';
-  hint.style.color = pw ? colors[Math.max(score - 1, 0)] : 'var(--muted)';
+function onPinInput(el) {
+  el.value = el.value.replace(/\D/g,'').slice(0,6);
+  if (el.value.length === 6) document.getElementById('pinForm').requestSubmit();
 }
+
+async function doPinLogin(e) {
+  e.preventDefault();
+  clearAlert();
+  const pin = document.getElementById('pinInput').value.trim();
+  if (pin.length !== 6) { showAlert('El PIN debe tener 6 dígitos.', 'error'); return; }
+  setLoading('pinBtn', true);
+  try {
+    // Firestore exige sesión iniciada, así que primero entramos como anónimos
+    await auth.signInAnonymously();
+    // Pins/{pin} sólo se puede leer si ya conoces el PIN exacto:
+    // la colección no permite listar, así que no se puede enumerar.
+    const pinDoc = await db.collection('Pins').doc(pin).get();
+    if (!pinDoc.exists) {
+      await auth.signOut();
+      setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+      showAlert('PIN no reconocido. Verifícalo con tu gerente.', 'error');
+      return;
+    }
+    const empDoc = await db.collection('Employees').doc(pinDoc.data().employeeId).get();
+    if (!empDoc.exists) {
+      await auth.signOut();
+      setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+      showAlert('PIN no reconocido. Verifícalo con tu gerente.', 'error');
+      return;
+    }
+    const emp = { id: empDoc.id, ...empDoc.data() };
+    if (emp.status !== 'active') {
+      await auth.signOut();
+      setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+      showAlert('Esta cuenta está inactiva. Comunícate con tu gerente.', 'error');
+      return;
+    }
+    localStorage.setItem('elaguila_emp', emp.id);
+    localStorage.setItem('elaguila_key', pin);
+    window.location.href = 'grupo.html';
+  } catch (err) {
+    setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+    const msg = err.code === 'auth/operation-not-allowed'
+      ? 'El acceso por PIN no está habilitado. Activa "Anónimo" en Firebase Authentication.'
+      : err.message;
+    showAlert(msg, 'error');
+  }
+}
+
 
 function showAlert(msg, type) {
   const el  = document.getElementById('authAlert');
@@ -571,7 +560,7 @@ function setLoading(btnId, loading, label, icon) {
   const btn = document.getElementById(btnId);
   btn.disabled = loading;
   btn.innerHTML = loading
-    ? `<i class="fa-solid fa-spinner fa-spin"></i> Please wait...`
+    ? `<i class="fa-solid fa-spinner fa-spin"></i> Espera un momento...`
     : `<i class="${icon}"></i> ${label}`;
 }
 
@@ -585,58 +574,18 @@ async function doLogin(e) {
     await auth.signInWithEmailAndPassword(email, password);
     // onAuthStateChanged will redirect
   } catch (err) {
-    setLoading('loginBtn', false, 'Sign In', 'fa-solid fa-arrow-right-to-bracket');
+    setLoading('loginBtn', false, 'Iniciar Sesión', 'fa-solid fa-arrow-right-to-bracket');
     const msgs = {
-      'auth/user-not-found': 'No account found with this email.',
-      'auth/wrong-password': 'Incorrect password. Please try again.',
-      'auth/invalid-credential': 'Invalid email or password.',
-      'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
-      'auth/invalid-email': 'Please enter a valid email address.',
+      'auth/user-not-found': 'No existe ninguna cuenta con este correo.',
+      'auth/wrong-password': 'Contraseña incorrecta. Inténtalo de nuevo.',
+      'auth/invalid-credential': 'Correo o contraseña inválidos.',
+      'auth/too-many-requests': 'Demasiados intentos fallidos. Inténtalo más tarde.',
+      'auth/invalid-email': 'Ingresa un correo electrónico válido.',
     };
     showAlert(msgs[err.code] || err.message, 'error');
   }
 }
 
-async function doRegister(e) {
-  e.preventDefault();
-  clearAlert();
-  const first   = document.getElementById('regFirstName').value.trim();
-  const last    = document.getElementById('regLastName').value.trim();
-  const email   = document.getElementById('regEmail').value.trim();
-  const role    = document.getElementById('regRole').value;
-  const pw      = document.getElementById('regPassword').value;
-  const confirm = document.getElementById('regConfirm').value;
-
-  if (pw.length < 8) {
-    showAlert('Password must be at least 8 characters.', 'error'); return;
-  }
-  if (pw !== confirm) {
-    showAlert('Passwords do not match.', 'error'); return;
-  }
-
-  setLoading('registerBtn', true);
-  try {
-    const cred = await auth.createUserWithEmailAndPassword(email, pw);
-    const uid  = cred.user.uid;
-    await db.collection('Main').doc(uid).set({
-      name: `${first} ${last}`,
-      firstName: first,
-      lastName: last,
-      email,
-      role,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    // onAuthStateChanged will redirect
-  } catch (err) {
-    setLoading('registerBtn', false, 'Create Account', 'fa-solid fa-user-plus');
-    const msgs = {
-      'auth/email-already-in-use': 'An account with this email already exists.',
-      'auth/weak-password': 'Password is too weak. Use at least 8 characters.',
-      'auth/invalid-email': 'Please enter a valid email address.',
-    };
-    showAlert(msgs[err.code] || err.message, 'error');
-  }
-}
 </script>
 </body>
 </html>

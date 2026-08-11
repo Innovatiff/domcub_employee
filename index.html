@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — Domcub</title>
+<title>Panel — El Águila</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -12,32 +13,34 @@
 <aside class="sidebar">
   <div class="sidebar-brand">
     <div class="brand-logo">
-      <div class="brand-icon"><i class="fa-solid fa-mobile-screen-button"></i></div>
-      <div>
-        <div class="brand-name">Domcub</div>
-        <div class="brand-sub">Employee Portal</div>
+      <div class="brand-icon"><svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">El Águila</div>
+        <div class="brand-sub">Portal de Colaboradores</div>
       </div>
     </div>
   </div>
+
+  <div class="store-switcher" id="storeSwitcher"></div>
+
   <nav class="sidebar-nav">
-    <div class="nav-section-label">Main</div>
-    <a href="index.html"         class="nav-link active"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
-    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Employees</span></a>
-    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Job Positions</span></a>
-    <div class="nav-section-label">Time</div>
-    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Hours</span></a>
-    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Pay Statements</span></a>
-    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Time Off</span></a>
+    <div class="nav-section-label">Principal</div>
+    <a href="index.html" data-manager-only class="nav-link active"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <div class="nav-section-label">Operación</div>
+    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
+    <div class="nav-section-label">Tiempo</div>
+    <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
   </nav>
+
   <div class="sidebar-footer">
-    <div id="sidebarUser" style="margin-bottom:12px"></div>
-    <select class="store-selector" id="storeFilter" onchange="onStoreChange(this.value)">
-      <option value="all">All Stores</option>
-      <option value="1">Store 1</option>
-      <option value="2">Store 2</option>
-    </select>
+    <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Sign Out</span>
+      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -45,10 +48,10 @@
 <main class="main">
   <div class="page-header-row">
     <div class="page-header">
-      <h1 id="greeting">Dashboard</h1>
+      <h1 id="greeting">Panel</h1>
       <p id="todayDate"></p>
     </div>
-    <button class="btn btn-primary" onclick="openClockModal()"><i class="fa-solid fa-fingerprint"></i> Clock In / Out</button>
+    <button class="btn btn-primary" onclick="openClockModal()"><i class="fa-solid fa-fingerprint"></i> Marcar Entrada / Salida</button>
   </div>
 
   <div class="stats-grid" id="statsGrid">
@@ -58,12 +61,12 @@
 
   <div class="card" style="margin-bottom:20px;animation-delay:0.1s">
     <div class="card-header">
-      <span class="card-title"><i class="fa-solid fa-bolt" style="color:var(--success)"></i> Currently Working</span>
+      <span class="card-title"><i class="fa-solid fa-bolt" style="color:var(--success)"></i> Trabajando Ahora</span>
       <span class="badge badge-green live" id="workingCount">—</span>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Employee</th><th>Position</th><th>Store</th><th>Clocked In</th><th>Hours So Far</th><th></th></tr></thead>
+        <thead><tr><th>Colaborador</th><th>Puesto</th><th>Tienda</th><th>Hora de Entrada</th><th>Horas Acumuladas</th><th></th></tr></thead>
         <tbody id="workingTable"></tbody>
       </table>
     </div>
@@ -71,35 +74,35 @@
 
   <div class="card" style="animation-delay:0.16s">
     <div class="card-header">
-      <span class="card-title"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> Today's Completed Shifts</span>
+      <span class="card-title"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> Turnos Completados Hoy</span>
       <span class="badge badge-gray" id="doneCount">—</span>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Employee</th><th>Position</th><th>Store</th><th>Clock In</th><th>Clock Out</th><th>Hours</th></tr></thead>
+        <thead><tr><th>Colaborador</th><th>Puesto</th><th>Tienda</th><th>Entrada</th><th>Salida</th><th>Horas</th></tr></thead>
         <tbody id="todayTable"></tbody>
       </table>
     </div>
   </div>
 </main>
 
-<!-- Clock Modal -->
+<!-- Modal de Entrada/Salida -->
 <div class="modal-overlay" id="clockModal">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <h3>Clock In / Out</h3>
+      <h3>Marcar Entrada / Salida</h3>
       <button class="modal-close" onclick="closeModal('clockModal')">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Select Employee</label>
+        <label>Selecciona un Colaborador</label>
         <select id="clockEmpSelect" onchange="updateClockStatus()"></select>
       </div>
       <div id="clockStatus" style="margin-top:10px"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('clockModal')">Cancel</button>
-      <button class="btn btn-primary" id="clockActionBtn" onclick="doClockAction()">Clock In</button>
+      <button class="btn btn-outline" onclick="closeModal('clockModal')">Cancelar</button>
+      <button class="btn btn-primary" id="clockActionBtn" onclick="doClockAction()">Marcar Entrada</button>
     </div>
   </div>
 </div>
@@ -112,11 +115,9 @@
 <script>
 const today = new Date();
 const hour  = today.getHours();
-document.getElementById('greeting').textContent = `${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}, Manager`;
-document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-document.getElementById('storeFilter').value = getSelectedStore();
+document.getElementById('greeting').textContent = `${hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'}`;
+document.getElementById('todayDate').textContent = formatDateLong(today);
 
-function onStoreChange(v) { setSelectedStore(v); render(); }
 
 requireAuth(() => { render(); });
 
@@ -142,37 +143,37 @@ async function render() {
     document.getElementById('statsGrid').innerHTML = `
       <div class="stat-card">
         <div class="stat-icon purple"><i class="fa-solid fa-users"></i></div>
-        <div class="stat-label">Total Employees</div>
+        <div class="stat-label">Total de Colaboradores</div>
         <div class="stat-value">${active.length}</div>
-        <div class="stat-sub">${allEmps.filter(e=>e.store==='1'&&e.status==='active').length} Store 1 · ${allEmps.filter(e=>e.store==='2'&&e.status==='active').length} Store 2</div>
+        <div class="stat-sub">${allEmps.filter(e=>e.store==='1'&&e.status==='active').length} Despensas · ${allEmps.filter(e=>e.store==='2'&&e.status==='active').length} Cocina</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon green"><i class="fa-solid fa-person-walking-arrow-right"></i></div>
-        <div class="stat-label">Working Now</div>
+        <div class="stat-label">Trabajando Ahora</div>
         <div class="stat-value">${workingCIs.length}</div>
-        <div class="stat-sub">Clocked in today</div>
+        <div class="stat-sub">Con entrada marcada hoy</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon yellow"><i class="fa-solid fa-clock"></i></div>
-        <div class="stat-label">Hours Today</div>
+        <div class="stat-label">Horas de Hoy</div>
         <div class="stat-value">${todayHours.toFixed(1)}</div>
-        <div class="stat-sub">Completed shifts</div>
+        <div class="stat-sub">Turnos completados</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon cyan"><i class="fa-solid fa-briefcase"></i></div>
-        <div class="stat-label">Job Positions</div>
+        <div class="stat-label">Puestos</div>
         <div class="stat-value">${jobs.length}</div>
-        <div class="stat-sub">Across both stores</div>
+        <div class="stat-sub">En ambas tiendas</div>
       </div>
     `;
     animateValues('statsGrid');
 
     // Currently working
-    document.getElementById('workingCount').textContent = workingCIs.length + ' active';
-    document.getElementById('doneCount').textContent    = doneCIs.length + ' shift' + (doneCIs.length !== 1 ? 's' : '');
+    document.getElementById('workingCount').textContent = workingCIs.length + (workingCIs.length === 1 ? ' activo' : ' activos');
+    document.getElementById('doneCount').textContent    = doneCIs.length + (doneCIs.length === 1 ? ' turno' : ' turnos');
     const wb = document.getElementById('workingTable');
     if (workingCIs.length === 0) {
-      wb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-regular fa-clock"></i><p>No employees are currently clocked in.</p></div></td></tr>`;
+      wb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-regular fa-clock"></i><p>Ningún colaborador tiene la entrada marcada en este momento.</p></div></td></tr>`;
     } else {
       wb.innerHTML = workingCIs.map(c => {
         const emp = allEmps.find(e => e.id === c.employeeId);
@@ -183,10 +184,10 @@ async function render() {
         return `<tr>
           <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}</div></div></td>
           <td>${job ? `<span class="badge" style="background:${job.color}22;color:${job.color}">${job.title}</span>` : '—'}</td>
-          <td><span class="badge badge-gray">Store ${emp.store}</span></td>
+          <td>${storeBadge(emp.store)}</td>
           <td>${formatTime(c.clockIn)}</td>
           <td><strong>${hrs}h</strong></td>
-          <td><button class="btn btn-sm btn-outline" onclick="quickClockOut('${c.id}')"><i class="fa-solid fa-stop"></i> Clock Out</button></td>
+          <td><button class="btn btn-sm btn-outline" onclick="quickClockOut('${c.id}')"><i class="fa-solid fa-stop"></i> Marcar Salida</button></td>
         </tr>`;
       }).join('');
     }
@@ -194,7 +195,7 @@ async function render() {
     // Today completed
     const tb = document.getElementById('todayTable');
     if (doneCIs.length === 0) {
-      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-regular fa-calendar-xmark"></i><p>No completed shifts today.</p></div></td></tr>`;
+      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-regular fa-calendar-xmark"></i><p>No hay turnos completados hoy.</p></div></td></tr>`;
     } else {
       tb.innerHTML = doneCIs.map(c => {
         const emp = allEmps.find(e => e.id === c.employeeId);
@@ -203,7 +204,7 @@ async function render() {
         return `<tr>
           <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}</div></div></td>
           <td>${job ? job.title : '—'}</td>
-          <td><span class="badge badge-gray">Store ${emp.store}</span></td>
+          <td>${storeBadge(emp.store)}</td>
           <td>${formatTime(c.clockIn)}</td>
           <td>${formatTime(c.clockOut)}</td>
           <td><strong>${(c.hours || 0).toFixed(2)}h</strong></td>
@@ -212,13 +213,13 @@ async function render() {
     }
   } catch (err) {
     console.error('Dashboard render error:', err);
-    toast('Could not load dashboard data.', 'error');
+    toast('No se pudieron cargar los datos del panel.', 'error');
   }
 }
 
 async function quickClockOut(ciId) {
   const hrs = await clockOut(ciId);
-  toast(`Clocked out · ${(hrs || 0).toFixed(2)}h recorded`, 'success');
+  toast(`Salida marcada · ${(hrs || 0).toFixed(2)} h registradas`, 'success');
   render();
 }
 
@@ -228,7 +229,7 @@ async function openClockModal() {
   allEmpsCache = await getEmployees();
   const active = allEmpsCache.filter(e => e.status === 'active');
   document.getElementById('clockEmpSelect').innerHTML = active.map(e =>
-    `<option value="${e.id}">${e.name} — Store ${e.store}</option>`
+    `<option value="${e.id}">${e.name} — ${storeShort(e.store)}</option>`
   ).join('');
   await updateClockStatus();
   openModal('clockModal');
@@ -243,12 +244,12 @@ async function updateClockStatus() {
   const btn = document.getElementById('clockActionBtn');
   const st  = document.getElementById('clockStatus');
   if (activeCI) {
-    st.innerHTML = `<span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:8px"></i> Clocked in since ${formatTime(activeCI.clockIn)}</span>`;
-    btn.textContent = 'Clock Out';
+    st.innerHTML = `<span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:8px"></i> Entrada marcada desde las ${formatTime(activeCI.clockIn)}</span>`;
+    btn.textContent = 'Marcar Salida';
     btn.className = 'btn btn-danger';
   } else {
-    st.innerHTML = `<span class="badge badge-gray"><i class="fa-solid fa-circle" style="font-size:8px"></i> Not clocked in</span>`;
-    btn.textContent = 'Clock In';
+    st.innerHTML = `<span class="badge badge-gray"><i class="fa-solid fa-circle" style="font-size:8px"></i> Sin entrada marcada</span>`;
+    btn.textContent = 'Marcar Entrada';
     btn.className = 'btn btn-primary';
   }
 }
@@ -262,10 +263,10 @@ async function doClockAction() {
   try {
     if (activeCI) {
       const hrs = await clockOut(activeCI.id);
-      toast(`${emp.name} clocked out · ${(hrs || 0).toFixed(2)}h`, 'success');
+      toast(`${emp.name} marcó salida · ${(hrs || 0).toFixed(2)} h`, 'success');
     } else {
       await clockIn(empId, emp.store);
-      toast(`${emp.name} clocked in`, 'success');
+      toast(`${emp.name} marcó entrada`, 'success');
     }
     closeModal('clockModal');
     render();

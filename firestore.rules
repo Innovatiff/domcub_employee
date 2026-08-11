@@ -1,0 +1,217 @@
+rules_version = '2';
+
+// ══════════════════════════════════════════════════════════
+//  El Águila — reglas de seguridad de Firestore
+//
+//  Cómo se distingue quién es quién
+//  ────────────────────────────────
+//  · Gerencia    → correo y contraseña   → sign_in_provider 'password'
+//  · Colaborador → PIN de 6 dígitos      → sign_in_provider 'anonymous'
+//
+//  El proveedor viaja firmado dentro del token de Firebase, así que un
+//  colaborador NO puede hacerse pasar por gerente.
+//
+//  Cómo se prueba QUÉ colaborador es
+//  ─────────────────────────────────
+//  La única prueba de identidad de un colaborador es conocer su PIN.
+//  Por eso la cadena se ancla en el PIN:
+//
+//    Pins/{pin}        = { employeeId }      ← creado por la gerencia
+//    PidClaims/{pin}   = { uid, employeeId } ← creado al entrar
+//    UserIndex/{uid}   = { pid, claimKey }   ← pid = 'emp:' + employeeId
+//
+//  Para escribir UserIndex hay que presentar un claimKey (el PIN) cuyo
+//  PidClaims apunte a tu uid, y cuyo employeeId coincida con Pins/{pin}.
+//  Sin el PIN correcto no se puede reclamar la identidad de otro, y por
+//  lo tanto no se pueden abrir sus conversaciones privadas.
+//
+//  Pins no permite `list`: sólo se puede leer un PIN que ya se conoce,
+//  nunca enumerarlos.
+// ══════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()  { return request.auth != null; }
+    function provider()  { return request.auth.token.firebase.sign_in_provider; }
+
+    // Los colaboradores del portal también entran con correo y contraseña,
+    // así que el proveedor ya no basta para distinguirlos. La gerencia da
+    // de alta la cuenta al contratar y deja constancia en Colaboradores;
+    // esa colección sólo la escribe la gerencia, así que no se puede fingir.
+    function isColabAccount() {
+      return exists(/databases/$(database)/documents/Colaboradores/$(request.auth.uid));
+    }
+    function colabEmpId() {
+      return get(/databases/$(database)/documents/Colaboradores/$(request.auth.uid)).data.employeeId;
+    }
+    function isManager() {
+      return signedIn() && provider() == 'password' && !isColabAccount();
+    }
+
+    function haveIndex() {
+      return exists(/databases/$(database)/documents/UserIndex/$(request.auth.uid));
+    }
+    function myPid() {
+      return get(/databases/$(database)/documents/UserIndex/$(request.auth.uid)).data.pid;
+    }
+    function chatParticipants(chatId) {
+      return get(/databases/$(database)/documents/Chats/$(chatId)).data.participants;
+    }
+    function claimFor(key) {
+      return get(/databases/$(database)/documents/PidClaims/$(key)).data;
+    }
+    function pinOwner(key) {
+      return get(/databases/$(database)/documents/Pins/$(key)).data.employeeId;
+    }
+
+    // ── PIN → colaborador ──
+    // `get` sí, `list` no: hay que conocer el PIN exacto para leerlo.
+    match /Pins/{pin} {
+      allow get:    if signedIn();
+      allow list:   if false;
+      allow write:  if isManager();
+    }
+
+    // ── Cuentas de colaborador del portal ──
+    // La gerencia crea la cuenta al contratar y guarda aquí uid -> colaborador.
+    match /Colaboradores/{uid} {
+      allow read:  if signedIn();
+      allow write: if isManager();
+    }
+
+    // ── Reclamo de identidad, anclado al PIN ──
+    // Sólo se puede crear/actualizar si Pins/{pin} confirma que ese PIN
+    // pertenece al colaborador indicado.
+    match /PidClaims/{key} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && pinOwner(key) == request.resource.data.employeeId;
+      allow delete: if isManager();
+    }
+
+    // ── Identidad de la sesión ──
+    match /UserIndex/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid && (
+        // Gerencia: se verifica sola, pid = 'mgr:' + su propio uid
+        (isManager() && request.resource.data.pid == ('mgr:' + request.auth.uid))
+
+        // Portal: la cuenta la creó la gerencia, así que el vínculo ya existe
+        || (isColabAccount() && request.resource.data.pid == ('emp:' + colabEmpId()))
+
+        // Reloj: la prueba es el PIN con el que entró
+        || ( claimFor(request.resource.data.claimKey).uid == request.auth.uid
+             && request.resource.data.pid ==
+                ('emp:' + claimFor(request.resource.data.claimKey).employeeId) )
+      );
+    }
+
+    // ── Cuentas de gerencia ──
+    // Lectura abierta a la sesión porque el chat muestra los nombres.
+    match /Main/{uid} {
+      allow read: if signedIn();
+      allow create, update, delete: if isManager() && request.auth.uid == uid;
+    }
+
+    // ── Colaboradores ──
+    // El documento ya NO contiene el PIN, así que se puede leer sin riesgo.
+    match /Employees/{id} {
+      allow read:  if signedIn();
+      allow write: if isManager();
+
+      // El PIN vive aparte y sólo lo lee la gerencia.
+      match /secure/{doc} {
+        allow read, write: if isManager();
+      }
+    }
+
+    match /Jobs/{id} {
+      allow read:  if signedIn();
+      allow write: if isManager();
+    }
+
+    // ── Horas ──
+    // Cada quien ve y registra únicamente sus propias marcas. El reloj de
+    // la tienda escribe con la sesión del PIN, y el portal con la del correo.
+    match /ClockIns/{id} {
+      allow read: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow create: if isManager()
+        || (haveIndex() && ('emp:' + request.resource.data.employeeId) == myPid());
+      allow update: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow delete: if isManager();
+    }
+
+    // ── Nómina ──
+    // El colaborador ve sus propios recibos; nadie ve los de otro.
+    match /PayStatements/{id} {
+      allow read: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow write: if isManager();
+    }
+
+    // Permisos: cada colaborador ve SÓLO los suyos (incluido el motivo
+    // del rechazo) y puede solicitar. Aprobar o denegar es de gerencia.
+    match /TimeOff/{id} {
+      allow read: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow create: if isManager()
+        || (haveIndex()
+            && ('emp:' + request.resource.data.employeeId) == myPid()
+            && request.resource.data.status == 'pending');
+      allow update, delete: if isManager();
+    }
+
+    // ── Pedidos ──
+    match /Pedidos/{id} {
+      allow read:   if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.createdBy) == myPid());
+    }
+
+    // ══ Chat ══
+    // Una conversación privada sólo la ven sus dos participantes.
+    match /Chats/{chatId} {
+      allow read: if signedIn() && (
+           resource.data.type == 'anuncios'
+        || (haveIndex() && myPid() in resource.data.participants)
+      );
+      allow create: if signedIn() && (
+           request.resource.data.type == 'anuncios'
+        || (haveIndex() && myPid() in request.resource.data.participants)
+      );
+      allow update: if signedIn() && (
+           resource.data.type == 'anuncios'
+        || (haveIndex() && myPid() in resource.data.participants)
+      );
+      allow delete: if isManager();
+    }
+
+    // Los mensajes se consultan siempre con where('chatId','==',X),
+    // así que la regla se resuelve con una sola lectura del chat.
+    match /Messages/{id} {
+      allow read: if signedIn() && (
+           resource.data.chatId == 'anuncios'
+        || (haveIndex() && myPid() in chatParticipants(resource.data.chatId))
+      );
+
+      // Sólo puedes enviar como tú mismo.
+      // En Anuncios Generales únicamente publica la gerencia.
+      allow create: if signedIn() && haveIndex()
+        && request.resource.data.senderId == myPid()
+        && (
+             request.resource.data.chatId == 'anuncios'
+               ? isManager()
+               : myPid() in chatParticipants(request.resource.data.chatId)
+           );
+
+      // Los mensajes no se editan; la gerencia sí puede borrarlos.
+      allow update: if false;
+      allow delete: if isManager();
+    }
+  }
+}
