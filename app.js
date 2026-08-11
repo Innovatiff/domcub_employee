@@ -97,6 +97,7 @@ function requireAuth(callback, opts) {
       applyRoleToNav();
       updateSidebarUser(SESSION);
       renderStoreSwitcher();
+      mountNotifications();
       if (callback) callback(SESSION);
     } catch (err) {
       console.error('Auth error:', err);
@@ -728,6 +729,7 @@ async function sendMessage(chatId, text) {
   });
   await db.collection('Chats').doc(chatId).set({
     lastMessage: clean.slice(0,80),
+    lastSender:  SESSION.pid,   // para no avisarte de tus propios mensajes
     lastAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge:true });
 }
@@ -767,6 +769,130 @@ function listenChats(cb) {
     }, err => console.error('listenChats(anuncios):', err));
 
   return () => { unsubMine(); unsubAnuncios(); };
+}
+
+// ══ Avisos de mensajes nuevos ══
+//
+// Qué se considera "no leído": el chat tiene un último mensaje más reciente
+// que la última vez que abrí ese chat, y no lo escribí yo. La marca de
+// lectura se guarda en este equipo (localStorage) por dos razones: no hace
+// falta tocar las reglas, y "leído" es realmente por dispositivo.
+
+function readKey() { return 'elaguila_leido_' + (SESSION ? SESSION.pid : 'anon'); }
+
+function readMap() {
+  try { return JSON.parse(localStorage.getItem(readKey()) || '{}'); }
+  catch (e) { return {}; }
+}
+function markChatRead(chatId) {
+  const m = readMap();
+  m[chatId] = Date.now();
+  try { localStorage.setItem(readKey(), JSON.stringify(m)); } catch (e) {}
+  if (window.refreshNotifBadge) window.refreshNotifBadge();
+}
+function millisOf(ts) { return ts && ts.toMillis ? ts.toMillis() : 0; }
+
+function unreadChats(chats) {
+  const leido = readMap();
+  return chats.filter(c => {
+    const t = millisOf(c.lastAt);
+    if (!t) return false;
+    if (c.lastSender === SESSION.pid) return false;   // lo escribí yo
+    return t > (leido[c.id] || 0);
+  }).sort((a,b) => millisOf(b.lastAt) - millisOf(a.lastAt));
+}
+
+/**
+ * Coloca la campana de avisos arriba de cada página. Se inyecta desde aquí
+ * para que exista en todas sin tener que tocar cada HTML.
+ */
+function mountNotifications() {
+  const main = document.querySelector('main.main');
+  if (!main || document.getElementById('notifBar')) return;
+  // En la página del chat sobra: ahí se ven los avisos en la propia lista.
+  if (/grupo\.html$/.test(location.pathname)) return;
+
+  const bar = document.createElement('div');
+  bar.className = 'notif-bar';
+  bar.id = 'notifBar';
+  bar.innerHTML = `
+    <button class="notif-btn" id="notifBtn" title="Avisos" aria-label="Avisos">
+      <i class="fa-solid fa-bell"></i>
+      <span class="notif-dot" id="notifDot" hidden></span>
+    </button>
+    <div class="notif-panel" id="notifPanel" hidden>
+      <div class="notif-panel-head">Avisos</div>
+      <div id="notifPanelBody"></div>
+    </div>`;
+  main.insertBefore(bar, main.firstChild);
+
+  let ultimos = [];
+
+  document.getElementById('notifBtn').onclick = e => {
+    e.stopPropagation();
+    const p = document.getElementById('notifPanel');
+    p.hidden = !p.hidden;
+    if (!p.hidden) pintarPanel();
+  };
+  document.addEventListener('click', e => {
+    const p = document.getElementById('notifPanel');
+    if (p && !p.hidden && !bar.contains(e.target)) p.hidden = true;
+  });
+
+  function pintarPanel() {
+    const body = document.getElementById('notifPanelBody');
+    if (!ultimos.length) {
+      body.innerHTML = `<div class="notif-empty">
+        <i class="fa-regular fa-bell-slash"></i>
+        <div>Nada nuevo por ahora</div></div>`;
+      return;
+    }
+    body.innerHTML = ultimos.map(c => {
+      const quien = c.id === ANUNCIOS_ID
+        ? 'Anuncios Generales'
+        : ((c.names && c.names[c.lastSender]) || 'Mensaje nuevo');
+      return `<a class="notif-item" href="grupo.html?chat=${encodeURIComponent(c.id)}">
+        <div class="notif-item-icon">${c.id === ANUNCIOS_ID
+          ? '<i class="fa-solid fa-bullhorn"></i>'
+          : '<i class="fa-solid fa-comment"></i>'}</div>
+        <div style="min-width:0;flex:1">
+          <div class="notif-item-name">${escapeHtml(quien)}</div>
+          <div class="notif-item-text">${escapeHtml(c.lastMessage || 'Mensaje nuevo')}</div>
+        </div>
+        <div class="notif-item-time">${c.lastAt ? relativeTime(c.lastAt) : ''}</div>
+      </a>`;
+    }).join('');
+  }
+
+  function pintarBadge() {
+    const dot = document.getElementById('notifDot');
+    const btn = document.getElementById('notifBtn');
+    if (!dot) return;
+    dot.hidden = ultimos.length === 0;
+    dot.textContent = ultimos.length > 9 ? '9+' : String(ultimos.length);
+    btn.classList.toggle('has-news', ultimos.length > 0);
+    const p = document.getElementById('notifPanel');
+    if (p && !p.hidden) pintarPanel();
+  }
+
+  let todos = [];
+  window.refreshNotifBadge = () => { ultimos = unreadChats(todos); pintarBadge(); };
+
+  listenChats(list => {
+    todos  = list;
+    const antes = ultimos.length;
+    ultimos = unreadChats(list);
+    pintarBadge();
+    // Aviso emergente sólo cuando llega algo mientras la página está abierta,
+    // y no en la propia página del chat, que ya lo muestra.
+    if (ultimos.length > antes && !/grupo\.html$/.test(location.pathname)) {
+      const c = ultimos[0];
+      const quien = c.id === ANUNCIOS_ID
+        ? 'Anuncios Generales'
+        : ((c.names && c.names[c.lastSender]) || 'un compañero');
+      toast('Nuevo mensaje de ' + quien, 'success');
+    }
+  });
 }
 
 // ── Estados de carga ──

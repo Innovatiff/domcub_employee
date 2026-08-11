@@ -104,11 +104,18 @@ let unsubChats  = null;
 requireAuth(async () => {
   await buildPeople();
   paintList();
-  // Abrir Anuncios por defecto
-  openAnuncios();
+
+  // Si se llega desde un aviso (grupo.html?chat=...) se abre esa
+  // conversación; si no, Anuncios por defecto.
+  const pedido = new URLSearchParams(location.search).get('chat');
+  const otro = pedido && pedido !== ANUNCIOS_ID
+    ? people.find(p => dmId(SESSION.pid, p.pid) === pedido) : null;
+  if (otro) openDm(otro.pid); else openAnuncios();
   unsubChats = listenChats(list => {
     chatMeta = {};
     list.forEach(c => chatMeta[c.id] = c);
+    // Lo que llega al chat que tengo abierto ya lo estoy viendo
+    if (activeChat) markChatRead(activeChat.id);
     paintList();
   });
 }, { allow: ['manager','colaborador'] });
@@ -139,12 +146,17 @@ function paintList() {
   const q = (document.getElementById('chatSearch').value || '').toLowerCase();
   const anunciosMeta = chatMeta[ANUNCIOS_ID] || {};
 
+  // Conversaciones con mensajes que aún no he visto
+  const sinLeer = {};
+  unreadChats(Object.values(chatMeta)).forEach(c => sinLeer[c.id] = true);
+  const punto = id => sinLeer[id] ? '<span class="chat-unread"></span>' : '';
+
   const anuncios = `
     <div class="chat-item ${activeChat && activeChat.id===ANUNCIOS_ID ? 'active':''}" onclick="openAnuncios()">
       <div class="chat-ava anuncios"><i class="fa-solid fa-bullhorn"></i></div>
       <div style="min-width:0;flex:1">
         <div class="chat-item-top">
-          <span class="chat-item-name">Anuncios Generales</span>
+          <span class="chat-item-name">Anuncios Generales${punto(ANUNCIOS_ID)}</span>
           <span class="chat-item-time">${anunciosMeta.lastAt ? relativeTime(anunciosMeta.lastAt) : ''}</span>
         </div>
         <div class="chat-item-sub">${escapeHtml(anunciosMeta.lastMessage || 'Todo el equipo · sólo anuncios')}</div>
@@ -162,7 +174,7 @@ function paintList() {
       ${avatarHtml(p.name, 38)}
       <div style="min-width:0;flex:1">
         <div class="chat-item-top">
-          <span class="chat-item-name">${escapeHtml(p.name)}</span>
+          <span class="chat-item-name">${escapeHtml(p.name)}${punto(id)}</span>
           <span class="chat-item-time">${meta.lastAt ? relativeTime(meta.lastAt) : ''}</span>
         </div>
         <div class="chat-item-sub">${escapeHtml(meta.lastMessage || p.sub)}</div>
@@ -195,6 +207,7 @@ async function openDm(otherPid) {
 }
 
 function mountChat() {
+  markChatRead(activeChat.id);   // abrirlo cuenta como leerlo
   paintList();
 
   document.getElementById('chatHead').innerHTML = activeChat.type === 'anuncios'
