@@ -1,10 +1,10 @@
-// ════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 //  El Águila — capa compartida
 //  NOTA: los nombres de las colecciones y de los campos se
 //  mantienen en inglés (Employees, Jobs, Main, ClockIns,
 //  TimeOff, PayStatements, Pedidos, Chats, Messages) para no
 //  romper los documentos ya guardados en Firestore.
-// ════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 
 // ── Tiendas ──
 // Los valores '1' y '2' se conservan en la base de datos; sólo
@@ -350,9 +350,9 @@ function avatarHtml(name, size) {
   return `<div class="avatar" style="background:${avatarColor(name)};width:${s}px;height:${s}px">${initials(name)}</div>`;
 }
 
-// ════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 //  Firestore
-// ════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
 
 // Puestos
 async function getJobs() {
