@@ -696,24 +696,22 @@ function dmId(a, b) { return 'dm_' + [a,b].sort().join('__'); }
 
 async function ensureDm(meP, otherP, names) {
   const id = dmId(meP, otherP);
-  const ref = db.collection('Chats').doc(id);
-  const doc = await ref.get();
-  if (!doc.exists) {
-    await ref.set({
-      type:'dm', participants:[meP, otherP], names:names || {},
-      lastMessage:'', lastAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }
+  // Ojo: NO se puede consultar antes si existe. Las reglas resuelven la
+  // lectura de un chat mirando `resource.data.participants`, y en un
+  // documento que todavía no existe `resource` es nulo, así que la lectura
+  // se deniega y la conversación nunca llegaba a crearse. Se escribe
+  // directamente con merge, que sirve igual para crear que para actualizar.
+  // Sólo se tocan los campos estables, para no borrar el último mensaje.
+  await db.collection('Chats').doc(id).set({
+    type:'dm', participants:[meP, otherP], names:names || {}
+  }, { merge:true });
   return id;
 }
 
 async function ensureAnuncios() {
-  const ref = db.collection('Chats').doc(ANUNCIOS_ID);
-  const doc = await ref.get();
-  if (!doc.exists) {
-    await ref.set({ type:'anuncios', participants:[], names:{},
-      lastMessage:'', lastAt: firebase.firestore.FieldValue.serverTimestamp() });
-  }
+  // Mismo motivo que en ensureDm: se escribe sin consultar antes.
+  await db.collection('Chats').doc(ANUNCIOS_ID)
+    .set({ type:'anuncios', participants:[], names:{} }, { merge:true });
   return ANUNCIOS_ID;
 }
 

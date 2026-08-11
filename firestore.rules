@@ -176,8 +176,12 @@ service cloud.firestore {
     // ══ Chat ══
     // Una conversación privada sólo la ven sus dos participantes.
     match /Chats/{chatId} {
+      // `resource == null` es una conversación que todavía no existe. Sin
+      // este caso, mirar si ya existe un chat devuelve permiso denegado en
+      // vez de "no existe", y no hay forma de empezar una conversación.
       allow read: if signedIn() && (
-           resource.data.type == 'anuncios'
+           resource == null
+        || resource.data.type == 'anuncios'
         || (haveIndex() && myPid() in resource.data.participants)
       );
       allow create: if signedIn() && (
