@@ -1497,3 +1497,17 @@ select {
 
   tr, .anuncio, .pedido-card { break-inside: avoid; }
 }
+
+/* Motivo del rechazo de un permiso */
+.deny-reason {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin-top: 5px; padding: 6px 9px;
+  background: var(--danger-soft);
+  border-left: 2.5px solid var(--danger);
+  border-radius: 5px;
+  font-size: 11.5px; line-height: 1.45;
+  color: #9f1239;
+  white-space: normal;
+  animation: fadeInUp 280ms var(--ease-out) both;
+}
+.deny-reason i { margin-top: 2px; flex-shrink: 0; font-size: 10px; }

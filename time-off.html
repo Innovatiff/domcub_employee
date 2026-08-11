@@ -40,7 +40,7 @@
     <div class="nav-section-label">Tiempo</div>
     <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
     <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html" data-manager-only class="nav-link active"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="time-off.html" class="nav-link active"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
   </nav>
 
   <div class="sidebar-footer">
@@ -147,6 +147,29 @@
   </div>
 </div>
 
+<!-- Modal Denegar con motivo -->
+<div class="modal-overlay" id="denyModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Denegar Solicitud</h3>
+      <button class="modal-close" onclick="closeModal('denyModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+        Explica brevemente por qué se deniega. <strong id="denyWho"></strong> verá este motivo.
+      </p>
+      <div class="form-group">
+        <label>Motivo *</label>
+        <textarea id="denyReason" placeholder="ej. Esa semana ya hay dos personas de permiso."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('denyModal')">Cancelar</button>
+      <button class="btn btn-danger" id="denyBtn" onclick="doDeny()">Denegar Solicitud</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -163,14 +186,22 @@ let allEmpsCache = [];
 const MONTH_NAMES = MESES.map(m => m.charAt(0).toUpperCase() + m.slice(1));
 const DAY_NAMES   = DIAS_CORTOS;
 
-requireAuth(() => loadAll());
+requireAuth(() => loadAll(), { allow: ['manager','colaborador'] });
 
 async function loadAll() {
   document.getElementById('toTable').innerHTML = skeletonRows(8, 3);
   try {
     const [emps, tos] = await Promise.all([getEmployees(), getTimeOff()]);
     allEmpsCache = emps;
-    allTOCache   = tos;
+    // Un colaborador sólo ve sus propias solicitudes
+    allTOCache = isColaborador()
+      ? tos.filter(t => t.employeeId === SESSION.employeeId)
+      : tos;
+    if (isColaborador()) {
+      document.querySelector('.page-header h1').textContent = 'Mis Permisos';
+      document.querySelector('.page-header p').textContent =
+        'Consulta el estado de tus solicitudes de permiso.';
+    }
     renderCalendar();
     renderList();
   } catch (err) {
@@ -250,13 +281,18 @@ function renderList() {
       <td>${formatDate(t.startDate)}</td>
       <td>${formatDate(t.endDate)}</td>
       <td>${days} ${days === 1 ? 'día' : 'días'}</td>
-      <td style="color:var(--text-muted);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.note||'—'}</td>
+      <td style="max-width:220px">
+        <div style="color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.note)||'—'}</div>
+        ${t.status === 'denied' && t.denyReason
+          ? `<div class="deny-reason"><i class="fa-solid fa-circle-info"></i><span>${escapeHtml(t.denyReason)}</span></div>`
+          : ''}
+      </td>
       <td><span class="badge ${statBadge[t.status]||'badge-gray'}">${statLabel[t.status]||t.status}</span></td>
       <td>
         <div class="td-actions">
-          ${t.status === 'pending' ? `
+          ${!isManager() ? '<span style="color:var(--text-light);font-size:12px">—</span>' : t.status === 'pending' ? `
             <button class="btn btn-sm btn-success" onclick="doUpdateStatus('${t.id}','approved')"><i class="fa-solid fa-check"></i> Aprobar</button>
-            <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="doUpdateStatus('${t.id}','denied')"><i class="fa-solid fa-xmark"></i> Denegar</button>
+            <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="askDeny('${t.id}')"><i class="fa-solid fa-xmark"></i> Denegar</button>
           ` : `<button class="btn btn-sm btn-outline" onclick="doUpdateStatus('${t.id}','pending')">Restablecer</button>`}
           <button class="btn-icon" title="Eliminar" onclick="doDelete('${t.id}')"><i class="fa-solid fa-trash" style="font-size:12px;color:var(--danger)"></i></button>
         </div>
@@ -272,8 +308,48 @@ function filterStatus(val, btn) {
   renderList();
 }
 
+let denyId = null;
+
+function askDeny(id) {
+  const t = allTOCache.find(x => x.id === id);
+  const emp = t && allEmpsCache.find(e => e.id === t.employeeId);
+  denyId = id;
+  document.getElementById('denyWho').textContent = emp ? emp.name : 'El colaborador';
+  document.getElementById('denyReason').value = '';
+  openModal('denyModal');
+}
+
+async function doDeny() {
+  const reason = document.getElementById('denyReason').value.trim();
+  if (!reason) { toast('Escribe el motivo del rechazo.', 'error'); return; }
+  const btn = document.getElementById('denyBtn');
+  btn.disabled = true;
+  try {
+    await updateTimeOff(denyId, {
+      status: 'denied',
+      denyReason: reason,
+      decidedBy: SESSION.name,
+      decidedAt: new Date().toISOString()
+    });
+    allTOCache = await getTimeOff();
+    closeModal('denyModal');
+    toast('Solicitud denegada · el colaborador verá el motivo', 'info');
+    renderCalendar();
+    renderList();
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  } finally { btn.disabled = false; }
+}
+
 async function doUpdateStatus(id, status) {
-  await updateTimeOff(id, { status });
+  // Al aprobar o reabrir se borra el motivo anterior
+  const patch = { status };
+  if (status !== 'denied') {
+    patch.denyReason = firebase.firestore.FieldValue.delete();
+    patch.decidedBy  = SESSION.name;
+    patch.decidedAt  = new Date().toISOString();
+  }
+  await updateTimeOff(id, patch);
   allTOCache = await getTimeOff();
   const labels = { approved: 'Solicitud aprobada', denied: 'Solicitud denegada', pending: 'Solicitud restablecida a pendiente' };
   toast(labels[status], status === 'denied' ? 'info' : status === 'approved' ? 'success' : 'info');
@@ -291,10 +367,17 @@ async function doDelete(id) {
 }
 
 async function openRequestModal() {
-  const active = allEmpsCache.filter(e => e.status === 'active');
-  document.getElementById('toEmp').innerHTML = active.map(e =>
-    `<option value="${e.id}">${e.name} — ${storeShort(e.store)}</option>`
-  ).join('');
+  const sel = document.getElementById('toEmp');
+  if (isColaborador()) {
+    sel.innerHTML = `<option value="${SESSION.employeeId}">${escapeHtml(SESSION.name)}</option>`;
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+    const active = allEmpsCache.filter(e => e.status === 'active');
+    sel.innerHTML = active.map(e =>
+      `<option value="${e.id}">${e.name} — ${storeShort(e.store)}</option>`
+    ).join('');
+  }
   document.getElementById('toStart').value = todayStr();
   document.getElementById('toEnd').value   = todayStr();
   document.getElementById('toNote').value  = '';
