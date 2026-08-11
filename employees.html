@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Empleados — El Águila</title>
+<title>Colaboradores — El Águila</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -14,21 +14,31 @@
   <div class="sidebar-brand">
     <div class="brand-logo">
       <div class="brand-icon"><svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg></div>
-      <div><div class="brand-name">El Águila</div><div class="brand-sub">Portal de Empleados</div></div>
+      <div class="brand-text">
+        <div class="brand-name">El Águila</div>
+        <div class="brand-sub">Portal de Colaboradores</div>
+      </div>
     </div>
   </div>
+
+  <div class="store-switcher" id="storeSwitcher"></div>
+
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
-    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
-    <a href="employees.html"     class="nav-link active"><i class="fa-solid fa-users"></i><span>Empleados</span></a>
-    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <a href="index.html" data-manager-only class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link active"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <div class="nav-section-label">Operación</div>
+    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
     <div class="nav-section-label">Tiempo</div>
-    <a href="hours.html"         class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
-    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
+    <a href="time-off.html" data-manager-only class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
   </nav>
+
   <div class="sidebar-footer">
-    <div id="sidebarUser" style="margin-bottom:12px"></div>
+    <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
       <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
     </button>
@@ -38,28 +48,28 @@
 <main class="main">
   <div class="page-header-row">
     <div class="page-header">
-      <h1>Empleados</h1>
-      <p>Administra tu equipo en la Tienda 1 y la Tienda 2.</p>
+      <h1>Colaboradores</h1>
+      <p>Administra tu equipo en Despensas y Cocina.</p>
     </div>
-    <button class="btn btn-primary" onclick="openHireModal()"><i class="fa-solid fa-user-plus"></i> Contratar Empleado</button>
+    <button class="btn btn-primary" onclick="openHireModal()"><i class="fa-solid fa-user-plus"></i> Contratar Colaborador</button>
   </div>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="filterStore('all',this)">Todas</button>
-    <button class="tab-btn" onclick="filterStore('1',this)">Tienda 1</button>
-    <button class="tab-btn" onclick="filterStore('2',this)">Tienda 2</button>
+    <button class="tab-btn" onclick="filterStore('1',this)">Despensas</button>
+    <button class="tab-btn" onclick="filterStore('2',this)">Cocina</button>
     <button class="tab-btn" onclick="filterStore('inactive',this)">Inactivos</button>
   </div>
 
   <div class="card">
     <div class="card-header">
-      <span class="card-title" id="tableTitle">Todos los Empleados</span>
+      <span class="card-title" id="tableTitle">Todos los Colaboradores</span>
       <span class="badge badge-blue" id="empCount">Cargando...</span>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Empleado</th><th>Puesto</th><th>Tienda</th><th>Fecha de Ingreso</th><th>Tarifa/hora</th><th>PIN</th><th>Estado</th><th>Acciones</th></tr>
+          <tr><th>Colaborador</th><th>Puesto</th><th>Tienda</th><th>Fecha de Ingreso</th><th>Tarifa/hora</th><th>PIN</th><th>Pedidos</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
         <tbody id="empTable"></tbody>
       </table>
@@ -71,7 +81,7 @@
 <div class="modal-overlay" id="empModal">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <h3 id="empModalTitle">Contratar Empleado</h3>
+      <h3 id="empModalTitle">Contratar Colaborador</h3>
       <button class="modal-close" onclick="closeModal('empModal')">&times;</button>
     </div>
     <div class="modal-body">
@@ -94,8 +104,8 @@
         <div class="form-group">
           <label>Tienda *</label>
           <select id="empStore">
-            <option value="1">Tienda 1</option>
-            <option value="2">Tienda 2</option>
+            <option value="1">Tienda Despensas</option>
+            <option value="2">Tienda Cocina</option>
           </select>
         </div>
       </div>
@@ -115,15 +125,26 @@
           <input type="date" id="empHire">
         </div>
       </div>
+      <div class="assign-box">
+        <label class="switch-row">
+          <input type="checkbox" id="empPedidos">
+          <span class="switch"></span>
+          <span>
+            <strong>Encargado de pedidos</strong>
+            <em>Puede crear y editar las listas de pedidos de su tienda.</em>
+          </span>
+        </label>
+      </div>
+
       <!-- PIN (solo al contratar) -->
       <div class="pin-box" id="pinPreview" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div>
             <div style="font-size:11.5px;color:#065f46;font-weight:650;text-transform:uppercase;letter-spacing:0.05em">
-              <i class="fa-solid fa-key" style="margin-right:6px"></i>PIN del Empleado
+              <i class="fa-solid fa-key" style="margin-right:6px"></i>PIN del Colaborador
             </div>
             <div class="pin-digits" id="pinDisplay"></div>
-            <div style="font-size:11.5px;color:#047857">Comparte este PIN con el empleado — se guarda en su perfil.</div>
+            <div style="font-size:11.5px;color:#047857">Comparte este PIN con el colaborador — se guarda en su perfil.</div>
           </div>
           <button type="button" class="btn-icon" title="Generar un PIN nuevo" onclick="regeneratePin()"><i class="fa-solid fa-rotate"></i></button>
         </div>
@@ -131,7 +152,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('empModal')">Cancelar</button>
-      <button class="btn btn-primary" id="saveEmpBtn" onclick="doSaveEmployee()">Contratar Empleado</button>
+      <button class="btn btn-primary" id="saveEmpBtn" onclick="doSaveEmployee()">Contratar Colaborador</button>
     </div>
   </div>
 </div>
@@ -140,7 +161,7 @@
 <div class="modal-overlay" id="viewModal">
   <div class="modal">
     <div class="modal-header">
-      <h3>Perfil del Empleado</h3>
+      <h3>Perfil del Colaborador</h3>
       <button class="modal-close" onclick="closeModal('viewModal')">&times;</button>
     </div>
     <div class="modal-body" id="viewModalBody"></div>
@@ -182,7 +203,7 @@ let isHiring      = true;
 requireAuth(() => render());
 
 async function render() {
-  document.getElementById('empTable').innerHTML = skeletonRows(8, 4);
+  document.getElementById('empTable').innerHTML = skeletonRows(9, 4);
   try {
     const [allEmps, jobs] = await Promise.all([getEmployees(), getJobs()]);
     jobsCache = jobs;
@@ -195,13 +216,13 @@ async function render() {
       if (currentFilter !== 'all') emps = emps.filter(e => e.store === currentFilter);
     }
 
-    const titles = { all:'Todos los Empleados', '1':'Empleados de la Tienda 1', '2':'Empleados de la Tienda 2', inactive:'Empleados Inactivos' };
-    document.getElementById('tableTitle').textContent = titles[currentFilter] || 'Empleados';
-    document.getElementById('empCount').textContent = emps.length + (emps.length === 1 ? ' empleado' : ' empleados');
+    const titles = { all:'Todos los Colaboradores', '1':'Colaboradores · Despensas', '2':'Colaboradores · Cocina', inactive:'Colaboradores Inactivos' };
+    document.getElementById('tableTitle').textContent = titles[currentFilter] || 'Colaboradores';
+    document.getElementById('empCount').textContent = emps.length + (emps.length === 1 ? ' colaborador' : ' colaboradores');
 
     const tb = document.getElementById('empTable');
     if (emps.length === 0) {
-      tb.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fa-solid fa-users"></i><p>No se encontraron empleados.</p></div></td></tr>`;
+      tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-users"></i><p>No se encontraron colaboradores.</p></div></td></tr>`;
       return;
     }
 
@@ -218,10 +239,13 @@ async function render() {
           </div>
         </td>
         <td>${job ? `<span class="badge" style="background:${job.color}22;color:${job.color}">${job.title}</span>` : '—'}</td>
-        <td><span class="badge badge-gray">Tienda ${e.store}</span></td>
+        <td>${storeBadge(e.store)}</td>
         <td>${formatDate(e.hireDate)}</td>
         <td>$${Number(e.hourlyRate || 0).toFixed(2)}</td>
         <td><span class="pin-cell">${e.pin || '——'}</span></td>
+        <td>${e.canPedidos
+          ? '<span class="badge badge-purple"><i class="fa-solid fa-clipboard-check" style="font-size:9px"></i>Encargado</span>'
+          : '<span style="color:var(--text-light)">—</span>'}</td>
         <td><span class="badge ${e.status==='active'?'badge-green':'badge-red'}">${e.status==='active'?'Activo':'Inactivo'}</span></td>
         <td>
           <div class="td-actions">
@@ -236,8 +260,8 @@ async function render() {
       </tr>`;
     }).join('');
   } catch (err) {
-    document.getElementById('empTable').innerHTML = `<tr><td colspan="8" style="color:var(--danger);padding:24px">Error: ${err.message}</td></tr>`;
-    toast('No se pudieron cargar los empleados.', 'error');
+    document.getElementById('empTable').innerHTML = `<tr><td colspan="9" style="color:var(--danger);padding:24px">Error: ${err.message}</td></tr>`;
+    toast('No se pudieron cargar los colaboradores.', 'error');
   }
 }
 
@@ -260,8 +284,8 @@ function filterStore(val, btn) {
 
 function openHireModal() {
   isHiring = true;
-  document.getElementById('empModalTitle').textContent = 'Contratar Empleado';
-  document.getElementById('saveEmpBtn').textContent = 'Contratar Empleado';
+  document.getElementById('empModalTitle').textContent = 'Contratar Colaborador';
+  document.getElementById('saveEmpBtn').textContent = 'Contratar Colaborador';
   document.getElementById('empDocId').value = '';
   document.getElementById('empName').value  = '';
   document.getElementById('empEmail').value = '';
@@ -269,6 +293,7 @@ function openHireModal() {
   document.getElementById('empStore').value = '1';
   document.getElementById('empRate').value  = '';
   document.getElementById('empHire').value  = todayStr();
+  document.getElementById('empPedidos').checked = false;
 
   // Generate PIN preview
   const pin = generatePin();
@@ -287,7 +312,7 @@ async function openEditModal(id) {
   isHiring = false;
   const emp = await getEmployee(id);
   if (!emp) return;
-  document.getElementById('empModalTitle').textContent = 'Editar Empleado';
+  document.getElementById('empModalTitle').textContent = 'Editar Colaborador';
   document.getElementById('saveEmpBtn').textContent = 'Guardar Cambios';
   document.getElementById('empDocId').value  = emp.id;
   document.getElementById('empName').value   = emp.name || '';
@@ -296,6 +321,7 @@ async function openEditModal(id) {
   document.getElementById('empStore').value  = emp.store || '1';
   document.getElementById('empRate').value   = emp.hourlyRate || '';
   document.getElementById('empHire').value   = emp.hireDate || '';
+  document.getElementById('empPedidos').checked = !!emp.canPedidos;
   document.getElementById('pinPreview').style.display = 'none';
   document.getElementById('empJob').innerHTML = jobsCache.map(j =>
     `<option value="${j.id}" ${j.id===emp.jobId?'selected':''}>${j.title} — ${j.department||''}</option>`
@@ -317,6 +343,7 @@ async function doSaveEmployee() {
     jobId,
     hourlyRate: parseFloat(document.getElementById('empRate').value) || 0,
     hireDate:   document.getElementById('empHire').value,
+    canPedidos: document.getElementById('empPedidos').checked,
   };
 
   const btn = document.getElementById('saveEmpBtn');
@@ -336,7 +363,7 @@ async function doSaveEmployee() {
     closeModal('empModal');
     render();
   } catch (err) {
-    toast('Error al guardar el empleado: ' + err.message, 'error');
+    toast('Error al guardar el colaborador: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -360,13 +387,14 @@ async function openView(id) {
       <span class="badge ${emp.status==='active'?'badge-green':'badge-red'}" style="margin-left:auto">${emp.status==='active'?'Activo':'Inactivo'}</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      ${infoBlock('Tienda', 'Tienda ' + emp.store)}
+      ${infoBlock('Tienda', storeName(emp.store))}
       ${infoBlock('Tarifa por Hora', '$' + Number(emp.hourlyRate||0).toFixed(2))}
       ${infoBlock('Fecha de Ingreso', formatDate(emp.hireDate))}
       ${infoBlock('Correo', emp.email || '—')}
       ${infoBlock('Teléfono', emp.phone || '—')}
       ${infoBlock('Horas del Período Actual', hrs.toFixed(2) + ' h')}
-      ${infoBlock('PIN del Empleado', `<span class="pin-cell" style="font-size:15px;font-weight:700">${emp.pin || '——'}</span>`)}
+      ${infoBlock('Encargado de pedidos', emp.canPedidos ? 'Sí' : 'No')}
+      ${infoBlock('PIN del Colaborador', `<span class="pin-cell" style="font-size:15px;font-weight:700">${emp.pin || '——'}</span>`)}
     </div>
   `;
   document.getElementById('viewEditBtn').onclick = () => { closeModal('viewModal'); openEditModal(id); };
@@ -393,7 +421,7 @@ async function doFire() {
   try {
     await updateEmployee(fireEmpId, { status: 'inactive' });
     closeModal('fireModal');
-    toast('Empleado dado de baja', 'info');
+    toast('Colaborador dado de baja', 'info');
     render();
   } catch (err) {
     toast('Error: ' + err.message, 'error');
@@ -404,7 +432,7 @@ async function doFire() {
 
 async function doRehire(id) {
   await updateEmployee(id, { status: 'active' });
-  toast('Empleado reactivado', 'success');
+  toast('Colaborador reactivado', 'success');
   render();
 }
 </script>
