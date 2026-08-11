@@ -67,13 +67,6 @@
     <button class="btn-icon" onclick="shiftPeriod(1)"><i class="fa-solid fa-chevron-right"></i></button>
   </div>
 
-  <!-- Pestañas de Tienda -->
-  <div class="tabs">
-    <button class="tab-btn active" onclick="filterStore('all',this)">Todas</button>
-    <button class="tab-btn" onclick="filterStore('1',this)">Despensas</button>
-    <button class="tab-btn" onclick="filterStore('2',this)">Cocina</button>
-  </div>
-
   <!-- Resumen -->
   <div id="periodSummary" style="display:flex;gap:12px;margin-bottom:22px;flex-wrap:wrap"></div>
 
@@ -145,17 +138,9 @@
 <script src="app.js"></script>
 <script>
 let periodIndex = getPeriodIndex(new Date());
-let storeFilter = 'all';
 const DAY_NAMES = DIAS_CORTOS;
 requireAuth(() => render());
 
-
-function filterStore(val, btn) {
-  storeFilter = val;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  render();
-}
 
 function shiftPeriod(dir) { periodIndex += dir; render(); }
 
@@ -176,8 +161,7 @@ async function render() {
   ]);
 
   let emps = allEmps.filter(e => e.status === 'active');
-  if (storeFilter !== 'all') emps = emps.filter(e => e.store === storeFilter);
-  else if (store !== 'all')  emps = emps.filter(e => e.store === store);
+  if (store !== 'all') emps = emps.filter(e => e.store === store);
 
   // Summary
   const totalHrs = emps.reduce((s, e) => {

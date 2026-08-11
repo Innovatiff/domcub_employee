@@ -55,9 +55,7 @@
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" onclick="filterStore('all',this)">Todas</button>
-    <button class="tab-btn" onclick="filterStore('1',this)">Despensas</button>
-    <button class="tab-btn" onclick="filterStore('2',this)">Cocina</button>
+    <button class="tab-btn active" onclick="filterStore('all',this)">Activos</button>
     <button class="tab-btn" onclick="filterStore('inactive',this)">Inactivos</button>
   </div>
 
@@ -208,16 +206,14 @@ async function render() {
     const [allEmps, jobs] = await Promise.all([getEmployees(), getJobs()]);
     jobsCache = jobs;
 
-    let emps = allEmps;
-    if (currentFilter === 'inactive') {
-      emps = emps.filter(e => e.status === 'inactive');
-    } else {
-      emps = emps.filter(e => e.status === 'active');
-      if (currentFilter !== 'all') emps = emps.filter(e => e.store === currentFilter);
-    }
+    const store = getSelectedStore();
+    let emps = allEmps.filter(e =>
+      currentFilter === 'inactive' ? e.status === 'inactive' : e.status === 'active');
+    if (store !== 'all') emps = emps.filter(e => e.store === store);
 
-    const titles = { all:'Todos los Colaboradores', '1':'Colaboradores · Despensas', '2':'Colaboradores · Cocina', inactive:'Colaboradores Inactivos' };
-    document.getElementById('tableTitle').textContent = titles[currentFilter] || 'Colaboradores';
+    const titles = { all:'Colaboradores Activos', inactive:'Colaboradores Inactivos' };
+    document.getElementById('tableTitle').textContent =
+      (titles[currentFilter] || 'Colaboradores') + (store === 'all' ? '' : ' · ' + storeShort(store));
     document.getElementById('empCount').textContent = emps.length + (emps.length === 1 ? ' colaborador' : ' colaboradores');
 
     const tb = document.getElementById('empTable');
