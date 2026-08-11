@@ -14,26 +14,31 @@
   <div class="sidebar-brand">
     <div class="brand-logo">
       <div class="brand-icon"><svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg></div>
-      <div><div class="brand-name">El Águila</div><div class="brand-sub">Portal de Empleados</div></div>
+      <div class="brand-text">
+        <div class="brand-name">El Águila</div>
+        <div class="brand-sub">Portal de Colaboradores</div>
+      </div>
     </div>
   </div>
+
+  <div class="store-switcher" id="storeSwitcher"></div>
+
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
-    <a href="index.html"         class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
-    <a href="employees.html"     class="nav-link"><i class="fa-solid fa-users"></i><span>Empleados</span></a>
-    <a href="jobs.html"          class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <a href="index.html" data-manager-only class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <div class="nav-section-label">Operación</div>
+    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
     <div class="nav-section-label">Tiempo</div>
-    <a href="hours.html"         class="nav-link active"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
-    <a href="pay-statement.html" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html"      class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="hours.html" data-manager-only class="nav-link active"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
+    <a href="time-off.html" data-manager-only class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
   </nav>
+
   <div class="sidebar-footer">
-    <div id="sidebarUser" style="margin-bottom:12px"></div>
-    <select class="store-selector" id="storeFilter" onchange="onStoreChange(this.value)">
-      <option value="all">Todas las Tiendas</option>
-      <option value="1">Tienda 1</option>
-      <option value="2">Tienda 2</option>
-    </select>
+    <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
       <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
     </button>
@@ -44,7 +49,7 @@
   <div class="page-header-row">
     <div class="page-header">
       <h1>Control de Horas</h1>
-      <p>Consulta y administra las horas de los empleados por período de pago.</p>
+      <p>Consulta y administra las horas de los colaboradores por período de pago.</p>
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-outline" onclick="openAddEntry()"><i class="fa-solid fa-plus"></i> Agregar Registro</button>
@@ -65,8 +70,8 @@
   <!-- Pestañas de Tienda -->
   <div class="tabs">
     <button class="tab-btn active" onclick="filterStore('all',this)">Todas</button>
-    <button class="tab-btn" onclick="filterStore('1',this)">Tienda 1</button>
-    <button class="tab-btn" onclick="filterStore('2',this)">Tienda 2</button>
+    <button class="tab-btn" onclick="filterStore('1',this)">Despensas</button>
+    <button class="tab-btn" onclick="filterStore('2',this)">Cocina</button>
   </div>
 
   <!-- Resumen -->
@@ -89,7 +94,7 @@
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Empleado</label>
+        <label>Colaborador</label>
         <select id="entryEmp"></select>
       </div>
       <div class="form-row">
@@ -142,11 +147,8 @@
 let periodIndex = getPeriodIndex(new Date());
 let storeFilter = 'all';
 const DAY_NAMES = DIAS_CORTOS;
-
-document.getElementById('storeFilter').value = getSelectedStore();
 requireAuth(() => render());
 
-function onStoreChange(v) { setSelectedStore(v); render(); }
 
 function filterStore(val, btn) {
   storeFilter = val;
@@ -188,11 +190,11 @@ async function render() {
       <div class="stat-value">${totalHrs.toFixed(1)}</div>
     </div>
     <div class="stat-card" style="flex:1;min-width:140px">
-      <div class="stat-label">Empleados</div>
+      <div class="stat-label">Colaboradores</div>
       <div class="stat-value">${emps.length}</div>
     </div>
     <div class="stat-card" style="flex:1;min-width:140px">
-      <div class="stat-label">Promedio por Empleado</div>
+      <div class="stat-label">Promedio por Colaborador</div>
       <div class="stat-value">${emps.length ? (totalHrs/emps.length).toFixed(1) : '0'}</div>
     </div>
   `;
@@ -206,7 +208,7 @@ async function render() {
 
   const acc = document.getElementById('hoursAccordion');
   if (emps.length === 0) {
-    acc.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><i class="fa-solid fa-clock"></i><p>No hay empleados para mostrar.</p></div></div></div>`;
+    acc.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><i class="fa-solid fa-clock"></i><p>No hay colaboradores para mostrar.</p></div></div></div>`;
     return;
   }
 
@@ -251,7 +253,7 @@ async function render() {
           ${avatarHtml(emp.name)}
           <div>
             <div class="employee-name">${emp.name}</div>
-            <div class="employee-sub">${job ? job.title : '—'} · Tienda ${emp.store}</div>
+            <div class="employee-sub">${job ? job.title : '—'} · ${storeShort(emp.store)}</div>
           </div>
         </div>
         <div class="hours-emp-right">
@@ -285,7 +287,7 @@ async function openAddEntry() {
   empsCache = await getEmployees();
   const active = empsCache.filter(e => e.status === 'active');
   document.getElementById('entryEmp').innerHTML = active.map(e =>
-    `<option value="${e.id}">${e.name} — Tienda ${e.store}</option>`
+    `<option value="${e.id}">${e.name} — ${storeShort(e.store)}</option>`
   ).join('');
   document.getElementById('entryDate').value = todayStr();
   openModal('addEntryModal');
