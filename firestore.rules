@@ -34,7 +34,20 @@ service cloud.firestore {
 
     function signedIn()  { return request.auth != null; }
     function provider()  { return request.auth.token.firebase.sign_in_provider; }
-    function isManager() { return signedIn() && provider() == 'password'; }
+
+    // Los colaboradores del portal también entran con correo y contraseña,
+    // así que el proveedor ya no basta para distinguirlos. La gerencia da
+    // de alta la cuenta al contratar y deja constancia en Colaboradores;
+    // esa colección sólo la escribe la gerencia, así que no se puede fingir.
+    function isColabAccount() {
+      return exists(/databases/$(database)/documents/Colaboradores/$(request.auth.uid));
+    }
+    function colabEmpId() {
+      return get(/databases/$(database)/documents/Colaboradores/$(request.auth.uid)).data.employeeId;
+    }
+    function isManager() {
+      return signedIn() && provider() == 'password' && !isColabAccount();
+    }
 
     function haveIndex() {
       return exists(/databases/$(database)/documents/UserIndex/$(request.auth.uid));
@@ -60,6 +73,13 @@ service cloud.firestore {
       allow write:  if isManager();
     }
 
+    // ── Cuentas de colaborador del portal ──
+    // La gerencia crea la cuenta al contratar y guarda aquí uid -> colaborador.
+    match /Colaboradores/{uid} {
+      allow read:  if signedIn();
+      allow write: if isManager();
+    }
+
     // ── Reclamo de identidad, anclado al PIN ──
     // Sólo se puede crear/actualizar si Pins/{pin} confirma que ese PIN
     // pertenece al colaborador indicado.
@@ -75,13 +95,16 @@ service cloud.firestore {
     match /UserIndex/{uid} {
       allow read: if signedIn();
       allow write: if signedIn() && request.auth.uid == uid && (
-        isManager()
-          // La gerencia se verifica sola: pid = 'mgr:' + su propio uid
-          ? request.resource.data.pid == ('mgr:' + request.auth.uid)
-          // El colaborador debe presentar el PIN con el que entró
-          : ( claimFor(request.resource.data.claimKey).uid == request.auth.uid
-              && request.resource.data.pid ==
-                 ('emp:' + claimFor(request.resource.data.claimKey).employeeId) )
+        // Gerencia: se verifica sola, pid = 'mgr:' + su propio uid
+        (isManager() && request.resource.data.pid == ('mgr:' + request.auth.uid))
+
+        // Portal: la cuenta la creó la gerencia, así que el vínculo ya existe
+        || (isColabAccount() && request.resource.data.pid == ('emp:' + colabEmpId()))
+
+        // Reloj: la prueba es el PIN con el que entró
+        || ( claimFor(request.resource.data.claimKey).uid == request.auth.uid
+             && request.resource.data.pid ==
+                ('emp:' + claimFor(request.resource.data.claimKey).employeeId) )
       );
     }
 
@@ -109,10 +132,26 @@ service cloud.firestore {
       allow write: if isManager();
     }
 
-    // ── Datos laborales ──
-    // Un colaborador no puede ver horas ni sueldos de nadie.
-    match /ClockIns/{id}      { allow read, write: if isManager(); }
-    match /PayStatements/{id} { allow read, write: if isManager(); }
+    // ── Horas ──
+    // Cada quien ve y registra únicamente sus propias marcas. El reloj de
+    // la tienda escribe con la sesión del PIN, y el portal con la del correo.
+    match /ClockIns/{id} {
+      allow read: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow create: if isManager()
+        || (haveIndex() && ('emp:' + request.resource.data.employeeId) == myPid());
+      allow update: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow delete: if isManager();
+    }
+
+    // ── Nómina ──
+    // El colaborador ve sus propios recibos; nadie ve los de otro.
+    match /PayStatements/{id} {
+      allow read: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow write: if isManager();
+    }
 
     // Permisos: cada colaborador ve SÓLO los suyos (incluido el motivo
     // del rechazo) y puede solicitar. Aprobar o denegar es de gerencia.

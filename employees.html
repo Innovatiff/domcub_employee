@@ -90,7 +90,7 @@
           <input type="text" id="empName" placeholder="Nombre Apellido">
         </div>
         <div class="form-group">
-          <label>Correo Electrónico</label>
+          <label>Correo Electrónico <span style="font-weight:400;color:var(--text-muted)">— acceso al portal</span></label>
           <input type="email" id="empEmail" placeholder="correo@ejemplo.com">
         </div>
       </div>
@@ -142,7 +142,9 @@
               <i class="fa-solid fa-key" style="margin-right:6px"></i>PIN del Colaborador
             </div>
             <div class="pin-digits" id="pinDisplay"></div>
-            <div style="font-size:11.5px;color:#047857">Comparte este PIN con el colaborador — se guarda en su perfil.</div>
+            <div style="font-size:11.5px;color:#047857">
+              Sirve para el reloj de la tienda y es la contraseña inicial del portal.
+            </div>
           </div>
           <button type="button" class="btn-icon" title="Generar un PIN nuevo" onclick="regeneratePin()"><i class="fa-solid fa-rotate"></i></button>
         </div>
@@ -372,8 +374,19 @@ async function doSaveEmployee() {
     } else {
       const pin = document.getElementById('pinPreview').dataset.pin;
       data.pin = pin;
-      await hireEmployee(data);
-      toast(`${name} contratado · PIN ${pin}`, 'success');
+      const res = await hireEmployee(data);
+      const avisos = {
+        duplicado:      'Ya existe una cuenta con ese correo; no se creó el acceso al portal.',
+        'correo-invalido': 'El correo no es válido; no se creó el acceso al portal.',
+        error:          'No se pudo crear el acceso al portal. Revísalo más tarde.'
+      };
+      if (res.portal === 'ok') {
+        toast(`${name} contratado · PIN ${pin} · acceso al portal creado`, 'success');
+      } else if (res.portal) {
+        toast(avisos[res.portal], 'error');
+      } else {
+        toast(`${name} contratado · PIN ${pin} · sin correo, no hay acceso al portal`, 'info');
+      }
     }
     closeModal('empModal');
     render();

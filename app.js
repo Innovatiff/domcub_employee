@@ -404,6 +404,28 @@ async function setEmployeePin(id, newPin, oldPin) {
   await db.collection('Employees').doc(id).collection('secure').doc('pin').set({ pin: String(newPin) });
 }
 
+// Crea la cuenta de acceso al portal del colaborador.
+// Se usa una segunda instancia de Firebase para que la gerencia NO pierda
+// su propia sesión al registrar a otra persona.
+async function createPortalAccount(email, password, employeeId) {
+  const name = 'alta-' + Date.now();
+  const app2 = firebase.initializeApp(firebase.app().options, name);
+  try {
+    const cred = await app2.auth().createUserWithEmailAndPassword(email, password);
+    const uid  = cred.user.uid;
+    await app2.auth().signOut();
+    // El vínculo uid -> colaborador es lo que las reglas usan para saber
+    // que esta cuenta NO es de gerencia.
+    await db.collection('Colaboradores').doc(uid).set({
+      employeeId, email: email.toLowerCase(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return { uid };
+  } finally {
+    await app2.delete();
+  }
+}
+
 async function hireEmployee(data) {
   const pin = data.pin || generatePin();
   const clean = { ...data };
@@ -413,7 +435,23 @@ async function hireEmployee(data) {
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
   await setEmployeePin(ref.id, pin);
-  return { id:ref.id, pin };
+
+  // Si se capturó un correo, se le crea el acceso al portal usando el PIN
+  // como contraseña inicial. El colaborador la cambia al entrar.
+  let portal = null;
+  if (clean.email) {
+    try {
+      const { uid } = await createPortalAccount(clean.email, pin, ref.id);
+      await db.collection('Employees').doc(ref.id).update({ authUid: uid, portalReady: true });
+      portal = 'ok';
+    } catch (err) {
+      console.error('createPortalAccount:', err);
+      portal = err.code === 'auth/email-already-in-use' ? 'duplicado'
+             : err.code === 'auth/invalid-email'        ? 'correo-invalido'
+             : 'error';
+    }
+  }
+  return { id:ref.id, pin, portal };
 }
 
 async function updateEmployee(id, data) {
