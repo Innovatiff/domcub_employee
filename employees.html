@@ -240,6 +240,32 @@ async function checkMigration() {
   } catch (err) { console.error('checkMigration', err); }
 }
 
+function mostrarAvisoClave(correos) {
+  const lista = correos.map(c => `<li><strong>${c}</strong></li>`).join('');
+  document.getElementById('migBanner').innerHTML = `
+    <div class="card" style="border-left:4px solid var(--danger);background:#fef2f2;margin-bottom:20px">
+      <div class="card-body">
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <i class="fa-solid fa-circle-exclamation" style="font-size:20px;color:var(--danger);margin-top:2px"></i>
+          <div style="flex:1;min-width:240px;font-size:13px;color:#991b1b;line-height:1.6">
+            <div style="font-weight:650;font-size:14px;margin-bottom:6px">
+              Este correo ya tiene una cuenta con otra contraseña
+            </div>
+            <ul style="margin:0 0 8px 16px">${lista}</ul>
+            No puedo vincularla desde aquí: para saber a qué cuenta pertenece
+            haría falta entrar en ella, y su contraseña no es el PIN. Bórrala y
+            vuelve a poner al día:
+            <ol style="margin:8px 0 0 16px">
+              <li>Firebase Console → <strong>Authentication</strong> → <strong>Users</strong></li>
+              <li>Busca ese correo y bórralo con el menú de los tres puntos</li>
+              <li>Vuelve aquí y pulsa <strong>Poner al día</strong> otra vez</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
 async function doMigrate() {
   const b = document.getElementById('migBtn');
   b.disabled = true;
@@ -260,7 +286,11 @@ async function doMigrate() {
     if (r.sinCorreo) pegas.push(`${r.sinCorreo} sin correo: agrégaselo y vuelve a intentar`);
     if (pegas.length) setTimeout(() => toast(pegas.join(' · '), 'error'), 600);
 
-    checkMigration();
+    // Correos que ya tienen cuenta pero con otra contraseña: no se puede
+    // averiguar su uid desde aquí, hace falta borrarlos en la consola.
+    const hayAvisoClave = r.ctaOtraClave && r.ctaOtraClave.length;
+    if (hayAvisoClave) mostrarAvisoClave(r.ctaOtraClave);
+    else checkMigration();   // el aviso ocupa el mismo sitio que el banner
     render();
   } catch (err) {
     b.disabled = false;

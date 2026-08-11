@@ -502,7 +502,7 @@ async function migrateAll(onProgress) {
   // Una sola instancia secundaria para todas las altas, de modo que la
   // gerencia no pierda su propia sesión al crear cuentas ajenas.
   const app2 = firebase.initializeApp(firebase.app().options, 'mig-' + Date.now());
-  const res  = { pinOk:0, pinFail:0, ctaOk:0, ctaExiste:0, ctaFail:0, sinCorreo:0 };
+  const res  = { pinOk:0, pinFail:0, ctaOk:0, ctaExiste:0, ctaFail:0, sinCorreo:0, ctaOtraClave:[] };
 
   // Lista de trabajo: unión de los dos conjuntos, sin repetir
   const ids = [...new Set([...pend.pin, ...pend.portal].map(e => e.id))];
@@ -543,7 +543,19 @@ async function migrateAll(onProgress) {
                 const cred = await app2.auth().signInWithEmailAndPassword(e.email, pin);
                 await vincularCuenta(app2, cred.user.uid, id, e.email);
                 res.ctaExiste++;
-              } catch (e2) { console.error('vincular existente', id, e2); res.ctaFail++; }
+              } catch (e2) {
+                // El correo ya tiene cuenta pero con OTRA contraseña, así que
+                // no hay forma de averiguar su uid desde aquí. La única salida
+                // es borrar ese usuario en la consola de Firebase y repetir.
+                if (e2.code === 'auth/invalid-login-credentials' ||
+                    e2.code === 'auth/wrong-password' ||
+                    e2.code === 'auth/user-not-found') {
+                  res.ctaOtraClave.push(e.email);
+                } else {
+                  console.error('vincular existente', id, e2);
+                }
+                res.ctaFail++;
+              }
             } else {
               console.error('crear cuenta', id, err); res.ctaFail++;
             }
