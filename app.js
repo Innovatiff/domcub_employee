@@ -67,8 +67,18 @@ function requireAuth(callback, opts) {
           canPedidos: !!emp.canPedidos
         };
       } else {
-        const doc = await db.collection('Main').doc(user.uid).get();
-        const p = doc.exists ? doc.data() : { name:user.email, role:'manager' };
+        const ref = db.collection('Main').doc(user.uid);
+        const doc = await ref.get();
+        let p;
+        if (doc.exists) {
+          p = doc.data();
+        } else {
+          // Las cuentas de gerencia se crean directamente en Firebase, así
+          // que la primera vez no existe la ficha. Se crea aquí; sin ella
+          // la persona no aparecería en la lista del chat.
+          p = { name: (user.email || '').split('@')[0], email: user.email, role: 'manager' };
+          await ref.set({ ...p, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        }
         SESSION = {
           kind:'manager', pid:'mgr:'+user.uid, uid:user.uid,
           name:p.name || user.email, role:p.role || 'manager', email:user.email
