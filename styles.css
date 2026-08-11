@@ -1632,3 +1632,109 @@ select {
   .rep-group { break-after: avoid; }
   .rep-foot  { break-inside: avoid; }
 }
+
+/* ══ Avisos de mensajes nuevos ══
+   La barra se inyecta desde app.js como primer hijo de .main, así que
+   aparece arriba en todas las páginas sin tocar cada HTML. */
+.notif-bar {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+.notif-btn {
+  position: relative;
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: background var(--t) var(--ease), color var(--t) var(--ease),
+              border-color var(--t) var(--ease), transform var(--t) var(--ease);
+}
+.notif-btn:hover { color: var(--primary); border-color: var(--primary); transform: translateY(-1px); }
+.notif-btn.has-news { color: var(--primary); border-color: var(--primary); }
+.notif-btn.has-news i { animation: campanita 1.6s var(--ease) 2; transform-origin: 50% 12%; }
+@keyframes campanita {
+  0%,60%,100% { transform: rotate(0); }
+  10%  { transform: rotate(13deg); }
+  22%  { transform: rotate(-11deg); }
+  34%  { transform: rotate(7deg); }
+  46%  { transform: rotate(-4deg); }
+}
+.notif-dot {
+  position: absolute; top: -5px; right: -5px;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger); color: #fff;
+  font-size: 10.5px; font-weight: 700; line-height: 18px;
+  border: 2px solid var(--surface);
+  animation: popIn 240ms var(--ease) both;
+}
+@keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+.notif-panel {
+  position: absolute; top: 48px; right: 0; z-index: 60;
+  width: 330px; max-width: calc(100vw - 40px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--sh-lg);
+  overflow: hidden;
+  animation: fadeInUp 200ms var(--ease) both;
+}
+.notif-panel-head {
+  padding: 12px 15px;
+  font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.notif-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none; color: inherit;
+  transition: background var(--t) var(--ease);
+}
+.notif-item:last-child { border-bottom: 0; }
+.notif-item:hover { background: var(--surface-alt); }
+.notif-item-icon {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: 10px; display: grid; place-items: center;
+  background: var(--primary-soft); color: var(--primary); font-size: 13px;
+}
+.notif-item-name { font-size: 13.5px; font-weight: 650; }
+.notif-item-text {
+  font-size: 12px; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.notif-item-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.notif-empty {
+  padding: 28px 16px; text-align: center;
+  color: var(--text-muted); font-size: 13px;
+}
+.notif-empty i { font-size: 22px; display: block; margin-bottom: 8px; opacity: .5; }
+
+/* La campana no se imprime */
+@media print { .notif-bar { display: none !important; } }
+
+/* Punto de "sin leer" en la lista de conversaciones */
+.chat-unread {
+  display: inline-block;
+  width: 8px; height: 8px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  vertical-align: middle;
+  animation: latido 1.8s var(--ease) infinite;
+}
+@keyframes latido {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.45); }
+  60%      { box-shadow: 0 0 0 5px rgba(225, 29, 72, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-unread, .notif-btn.has-news i { animation: none; }
+}
