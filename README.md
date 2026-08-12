@@ -43,3 +43,13 @@ anuncio), nunca a quien lo escribió.
 - El permiso se pide con un botón, no al entrar: si el navegador recibe un
   «no», no vuelve a preguntar.
 - Los tokens caducados se borran solos cuando FCM los rechaza.
+
+## Pruebas
+
+```
+node tests/nomina.test.js
+```
+
+Comprueba el cálculo de la nómina con colecciones simuladas: que las horas
+sumen sólo turnos cerrados, que ninguna tarifa vacía produzca NaN, y que
+volver a generar no reescriba un recibo ya pagado.

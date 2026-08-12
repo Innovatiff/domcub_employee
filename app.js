@@ -296,12 +296,23 @@ function escapeHtml(s) {
 // No se usa toLocaleString porque en español el CLDR no agrupa los
 // números de cuatro cifras (3286 quedaría como "3286"), y en un
 // documento contable el separador de miles debe verse siempre.
-function money(n) {
+/**
+ * Número en español: miles con punto, decimales con coma.
+ *
+ * Se agrupa a mano porque el CLDR español no separa los miles en cifras de
+ * cuatro dígitos —3286 se quedaría en "3286"— y en una nómina eso se lee
+ * mal justo en el rango donde caen casi todos los importes.
+ */
+function agrupaES(n, dec = 2) {
   const num = Number(n) || 0;
-  const [ent, dec] = Math.abs(num).toFixed(2).split('.');
+  const [ent, d] = Math.abs(num).toFixed(dec).split('.');
   const miles = ent.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return (num < 0 ? '-$' : '$') + miles + ',' + dec;
+  return (num < 0 ? '-' : '') + miles + (dec ? ',' + d : '');
 }
+
+function money(n)            { const v = Number(n) || 0;
+                               return (v < 0 ? '-$' : '$') + agrupaES(Math.abs(v), 2); }
+function numES(n, dec = 1)   { return agrupaES(n, dec); }
 
 // ── Fechas en español ──
 const MESES = ['enero','febrero','marzo','abril','mayo','junio',
@@ -1270,24 +1281,33 @@ function toast(message, type) {
 }
 
 // ── Contadores animados ──
+/**
+ * Anima los números de las tarjetas.
+ *
+ * Lee lo que ya está escrito, así que TIENE que interpretarlo en el mismo
+ * formato en que se escribe: español, punto para los miles y coma para los
+ * decimales. Antes daba por hecho que el punto siempre era de miles, y
+ * "$1234.56" acababa mostrándose como "$123.456,00" —cien veces más—.
+ * Por eso todas las cifras se escriben ya con money() o numES().
+ */
 function animateValues(scope) {
   const root = scope ? document.getElementById(scope) : document;
   if (!root) return;
   root.querySelectorAll('.stat-value').forEach(el => {
-    const m = el.textContent.trim().match(/^(\$?)([\d.,]+)(.*)$/);
+    const m = el.textContent.trim().match(/^([^\d-]*)(-?[\d.,]+)(.*)$/);
     if (!m) return;
     const [, prefix, numStr, suffix] = m;
-    const target = parseFloat(numStr.replace(/\./g,'').replace(',','.').replace(/,/g,''));
+    const target = parseFloat(numStr.replace(/\./g, '').replace(',', '.'));
     if (isNaN(target)) return;
-    const decimals = (numStr.split(/[.,]/)[1] || '').length > 0 && numStr.includes(',') ? 2 : (numStr.split('.')[1]||'').length;
+    const decimals = (numStr.split(',')[1] || '').length;
     const dur = 620, start = performance.now();
     const step = now => {
       const p = Math.min((now-start)/dur, 1);
       const v = target * (1 - Math.pow(1-p, 3));
-      el.textContent = prefix + v.toLocaleString('es', { minimumFractionDigits:decimals, maximumFractionDigits:decimals }) + suffix;
+      el.textContent = prefix + agrupaES(v, decimals) + suffix;
       if (p < 1) requestAnimationFrame(step);
     };
-    el.textContent = prefix + (0).toFixed(decimals) + suffix;
+    el.textContent = prefix + agrupaES(0, decimals) + suffix;
     requestAnimationFrame(step);
   });
 }

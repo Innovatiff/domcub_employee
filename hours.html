@@ -200,7 +200,7 @@ async function render() {
   document.getElementById('periodSummary').innerHTML = `
     <div class="stat-card" style="flex:1;min-width:140px">
       <div class="stat-label">Horas Totales</div>
-      <div class="stat-value">${totalHrs.toFixed(1)}</div>
+      <div class="stat-value">${numES(totalHrs, 1)}</div>
     </div>
     <div class="stat-card" style="flex:1;min-width:140px">
       <div class="stat-label">Colaboradores</div>
@@ -208,7 +208,7 @@ async function render() {
     </div>
     <div class="stat-card" style="flex:1;min-width:140px">
       <div class="stat-label">Promedio por Colaborador</div>
-      <div class="stat-value">${emps.length ? (totalHrs/emps.length).toFixed(1) : '0'}</div>
+      <div class="stat-value">${emps.length ? numES(totalHrs/emps.length, 1) : '0'}</div>
     </div>
   `;
   animateValues('periodSummary');
@@ -229,7 +229,7 @@ async function render() {
     const job     = jobs.find(j => j.id === emp.jobId);
     const empCIs  = cis.filter(c => c.employeeId === emp.id);
     const totalH  = empCIs.filter(c => c.clockOut).reduce((s,c) => s+(c.hours||0), 0);
-    const estPay  = (totalH * (emp.hourlyRate || 0)).toFixed(2);
+    const estPay  = money(totalH * (emp.hourlyRate || 0));
 
     const rows = days.map(dateStr => {
       const d2       = new Date(dateStr + 'T00:00:00');
@@ -253,7 +253,7 @@ async function render() {
         <td>${DAY_NAMES[d2.getDay()]}</td>
         <td>${formatTime(ci.clockIn)}</td>
         <td>${ci.clockOut ? formatTime(ci.clockOut) : '<span class="badge badge-green">En curso</span>'}</td>
-        <td><strong>${ci.clockOut ? (ci.hours||0).toFixed(2)+'h' : '—'}</strong></td>
+        <td><strong>${ci.clockOut ? numES(ci.hours, 2)+' h' : '—'}</strong></td>
         <td>${ci.clockOut ? '<span class="badge badge-green">Completo</span>' : '<span class="badge badge-yellow">En curso</span>'}</td>
         <td><button class="btn-icon btn-sm" onclick="doDeleteEntry('${ci.id}')" title="Eliminar"><ion-icon name="close-outline" style="font-size:11px"></ion-icon></button></td>
       </tr>`).join('');
@@ -270,8 +270,8 @@ async function render() {
           </div>
         </div>
         <div class="hours-emp-right">
-          <div class="hours-total">${totalH.toFixed(2)} h en total</div>
-          <span class="badge badge-gray">$${estPay} aprox.</span>
+          <div class="hours-total">${numES(totalH, 2)} h en total</div>
+          <span class="badge badge-gray">${estPay} aprox.</span>
           <ion-icon name="chevron-down-outline" style="color:var(--text-muted);font-size:12px;transition:transform 0.2s"></ion-icon>
         </div>
       </div>
@@ -350,47 +350,41 @@ async function doDeleteEntry(id) {
 function openSavePeriod() {
   const period = getPeriodByIndex(periodIndex);
   document.getElementById('savePeriodText').textContent =
-    `¿Guardar y generar la nómina de ${formatPeriodLabel(period)}? Se reemplazarán los recibos existentes de este período.`;
+    `¿Generar la nómina de ${formatPeriodLabel(period)} con las horas registradas? ` +
+    `Los recibos que ya estén marcados como pagados no se tocan.`;
   openModal('savePeriodModal');
 }
 
+/**
+ * Esta página tenía su propia copia del cálculo de la nómina, y hacía dos
+ * cosas mal: borraba TODOS los recibos del período —incluidos los ya
+ * pagados, que son dinero que ya salió de la caja— y multiplicaba por una
+ * tarifa que podía venir vacía, dejando el importe en NaN.
+ *
+ * Ahora llama a la misma función que el botón de la página de Nómina. Un
+ * único cálculo, un único sitio donde arreglarlo.
+ */
 async function doSavePeriod() {
   const period = getPeriodByIndex(periodIndex);
   const btn    = document.getElementById('confirmSaveBtn');
   btn.disabled = true;
   try {
-    const [emps, cis] = await Promise.all([
-      getEmployees(),
-      getClockInsRange(period.start, period.end)
-    ]);
-    const active = emps.filter(e => e.status === 'active');
+    const r = await generarNomina(period.start);
 
-    // Delete existing statements for this period
-    const existing = await getPayStatements(period.start);
-    await Promise.all(existing.map(s => db.collection('PayStatements').doc(s.id).delete()));
-
-    // Create new
-    await Promise.all(active.map(emp => {
-      const empHours = cis
-        .filter(c => c.employeeId === emp.id && c.clockOut)
-        .reduce((s, c) => s + (c.hours || 0), 0);
-      const gross = Math.round(empHours * emp.hourlyRate * 100) / 100;
-      return savePayStatement({
-        periodStart: period.start,
-        periodEnd:   period.end,
-        employeeId:  emp.id,
-        hours:       Math.round(empHours * 100) / 100,
-        rate:        emp.hourlyRate || 0,
-        gross,
-        status:      'pending',
-        paidDate:    null
-      });
-    }));
-
+    const hechos = [];
+    if (r.creados)      hechos.push(`${r.creados} ${r.creados===1?'recibo generado':'recibos generados'}`);
+    if (r.actualizados) hechos.push(`${r.actualizados} ${r.actualizados===1?'actualizado':'actualizados'}`);
     closeModal('savePeriodModal');
-    toast(`Período guardado · ${active.length} ${active.length === 1 ? 'recibo generado' : 'recibos generados'}`, 'success');
+    toast(hechos.length ? hechos.join(' · ') : 'No había horas que facturar en este período',
+          hechos.length ? 'success' : 'info');
+
+    const notas = [];
+    if (r.conservados) notas.push(`${r.conservados} ya ${r.conservados===1?'estaba pagado':'estaban pagados'} y no se tocaron`);
+    if (r.sinHoras)    notas.push(`${r.sinHoras} sin horas registradas`);
+    if (notas.length) setTimeout(() => toast(notas.join(' · '), 'info'), 900);
   } catch (err) {
-    toast('Error: ' + err.message, 'error');
+    console.error('generar nómina', err);
+    toast('No se pudo generar: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }
