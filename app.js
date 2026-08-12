@@ -787,6 +787,94 @@ async function generarNomina(periodStart) {
   return res;
 }
 
+// ══ Horario semanal ══
+//
+// Un documento por semana y tienda: Horarios/{lunes}_{tienda} =
+//   { weekStart, store, shifts: { empId: { 'YYYY-MM-DD': {in,out} } } }
+//
+// Un solo documento por semana hace que copiar la semana anterior, leerla
+// entera o pintarla sea una única operación, y con dos tiendas y un puñado
+// de colaboradores nunca se acerca al límite de tamaño.
+
+/** El lunes de la semana a la que pertenece la fecha. */
+function lunesDe(fecha) {
+  const d = fecha instanceof Date ? new Date(fecha) : parseLocalDate(fecha);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // getDay(): domingo=0
+  return toDateStr(d);
+}
+
+function diasDeSemana(lunes) {
+  const base = parseLocalDate(lunes);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(base); d.setDate(d.getDate() + i);
+    return toDateStr(d);
+  });
+}
+
+async function getHorario(lunes, store) {
+  const doc = await db.collection('Horarios').doc(`${lunes}_${store}`).get();
+  return doc.exists ? doc.data() : { weekStart: lunes, store, shifts: {} };
+}
+
+async function saveHorario(lunes, store, shifts) {
+  await db.collection('Horarios').doc(`${lunes}_${store}`).set({
+    weekStart: lunes, store, shifts,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+/**
+ * Borra los turnos de un colaborador entre dos fechas, en ambas tiendas.
+ *
+ * Es lo que engancha los permisos con el horario: al aprobarse uno, la
+ * persona sale sola de los días concedidos, sin que la gerencia tenga que
+ * acordarse de ir a la página del horario a quitarla.
+ */
+async function quitarDelHorario(employeeId, desde, hasta) {
+  const semanas = new Set();
+  let d = parseLocalDate(desde);
+  const fin = parseLocalDate(hasta);
+  while (d <= fin) { semanas.add(lunesDe(d)); d = new Date(d); d.setDate(d.getDate() + 7); }
+  semanas.add(lunesDe(fin));
+
+  let quitados = 0;
+  for (const lunes of semanas) {
+    for (const store of STORE_IDS) {
+      const ref = db.collection('Horarios').doc(`${lunes}_${store}`);
+      const doc = await ref.get();
+      if (!doc.exists) continue;
+      const shifts = doc.data().shifts || {};
+      const mios = shifts[employeeId];
+      if (!mios) continue;
+      let cambio = false;
+      for (const fecha of Object.keys(mios)) {
+        if (fecha >= desde && fecha <= hasta) { delete mios[fecha]; cambio = true; quitados++; }
+      }
+      if (cambio) {
+        if (!Object.keys(mios).length) delete shifts[employeeId];
+        await ref.set({ ...doc.data(), shifts,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+    }
+  }
+  return quitados;
+}
+
+/** Permisos aprobados que caen dentro de una semana, por colaborador. */
+async function permisosDeSemana(lunes) {
+  const dias = diasDeSemana(lunes);
+  const snap = await db.collection('TimeOff')
+    .where('status', '==', 'approved').get();
+  const porEmp = {};
+  snap.docs.map(d => d.data())
+    .filter(t => t.startDate <= dias[6] && t.endDate >= dias[0])
+    .forEach(t => {
+      (porEmp[t.employeeId] = porEmp[t.employeeId] || []).push(t);
+    });
+  return porEmp;
+}
+
 // ── Pedidos ──
 // Se ordena en el cliente para no exigir índices compuestos en Firestore.
 async function getPedidos(store) {

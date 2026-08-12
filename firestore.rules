@@ -165,6 +165,14 @@ service cloud.firestore {
       allow update, delete: if isManager();
     }
 
+    // ── Horario semanal ──
+    // Todos lo pueden leer —cada colaborador ve su semana en el portal—
+    // pero sólo la gerencia lo arma.
+    match /Horarios/{id} {
+      allow read:  if signedIn();
+      allow write: if isManager();
+    }
+
     // ── Pedidos ──
     match /Pedidos/{id} {
       allow read:   if signedIn();

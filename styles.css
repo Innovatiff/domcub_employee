@@ -1876,3 +1876,85 @@ ion-icon {
 .visor-x:hover { background: rgba(255,255,255,0.22); }
 .compose-adj.subiendo { color: var(--primary); border-color: var(--primary); }
 .compose-adj .pct { font-size: 11px; font-weight: 700; }
+
+/* ══ Horario semanal ══
+   Rejilla de 7 días. La primera columna va fija y las demás se reparten
+   el ancho por igual, para que la semana entera quepa sin desplazarse. */
+.htabla { table-layout: fixed; width: 100%; min-width: 860px; }
+/* En pantallas justas la tabla se desplaza dentro de su tarjeta (el
+   .table-wrap ya lo hace) en vez de comprimir los turnos hasta romperlos. */
+.htabla th.hemp { width: 180px; }
+.htabla .hdia {
+  text-align: center; padding: 9px 4px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.htabla .hdia span {
+  display: block; font-size: 16px; font-weight: 700;
+  letter-spacing: 0; color: var(--text); margin-top: 1px;
+}
+.htabla .hdia.hoy span {
+  width: 28px; height: 28px; line-height: 28px;
+  margin: 2px auto 0;
+  background: var(--primary); color: #fff;
+  border-radius: 50%;
+}
+
+.hemp { text-align: left; padding: 8px 10px; }
+.hemp .employee-name { font-size: 13px; }
+.hemp-total { font-size: 11px; color: var(--text-muted); }
+
+.hcell {
+  height: 54px; padding: 3px;
+  border-left: 1px solid var(--border);
+  vertical-align: middle; text-align: center;
+}
+.hcell.libre, .hcell.con-turno { cursor: pointer; }
+
+.hcell .hcell-mas {
+  display: grid; place-items: center;
+  height: 100%; border-radius: 8px;
+  color: transparent; font-size: 17px; font-weight: 600;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.hcell.libre:hover .hcell-mas { background: var(--primary-soft); color: var(--primary); }
+
+.hcell-turno {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  height: 100%; border-radius: 8px;
+  background: var(--primary-soft);
+  border: 1px solid #c7d2fe;
+  transition: filter var(--t-fast) var(--ease);
+}
+.hcell.con-turno:hover .hcell-turno { filter: brightness(0.96); }
+.hcell-horas { font-size: 11px; font-weight: 650; color: var(--primary-dark); white-space: nowrap; letter-spacing: -0.01em; }
+.hcell-dur   { font-size: 10px; color: var(--primary); }
+
+/* Día con permiso aprobado: bloqueado, no se puede asignar */
+.hcell.permiso { cursor: not-allowed; }
+.hcell-permiso {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  height: 100%; border-radius: 8px;
+  background: var(--warning-soft);
+  border: 1px dashed #fcd34d;
+  font-size: 10.5px; font-weight: 650; color: #92400e;
+}
+
+/* Atajos de horario en el modal */
+.turno-presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.turno-preset {
+  padding: 7px 13px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: #fff; color: var(--text);
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.turno-preset:hover { border-color: var(--primary); color: var(--primary); }
+
+@media (max-width: 900px) {
+  .htabla { min-width: 720px; }
+  .htabla th.hemp { width: 128px; }
+  .hcell-horas { font-size: 10px; }
+}
