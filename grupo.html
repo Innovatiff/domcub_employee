@@ -108,6 +108,11 @@
           Solo la gerencia puede publicar anuncios. Aquí puedes leerlos.
         </div>
         <form id="composeForm" onsubmit="doSend(event)">
+          <input type="file" id="fotoInput" accept="image/*" hidden onchange="doFoto(this)">
+          <button type="button" class="compose-adj" id="fotoBtn" title="Enviar una foto"
+                  onclick="document.getElementById('fotoInput').click()">
+            <ion-icon name="image-outline"></ion-icon>
+          </button>
           <textarea id="msgInput" rows="1" placeholder="Escribe un mensaje..." onkeydown="keySend(event)" oninput="autoCrecer(this)"></textarea>
           <button type="submit" class="btn btn-primary" id="sendBtn" title="Enviar">
             <ion-icon name="send-outline"></ion-icon>
@@ -121,6 +126,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
 <script>
@@ -300,13 +306,19 @@ function paintMsgs(msgs) {
           <span>${roleLabel(m.senderRole)}</span>
           <time>${formatTime(d)}</time>
         </div>
-        <div class="anuncio-body">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>
+        <div class="anuncio-body">${m.type === 'image'
+          ? `<img class="anuncio-foto" src="${m.url}" alt="Foto" loading="lazy" onclick="verFoto('${m.url}')">`
+          : escapeHtml(m.text).replace(/\n/g,'<br>')}</div>
       </div>`;
     } else {
       html += `<div class="bubble-row ${mine?'mine':''} ${seguido?'seguido':''} ${ultimo?'ultimo':''}">
         ${mine ? '' : (seguido ? '<div class="bubble-hueco"></div>' : avatarHtml(m.senderName, 28))}
-        <div class="bubble">
-          <div class="bubble-text">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>
+        <div class="bubble ${m.type==='image' ? 'bubble-foto' : ''}">
+          ${m.type === 'image'
+            ? `<img src="${m.url}" alt="Foto" loading="lazy"
+                    style="aspect-ratio:${(m.w||4)}/${(m.h||3)}"
+                    onclick="verFoto('${m.url}')">`
+            : `<div class="bubble-text">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>`}
           <time>${formatTime(d)}</time>
         </div>
       </div>`;
@@ -314,6 +326,50 @@ function paintMsgs(msgs) {
   });
   box.innerHTML = html;
   if (alFinal) box.scrollTop = box.scrollHeight;
+}
+
+async function doFoto(input) {
+  const file = input.files && input.files[0];
+  input.value = '';                       // permite reenviar la misma foto
+  if (!file || !activeChat || !activeChat.canPost) return;
+
+  const btn = document.getElementById('fotoBtn');
+  btn.disabled = true;
+  btn.classList.add('subiendo');
+  btn.innerHTML = '<ion-icon name="sync-outline" class="gira"></ion-icon>';
+  btn.title = 'Preparando la foto...';
+  try {
+    await enviarFoto(activeChat.id, file, pct => {
+      // pct nulo = todavía encogiendo, la subida no ha empezado
+      if (pct === null) return;
+      btn.title = 'Subiendo...';
+      const p = btn.querySelector('.pct');
+      if (p) p.textContent = pct + '%';
+      else   btn.innerHTML = `<span class="pct">${pct}%</span>`;
+    });
+  } catch (err) {
+    console.error('enviar foto', err);
+    toast('No se pudo enviar la foto: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('subiendo');
+    btn.title = 'Enviar una foto';
+    btn.innerHTML = '<ion-icon name="image-outline"></ion-icon>';
+  }
+}
+
+// Ver la foto en grande
+function verFoto(url) {
+  let v = document.getElementById('visorFoto');
+  if (!v) {
+    v = document.createElement('div');
+    v.id = 'visorFoto'; v.className = 'visor-foto';
+    v.onclick = () => v.classList.remove('on');
+    v.innerHTML = '<button class="visor-x" aria-label="Cerrar"><ion-icon name="close-outline"></ion-icon></button><img alt="Foto">';
+    document.body.appendChild(v);
+  }
+  v.querySelector('img').src = url;
+  v.classList.add('on');
 }
 
 function autoCrecer(t) {

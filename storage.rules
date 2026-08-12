@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// ══════════════════════════════════════════════════════════
+//  El Águila — reglas de Firebase Storage
+//
+//  Aquí sólo viven las fotos que se mandan por el chat. Van aparte de las
+//  reglas de Firestore: son dos servicios distintos y cada uno se publica
+//  en su propia pestaña de la consola.
+//
+//  Quién puede ver una foto no se decide aquí, sino en Firestore: la URL
+//  de descarga viaja dentro del mensaje, y un mensaje sólo lo leen los
+//  participantes de esa conversación. Sin la URL no hay forma de llegar al
+//  archivo, y Storage no permite listar el contenido de una carpeta.
+// ══════════════════════════════════════════════════════════
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /chat/{chatId}/{archivo} {
+      allow read: if request.auth != null;
+
+      // Sólo imágenes, y con un tope de tamaño. La aplicación las reduce
+      // antes de subirlas, pero si el teléfono no puede reducirlas sube el
+      // original —una foto de iPhone sin tocar cabe de sobra en 12 MB—.
+      allow create: if request.auth != null
+        && request.resource.size < 12 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+
+      // Una foto enviada no se reemplaza ni se borra: el chat es un
+      // registro de lo que se dijo.
+      allow update, delete: if false;
+    }
+
+    // Nada fuera de las fotos del chat
+    match /{todo=**} {
+      allow read, write: if false;
+    }
+  }
+}

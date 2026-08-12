@@ -372,6 +372,7 @@ function getPeriodByIndex(idx) {
   return { index: idx, start: toDateStr(start), end: toDateStr(end) };
 }
 function getCurrentPeriod() { return getPeriodByIndex(getPeriodIndex(new Date())); }
+function getPeriodByStart(start) { return getPeriodByIndex(getPeriodIndex(parseLocalDate(start))); }
 function formatPeriodLabel(p) {
   const s = parseLocalDate(p.start), e = parseLocalDate(p.end);
   return `${s.getDate()} ${MESES_CORTOS[s.getMonth()]} – ${e.getDate()} ${MESES_CORTOS[e.getMonth()]}, ${e.getFullYear()}`;
@@ -687,6 +688,64 @@ async function savePayStatement(data, id) {
   else    await db.collection('PayStatements').add({ ...data, savedAt: firebase.firestore.FieldValue.serverTimestamp() });
 }
 async function updatePayStatement(id, data) { await db.collection('PayStatements').doc(id).update(data); }
+async function deletePayStatement(id) { await db.collection('PayStatements').doc(id).delete(); }
+
+/**
+ * Arma los recibos de un período a partir de las marcas de entrada.
+ *
+ * Sólo cuenta los turnos cerrados: uno abierto todavía no tiene horas, y
+ * meterlo daría un recibo que cambia solo. Se rehacen los recibos del
+ * período, pero conservando lo ya pagado —marcar pagado es una decisión de
+ * la gerencia y no se pierde porque se vuelva a generar—.
+ */
+async function generarNomina(periodStart) {
+  const p = getPeriodByStart(periodStart);
+  const [emps, marcas, previos] = await Promise.all([
+    getEmployees(),
+    getClockInsRange(p.start, p.end),
+    getPayStatements(p.start)
+  ]);
+
+  const activos = emps.filter(e => e.status === 'active');
+  const horasPor = {};
+  marcas.filter(m => m.clockOut && m.hours).forEach(m => {
+    horasPor[m.employeeId] = (horasPor[m.employeeId] || 0) + Number(m.hours || 0);
+  });
+
+  const antes = {};
+  previos.forEach(s => { antes[s.employeeId] = s; });
+
+  const res = { creados: 0, actualizados: 0, sinHoras: 0, conservados: 0 };
+
+  for (const e of activos) {
+    const horas = Math.round((horasPor[e.id] || 0) * 100) / 100;
+    const viejo = antes[e.id];
+    delete antes[e.id];
+
+    if (!horas) { res.sinHoras++; if (!viejo) continue; }
+
+    // Un recibo ya pagado no se toca: reescribirlo cambiaría el importe de
+    // algo que ya salió de la caja.
+    if (viejo && viejo.status === 'paid') { res.conservados++; continue; }
+
+    const rate = Number(e.hourlyRate || 0);
+    const datos = {
+      employeeId: e.id, employeeName: e.name, store: e.store,
+      periodStart: p.start, periodEnd: p.end,
+      hours: horas, rate, gross: Math.round(horas * rate * 100) / 100,
+      status: 'pending', paidDate: null
+    };
+    if (viejo) { await updatePayStatement(viejo.id, datos); res.actualizados++; }
+    else if (horas)  { await savePayStatement(datos); res.creados++; }
+  }
+
+  // Recibos de gente que ya no está activa, y sin pagar: sobran
+  for (const id in antes) {
+    const s = antes[id];
+    if (s.status !== 'paid') await deletePayStatement(s.id);
+  }
+  return res;
+}
 
 // ── Pedidos ──
 // Se ordena en el cliente para no exigir índices compuestos en Firestore.
@@ -724,6 +783,151 @@ const PEDIDO_ESTADOS = {
 
 // ── Chat ──
 const ANUNCIOS_ID = 'anuncios';
+
+/**
+ * Reduce la foto antes de subirla.
+ *
+ * Una foto de teléfono ronda los 4 MB y por datos móviles eso son varios
+ * segundos de espera. Se redibuja a 1200 px de lado mayor con calidad 0,68,
+ * que deja el archivo en unos 90 KB: en una burbuja de chat no se nota la
+ * diferencia, y un papel o una etiqueta fotografiada de cerca se siguen
+ * leyendo. Es el punto donde la espera desaparece sin que la foto deje de
+ * servir para lo que se usa.
+ */
+/** Nunca deja una promesa colgada: si tarda de más, se rinde. */
+function conTiempo(promesa, ms, queHacia) {
+  return Promise.race([
+    promesa,
+    new Promise((_, fail) => setTimeout(
+      () => fail(new Error('Se agotó el tiempo ' + queHacia)), ms))
+  ]);
+}
+
+function aBlob(canvas, calidad) {
+  return new Promise((ok, fail) => {
+    if (!canvas.toBlob) {
+      // Safari antiguo: se arma el blob a mano desde el data URL
+      try {
+        const s = canvas.toDataURL('image/jpeg', calidad).split(',')[1];
+        const bin = atob(s);
+        const buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        return ok(new Blob([buf], { type: 'image/jpeg' }));
+      } catch (e) { return fail(e); }
+    }
+    canvas.toBlob(b => b ? ok(b) : fail(new Error('El navegador no pudo comprimir la imagen')),
+                  'image/jpeg', calidad);
+  });
+}
+
+/**
+ * Reduce la foto antes de subirla.
+ *
+ * En iPhone esto es lo delicado. Una foto de la cámara son 12 megapíxeles;
+ * descodificarla ya cuesta, y Safari además limita el tamaño de los lienzos
+ * y a veces deja `toBlob` sin responder. Por eso:
+ *
+ *   · se descodifica UNA sola vez —medir y reescalar en dos pasadas
+ *     duplicaba el trabajo, que es lo que la dejaba clavada—;
+ *   · todo va con tiempo máximo, para que nunca quede una promesa colgada;
+ *   · si algo falla, quien llama sube la foto original en vez de rendirse.
+ */
+async function encogerImagen(file, maxLado = 1200, calidad = 0.68) {
+  const dibujar = (fuente, anchoO, altoO) => {
+    const e = Math.min(1, maxLado / Math.max(anchoO, altoO));
+    const w = Math.max(1, Math.round(anchoO * e));
+    const h = Math.max(1, Math.round(altoO * e));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingQuality = 'medium';
+    ctx.drawImage(fuente, 0, 0, w, h);
+    return { c, w, h };
+  };
+
+  if (typeof createImageBitmap === 'function') {
+    let bmp = null;
+    try {
+      bmp = await conTiempo(createImageBitmap(file), 15000, 'al abrir la foto');
+      const { c, w, h } = dibujar(bmp, bmp.width, bmp.height);
+      const blob = await conTiempo(aBlob(c, calidad), 15000, 'al comprimir la foto');
+      return { blob, w, h };
+    } catch (e) {
+      console.warn('createImageBitmap no sirvió, se prueba con <img>:', e);
+    } finally {
+      if (bmp && bmp.close) bmp.close();
+    }
+  }
+
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await conTiempo(new Promise((ok, fail) => {
+      const i = new Image();
+      i.onload  = () => ok(i);
+      i.onerror = () => fail(new Error('El navegador no pudo abrir esa imagen'));
+      i.src = url;
+    }), 15000, 'al abrir la foto');
+
+    const { c, w, h } = dibujar(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+    const blob = await conTiempo(aBlob(c, calidad), 15000, 'al comprimir la foto');
+    return { blob, w, h };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+const MAX_FOTO = 12 * 1024 * 1024;   // lo que llega del teléfono, antes de encoger
+
+async function enviarFoto(chatId, file, onProgreso) {
+  if (file.type && !file.type.startsWith('image/')) {
+    throw new Error('Sólo se pueden enviar imágenes');
+  }
+  if (file.size > MAX_FOTO)            throw new Error('La imagen es demasiado grande');
+
+  // Encoger ocurre ANTES de que empiece la subida. Sin avisar de esta fase
+  // el porcentaje se queda en cero y parece colgado.
+  if (onProgreso) onProgreso(null);
+
+  // Si reducirla falla —Safari con una foto enorme, un formato que no sabe
+  // dibujar— se sube tal cual. Tarda más, pero la foto llega, que es lo que
+  // importa. Quedarse sin enviar nada sería el peor resultado.
+  let blob, w = 0, h = 0;
+  try {
+    ({ blob, w, h } = await encogerImagen(file));
+  } catch (e) {
+    console.warn('No se pudo reducir la foto, se sube original:', e);
+    blob = file;
+  }
+
+  const nombre = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}.jpg`;
+  const ref = firebase.storage().ref(`chat/${chatId}/${nombre}`);
+
+  // Con el porcentaje a la vista la espera se hace corta; sin él, cualquier
+  // segundo parece que se colgó.
+  // Si hubo que subir el original, su tipo puede no ser JPEG (iPhone manda
+  // HEIC); declararlo mal haría que no se viera.
+  const tarea = ref.put(blob, { contentType: blob.type || 'image/jpeg' });
+  await new Promise((ok, fail) => {
+    tarea.on('state_changed',
+      s => { if (onProgreso && s.totalBytes) onProgreso(Math.round(s.bytesTransferred / s.totalBytes * 100)); },
+      fail, ok);
+  });
+  const url = await ref.getDownloadURL();
+
+  await db.collection('Messages').add({
+    chatId,
+    senderId:   SESSION.pid,
+    senderName: SESSION.name,
+    senderRole: SESSION.role,
+    type: 'image', url, w, h, text: '',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await db.collection('Chats').doc(chatId).set({
+    lastMessage: 'Foto',
+    lastSender:  SESSION.pid,
+    lastAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge:true });
+}
 
 function dmId(a, b) { return 'dm_' + [a,b].sort().join('__'); }
 

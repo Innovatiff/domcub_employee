@@ -304,7 +304,44 @@ async function markAllPaid() {
   render();
 }
 
-function openGenerateModal() { openModal('generateModal'); }
+function openGenerateModal() {
+  document.getElementById('genPeriodSelect').value = document.getElementById('periodSelect').value;
+  openModal('generateModal');
+}
+
+async function doGenerate() {
+  const periodStart = document.getElementById('genPeriodSelect').value;
+  if (!periodStart) return;
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<ion-icon name="sync-outline" class="gira"></ion-icon> Generando...';
+  try {
+    const r = await generarNomina(periodStart);
+
+    const hechos = [];
+    if (r.creados)      hechos.push(`${r.creados} ${r.creados===1?'recibo creado':'recibos creados'}`);
+    if (r.actualizados) hechos.push(`${r.actualizados} ${r.actualizados===1?'actualizado':'actualizados'}`);
+    toast(hechos.length ? hechos.join(' · ') : 'No había horas que facturar en este período',
+          hechos.length ? 'success' : 'info');
+
+    // Lo que no se pudo tocar se avisa aparte, para que no parezca que se
+    // ignoró: un recibo pagado no se reescribe, y sin horas no hay recibo.
+    const notas = [];
+    if (r.conservados) notas.push(`${r.conservados} ya ${r.conservados===1?'estaba pagado y no se tocó':'estaban pagados y no se tocaron'}`);
+    if (r.sinHoras)    notas.push(`${r.sinHoras} sin horas registradas`);
+    if (notas.length) setTimeout(() => toast(notas.join(' · '), 'info'), 900);
+
+    closeModal('generateModal');
+    document.getElementById('periodSelect').value = periodStart;
+    render();
+  } catch (err) {
+    console.error('generar nómina', err);
+    toast('No se pudo generar: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generar';
+  }
+}
 
 // ══ Reporte para el contador ══
 function openReportModal() {

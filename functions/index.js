@@ -68,7 +68,10 @@ exports.avisarMensaje = onDocumentCreated('Messages/{id}', async event => {
   const titulo = esAnuncio
     ? 'Anuncios Generales'
     : (msg.senderName || 'Nuevo mensaje');
-  const cuerpo = String(msg.text || '').slice(0, 140);
+  // Una foto no trae texto: sin esto el aviso llegaría con el cuerpo vacío.
+  const cuerpo = msg.type === 'image'
+    ? '📷 Foto'
+    : String(msg.text || '').slice(0, 140);
 
   const res = await getMessaging().sendEachForMulticast({
     tokens,
