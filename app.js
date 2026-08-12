@@ -794,22 +794,52 @@ const ANUNCIOS_ID = 'anuncios';
  * leyendo. Es el punto donde la espera desaparece sin que la foto deje de
  * servir para lo que se usa.
  */
-function encogerImagen(file, maxLado = 1200, calidad = 0.68) {
-  return new Promise((ok, fail) => {
+async function encogerImagen(file, maxLado = 1200, calidad = 0.68) {
+  const medidas = (w, h) => {
+    const e = Math.min(1, maxLado / Math.max(w, h));
+    return { w: Math.round(w * e), h: Math.round(h * e) };
+  };
+  const alBlob = (canvas, w, h) => new Promise((ok, fail) =>
+    canvas.toBlob(b => b ? ok({ blob:b, w, h }) : fail(new Error('No se pudo procesar la imagen')),
+                  'image/jpeg', calidad));
+
+  // Camino rápido: createImageBitmap descodifica fuera del hilo de la
+  // interfaz y sabe reescalar por su cuenta. Con una foto de 12 megapíxeles
+  // la diferencia frente a <img> + canvas es de segundos, que es justo lo
+  // que hacía que el porcentaje se quedara clavado en cero.
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const sonda = await createImageBitmap(file);
+      const { w, h } = medidas(sonda.width, sonda.height);
+      sonda.close && sonda.close();
+
+      let bmp;
+      try {
+        bmp = await createImageBitmap(file, {
+          resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' });
+      } catch (e) {
+        bmp = await createImageBitmap(file);   // navegador sin opciones de reescalado
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(bmp, 0, 0, w, h);
+      bmp.close && bmp.close();
+      return await alBlob(c, w, h);
+    } catch (e) {
+      // Si algo falla se sigue por el camino de siempre
+    }
+  }
+
+  return await new Promise((ok, fail) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
-    img.onload = () => {
+    img.onload = async () => {
       URL.revokeObjectURL(url);
-      let { width: w, height: h } = img;
-      const escala = Math.min(1, maxLado / Math.max(w, h));
-      w = Math.round(w * escala); h = Math.round(h * escala);
-
+      const { w, h } = medidas(img.width, img.height);
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
       c.getContext('2d').drawImage(img, 0, 0, w, h);
-      c.toBlob(b => b ? ok({ blob: b, w, h })
-                      : fail(new Error('No se pudo procesar la imagen')),
-               'image/jpeg', calidad);
+      try { ok(await alBlob(c, w, h)); } catch (e) { fail(e); }
     };
     img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('Ese archivo no es una imagen')); };
     img.src = url;
@@ -822,7 +852,11 @@ async function enviarFoto(chatId, file, onProgreso) {
   if (!file.type.startsWith('image/')) throw new Error('Sólo se pueden enviar imágenes');
   if (file.size > MAX_FOTO)            throw new Error('La imagen es demasiado grande');
 
+  // Encoger tarda lo suyo y ocurre ANTES de que empiece la subida. Sin
+  // avisar de esta fase, el porcentaje se queda en cero y parece colgado.
+  if (onProgreso) onProgreso(null);
   const { blob, w, h } = await encogerImagen(file);
+
   const nombre = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}.jpg`;
   const ref = firebase.storage().ref(`chat/${chatId}/${nombre}`);
 

@@ -336,11 +336,16 @@ async function doFoto(input) {
   const btn = document.getElementById('fotoBtn');
   btn.disabled = true;
   btn.classList.add('subiendo');
-  btn.innerHTML = '<span class="pct">0%</span>';
+  btn.innerHTML = '<ion-icon name="sync-outline" class="gira"></ion-icon>';
+  btn.title = 'Preparando la foto...';
   try {
     await enviarFoto(activeChat.id, file, pct => {
+      // pct nulo = todavía encogiendo, la subida no ha empezado
+      if (pct === null) return;
+      btn.title = 'Subiendo...';
       const p = btn.querySelector('.pct');
       if (p) p.textContent = pct + '%';
+      else   btn.innerHTML = `<span class="pct">${pct}%</span>`;
     });
   } catch (err) {
     console.error('enviar foto', err);
@@ -348,6 +353,7 @@ async function doFoto(input) {
   } finally {
     btn.disabled = false;
     btn.classList.remove('subiendo');
+    btn.title = 'Enviar una foto';
     btn.innerHTML = '<ion-icon name="image-outline"></ion-icon>';
   }
 }
