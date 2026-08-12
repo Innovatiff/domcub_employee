@@ -216,6 +216,12 @@ function buildPeriodOptions() {
   document.getElementById('genPeriodSelect').innerHTML  = options.join('');
 }
 
+const sumar = (lista, campo) => lista.reduce((s, x) => s + (Number(x[campo]) || 0), 0);
+
+// La tienda del recibo se guarda al generarlo: si el colaborador cambia de
+// tienda después, su historial no debe mudarse con él.
+const tiendaDe = (s, emp) => s.store || (emp && emp.store) || null;
+
 async function render() {
   const periodStart = document.getElementById('periodSelect').value;
   if (!periodStart) return;
@@ -230,22 +236,22 @@ async function render() {
 
   let stmts = allStmts;
   if (store !== 'all') {
-    stmts = stmts.filter(s => {
-      const emp = allEmps.find(e => e.id === s.employeeId);
-      return emp && emp.store === store;
-    });
+    stmts = stmts.filter(s => tiendaDe(s, allEmps.find(e => e.id === s.employeeId)) === store);
   }
+  stmts.sort((a, b) => String(a.employeeName || '').localeCompare(String(b.employeeName || '')));
 
-  const totalGross = stmts.reduce((s,x) => s+x.gross, 0);
+  // Sin el respaldo a cero, un recibo antiguo sin el campo convierte toda
+  // la suma en NaN y la tarjeta se queda en blanco.
+  const totalGross = sumar(stmts, 'gross');
   const paid       = stmts.filter(s => s.status === 'paid');
   const pending    = stmts.filter(s => s.status !== 'paid');
 
   document.getElementById('stmtCount').textContent = stmts.length + (stmts.length === 1 ? ' registro' : ' registros');
   document.getElementById('payStats').innerHTML = `
-    <div class="stat-card"><div class="stat-icon purple"><ion-icon name="cash-outline"></ion-icon></div><div class="stat-label">Nómina Total</div><div class="stat-value">$${totalGross.toFixed(2)}</div></div>
-    <div class="stat-card"><div class="stat-icon green"><ion-icon name="checkmark-circle-outline"></ion-icon></div><div class="stat-label">Pagados</div><div class="stat-value">${paid.length}</div><div class="stat-sub">$${paid.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
-    <div class="stat-card"><div class="stat-icon yellow"><ion-icon name="hourglass-outline"></ion-icon></div><div class="stat-label">Pendientes</div><div class="stat-value">${pending.length}</div><div class="stat-sub">$${pending.reduce((s,x)=>s+x.gross,0).toFixed(2)}</div></div>
-    <div class="stat-card"><div class="stat-icon cyan"><ion-icon name="time-outline"></ion-icon></div><div class="stat-label">Horas Totales</div><div class="stat-value">${stmts.reduce((s,x)=>s+(x.hours||0),0).toFixed(1)}</div></div>
+    <div class="stat-card"><div class="stat-icon purple"><ion-icon name="cash-outline"></ion-icon></div><div class="stat-label">Nómina Total</div><div class="stat-value">${money(totalGross)}</div></div>
+    <div class="stat-card"><div class="stat-icon green"><ion-icon name="checkmark-circle-outline"></ion-icon></div><div class="stat-label">Pagados</div><div class="stat-value">${paid.length}</div><div class="stat-sub">${money(sumar(paid,'gross'))}</div></div>
+    <div class="stat-card"><div class="stat-icon yellow"><ion-icon name="hourglass-outline"></ion-icon></div><div class="stat-label">Pendientes</div><div class="stat-value">${pending.length}</div><div class="stat-sub">${money(sumar(pending,'gross'))}</div></div>
+    <div class="stat-card"><div class="stat-icon cyan"><ion-icon name="time-outline"></ion-icon></div><div class="stat-label">Horas Totales</div><div class="stat-value">${numES(sumar(stmts,'hours'), 2)}</div></div>
   `;
   animateValues('payStats');
 
@@ -257,16 +263,21 @@ async function render() {
 
   tb.innerHTML = stmts.map(s => {
     const emp    = allEmps.find(e => e.id === s.employeeId);
-    if (!emp) return '';
-    const job    = jobs.find(j => j.id === emp.jobId);
+    // Un recibo de alguien dado de baja —o borrado— sigue siendo dinero que
+    // se pagó: se muestra con el nombre que quedó guardado en vez de
+    // desaparecer de la tabla y descuadrar el total.
+    const nombre = (emp && emp.name) || s.employeeName || 'Colaborador retirado';
+    const job    = emp ? jobs.find(j => j.id === emp.jobId) : null;
     const isPaid = s.status === 'paid';
+    const baja   = !emp || emp.status !== 'active';
     return `<tr>
-      <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}</div></div></td>
+      <td><div class="employee-info">${avatarHtml(nombre)}<div class="employee-name">${escapeHtml(nombre)}${
+        baja ? ' <span class="badge badge-gray" style="margin-left:6px">Inactivo</span>' : ''}</div></div></td>
       <td>${job ? job.title : '—'}</td>
-      <td>${storeBadge(emp.store)}</td>
-      <td>${(s.hours||0).toFixed(2)}h</td>
-      <td>$${(s.rate||0).toFixed(2)}</td>
-      <td><strong>$${(s.gross||0).toFixed(2)}</strong></td>
+      <td>${storeBadge(tiendaDe(s, emp))}</td>
+      <td>${numES(s.hours, 2)} h</td>
+      <td>${money(s.rate)}</td>
+      <td><strong>${money(s.gross)}</strong></td>
       <td><span class="badge ${isPaid?'badge-green':'badge-yellow'}">${isPaid?'Pagado':'Pendiente'}</span></td>
       <td>${s.paidDate ? formatDate(s.paidDate) : '—'}</td>
       <td>
@@ -295,11 +306,23 @@ async function doMarkUnpaid(id) {
 
 async function markAllPaid() {
   const periodStart = document.getElementById('periodSelect').value;
-  const stmts = await getPayStatements(periodStart);
-  const pending = stmts.filter(s => s.status !== 'paid');
+  const store = getSelectedStore();
+
+  // Marcaba TODOS los recibos del período aunque estuvieras viendo una sola
+  // tienda: con "Despensas" en pantalla se pagaba también Cocina.
+  const [stmts, emps] = await Promise.all([getPayStatements(periodStart), getEmployees()]);
+  const delAmbito = store === 'all'
+    ? stmts
+    : stmts.filter(s => tiendaDe(s, emps.find(e => e.id === s.employeeId)) === store);
+
+  const pending = delAmbito.filter(s => s.status !== 'paid');
   if (pending.length === 0) { toast('Todos los recibos ya están pagados.', 'info'); return; }
-  if (!confirm(`¿Marcar ${pending.length} recibo(s) como pagados?`)) return;
-  await Promise.all(pending.map(s => updatePayStatement(s.id, { status: 'paid', paidDate: todayStr() })));
+
+  const donde = store === 'all' ? 'de las dos tiendas' : 'de ' + storeName(store);
+  const total = money(sumar(pending, 'gross'));
+  if (!confirm(`¿Marcar como pagados ${pending.length} recibo(s) ${donde}, por un total de ${total}?`)) return;
+
+  await Promise.all(pending.map(s => updatePayStatement(s.id, { status:'paid', paidDate: todayStr() })));
   toast(`${pending.length} ${pending.length === 1 ? 'recibo marcado' : 'recibos marcados'} como pagados`, 'success');
   render();
 }
@@ -428,7 +451,7 @@ async function buildReport() {
         <td>${escapeHtml(r.puesto)}</td>
         <td class="c">${r.turnos}</td>
         <td class="c">${r.dias}</td>
-        <td class="num">${r.horas.toFixed(2)}</td>
+        <td class="num">${numES(r.horas, 2)}</td>
         <td class="num">${money(r.rate)}</td>
         <td class="num b">${money(r.bruto)}</td>
       </tr>`).join('')}
@@ -436,7 +459,7 @@ async function buildReport() {
         <td colspan="3">Subtotal · ${storeShort(t.id)}</td>
         <td class="c">${sum(t.rows,'turnos')}</td>
         <td class="c">${sum(t.rows,'dias')}</td>
-        <td class="num">${sum(t.rows,'horas').toFixed(2)}</td>
+        <td class="num">${numES(sum(t.rows,'horas'), 2)}</td>
         <td></td>
         <td class="num b">${money(sum(t.rows,'bruto'))}</td>
       </tr>`;
@@ -483,7 +506,7 @@ async function buildReport() {
         <div><span>Colaboradores</span><strong>${rows.length}</strong></div>
         <div><span>Turnos</span><strong>${sum(rows,'turnos')}</strong></div>
         <div><span>Días trabajados</span><strong>${sum(rows,'dias')}</strong></div>
-        <div><span>Horas totales</span><strong>${sum(rows,'horas').toFixed(2)}</strong></div>
+        <div><span>Horas totales</span><strong>${numES(sum(rows,'horas'), 2)}</strong></div>
         <div class="hl"><span>Total a pagar</span><strong>${money(sum(rows,'bruto'))}</strong></div>
       </section>
 
@@ -502,7 +525,7 @@ async function buildReport() {
             <td colspan="3">TOTAL GENERAL</td>
             <td class="c">${sum(rows,'turnos')}</td>
             <td class="c">${sum(rows,'dias')}</td>
-            <td class="num">${sum(rows,'horas').toFixed(2)}</td>
+            <td class="num">${numES(sum(rows,'horas'), 2)}</td>
             <td></td>
             <td class="num">${money(sum(rows,'bruto'))}</td>
           </tr>
