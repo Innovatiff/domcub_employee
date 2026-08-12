@@ -95,6 +95,7 @@ function requireAuth(callback, opts) {
         return;
       }
       applyRoleToNav();
+      restaurarNav();
       updateSidebarUser(SESSION);
       renderStoreSwitcher();
       mountNotifications();
@@ -170,10 +171,44 @@ function applyRoleToNav() {
   if (!SESSION.canPedidos) {
     document.querySelectorAll('.nav-link[href="pedidos.html"]').forEach(a => a.remove());
   }
-  document.querySelectorAll('.nav-section-label').forEach(lbl => {
-    let n = lbl.nextElementSibling, count = 0;
-    while (n && n.classList.contains('nav-link')) { count++; n = n.nextElementSibling; }
-    if (count === 0) lbl.remove();
+  // Un grupo que se queda sin enlaces no tiene por qué seguir ahí
+  document.querySelectorAll('.nav-group').forEach(g => {
+    if (!g.querySelector('.nav-link')) g.remove();
+  });
+}
+
+/**
+ * Secciones plegables del menú. Se recuerda cuáles quedaron cerradas, de
+ * modo que el menú se vea igual al cambiar de página; y la sección de la
+ * página actual se abre siempre, para no dejarte sin ver dónde estás.
+ */
+const NAV_CERRADOS = 'elaguila_nav_cerrado';
+
+function navCerrados() {
+  try { return JSON.parse(localStorage.getItem(NAV_CERRADOS) || '[]'); }
+  catch (e) { return []; }
+}
+
+function toggleNavGroup(btn) {
+  const g = btn.closest('.nav-group');
+  const cerrar = !g.classList.contains('cerrado');
+  g.classList.toggle('cerrado', cerrar);
+  btn.setAttribute('aria-expanded', String(!cerrar));
+
+  const lista = navCerrados().filter(x => x !== g.dataset.group);
+  if (cerrar) lista.push(g.dataset.group);
+  try { localStorage.setItem(NAV_CERRADOS, JSON.stringify(lista)); } catch (e) {}
+}
+
+function restaurarNav() {
+  const cerrados = navCerrados();
+  document.querySelectorAll('.nav-group').forEach(g => {
+    // La sección donde estás nunca arranca cerrada
+    const aqui = g.querySelector('.nav-link.active');
+    const cerrado = !aqui && cerrados.includes(g.dataset.group);
+    g.classList.toggle('cerrado', cerrado);
+    const btn = g.querySelector('.nav-group-head');
+    if (btn) btn.setAttribute('aria-expanded', String(!cerrado));
   });
 }
 
