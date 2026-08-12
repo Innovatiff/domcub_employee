@@ -234,7 +234,10 @@ function signOut() {
 // Los colaboradores quedan fijados a su propia tienda.
 function getSelectedStore() {
   if (isColaborador()) return SESSION.store;
-  return localStorage.getItem('elaguila_store') || 'all';
+  const v = localStorage.getItem('elaguila_store');
+  // 'all' ya no existe como opción; quien lo tuviera guardado cae en
+  // Despensas. Cada página muestra una tienda o la otra, nunca las dos.
+  return (v === '1' || v === '2') ? v : '1';
 }
 function setSelectedStore(v) { localStorage.setItem('elaguila_store', v); }
 
@@ -250,8 +253,7 @@ function renderStoreSwitcher() {
     return;
   }
 
-  const opts = [{ id:'all', name:'Ambas Tiendas', short:'Ambas', color:'#4f46e5' }]
-    .concat(STORE_IDS.map(id => STORES[id]));
+  const opts = STORE_IDS.map(id => STORES[id]);
 
   host.innerHTML = `
     <div class="store-switch-label">Tienda activa</div>

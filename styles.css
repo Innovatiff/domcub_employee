@@ -1136,7 +1136,7 @@ select {
      gesto se ve igual en toda la aplicación. Sin iconos — tres palabras
      cortas se leen antes que tres dibujos que hay que interpretar. */
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 3px;
   padding: 4px;
   background: rgba(0, 0, 0, 0.22);
