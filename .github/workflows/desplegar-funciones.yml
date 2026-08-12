@@ -1,0 +1,57 @@
+# Despliega la función de notificaciones sin necesidad de terminal.
+#
+# La consola de Google no ofrece los activadores directos de Firestore al
+# crear la función a mano, así que el despliegue se hace desde aquí, que es
+# como lo hace la herramienta oficial: leyendo functions/index.js, de donde
+# saca el activador, la región y el punto de entrada.
+#
+# Requiere un único secreto en el repositorio: FIREBASE_SERVICE_ACCOUNT,
+# con el contenido del archivo JSON de la cuenta de servicio de Firebase.
+
+name: Desplegar funciones
+
+on:
+  # Botón manual en la pestaña Actions
+  workflow_dispatch:
+  # Y automático cuando cambie el código de la función
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - '.github/workflows/desplegar-funciones.yml'
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias de la función
+        working-directory: functions
+        run: npm install
+
+      - name: Escribir la credencial
+        env:
+          CUENTA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$CUENTA" ]; then
+            echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT."
+            echo "Firebase Console → Configuración del proyecto → Cuentas de"
+            echo "servicio → Generar nueva clave privada, y pega el archivo"
+            echo "completo en Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          printf '%s' "$CUENTA" > "$RUNNER_TEMP/cuenta.json"
+
+      - name: Desplegar
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/cuenta.json
+        run: npx --yes firebase-tools@latest deploy --only functions --project domcub --non-interactive
+
+      - name: Borrar la credencial
+        if: always()
+        run: rm -f "$RUNNER_TEMP/cuenta.json"
