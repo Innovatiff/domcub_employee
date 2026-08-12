@@ -132,6 +132,23 @@ exports.avisarPedido = onDocumentCreated('Pedidos/{id}', async event => {
     { tipo: 'pedido' }, 'pedido-' + event.params.id);
 });
 
+// ── Reportes de incidentes ──
+//
+// Un reporte es algo que la gerencia debe ver pronto: se le avisa a todos
+// sus dispositivos en cuanto se crea, venga de un colaborador o de otra
+// cuenta de gerencia.
+exports.avisarReporte = onDocumentCreated('Reportes/{id}', async event => {
+  const r = event.data && event.data.data();
+  if (!r) return;
+  const tienda = r.store === '1' ? 'Despensas' : r.store === '2' ? 'Cocina' : '';
+  const texto = String(r.texto || '').slice(0, 90) || 'Sin descripción';
+  const tokens = await tokensGerencia();
+  await enviar(tokens,
+    '⚠️ Reporte nuevo' + (tienda ? ' · ' + tienda : ''),
+    `${r.nombre || 'Alguien'}: ${texto}${r.foto ? ' 📷' : ''}`,
+    { tipo: 'reporte' }, 'reporte-' + event.params.id);
+});
+
 // ── Recibos de pago ──
 
 const MCORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];

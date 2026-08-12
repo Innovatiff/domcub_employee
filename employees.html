@@ -49,6 +49,8 @@
 
     <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
     <a href="registros.html" data-manager-only class="nav-link"><ion-icon name="car-outline"></ion-icon><span>Registros</span></a>
+    <a href="tareas.html" data-manager-only class="nav-link"><ion-icon name="checkbox-outline"></ion-icon><span>Tareas</span></a>
+    <a href="reportes.html" data-manager-only class="nav-link"><ion-icon name="warning-outline"></ion-icon><span>Reportes</span></a>
     <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
       </div></div>
     </div>
@@ -155,6 +157,10 @@
           <label>Fecha de Ingreso</label>
           <input type="date" id="empHire">
         </div>
+        <div class="form-group">
+          <label>Fecha de Nacimiento <span style="font-weight:400;color:var(--text-muted)">— para los cumpleaños</span></label>
+          <input type="date" id="empBirth">
+        </div>
       </div>
       <div class="assign-box">
         <label class="switch-row">
@@ -226,6 +232,34 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('fireModal')">Cancelar</button>
       <button class="btn btn-danger" id="confirmFireBtn" onclick="doFire()">Dar de Baja</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de notas de desempeño (privadas de la gerencia) -->
+<div class="modal-overlay" id="notasModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Notas de desempeño — <span id="notasNombre"></span></h3>
+      <button class="modal-close" onclick="closeModal('notasModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 14px">
+        <ion-icon name="lock-closed-outline" style="vertical-align:-1px"></ion-icon>
+        Privadas: el colaborador no las ve. Útiles al decidir aumentos o llamadas de atención.
+      </p>
+      <div class="nota-form">
+        <select id="notaTipo">
+          <option value="positivo">⭐ Reconocimiento</option>
+          <option value="incidente">⚠️ Incidente</option>
+          <option value="tarde">🕐 Llegada tarde</option>
+          <option value="nota">📝 Nota</option>
+        </select>
+        <input type="date" id="notaFecha">
+        <input type="text" id="notaTexto" placeholder="Qué pasó..." onkeydown="if(event.key==='Enter')guardarNota()">
+        <button class="btn btn-primary btn-sm" id="notaBtn" onclick="guardarNota()">Agregar</button>
+      </div>
+      <div id="notasLista" style="margin-top:16px"></div>
     </div>
   </div>
 </div>
@@ -385,6 +419,7 @@ async function render() {
           <div class="td-actions">
             <button class="btn-icon" title="Ver" onclick="openView('${e.id}')"><ion-icon name="eye-outline"></ion-icon></button>
             <button class="btn-icon" title="Editar" onclick="openEditModal('${e.id}')"><ion-icon name="create-outline"></ion-icon></button>
+            <button class="btn-icon" title="Notas de desempeño" onclick="openNotas('${e.id}','${e.name.replace(/'/g,"\\'")}')"><ion-icon name="reader-outline"></ion-icon></button>
             ${e.status==='active'
               ? `<button class="btn-icon" title="Dar de baja" style="color:var(--danger)" onclick="openFire('${e.id}','${e.name.replace(/'/g,"\\'")}')"><ion-icon name="person-remove-outline"></ion-icon></button>`
               : `<button class="btn-icon" title="Reactivar" style="color:var(--success)" onclick="doRehire('${e.id}')"><ion-icon name="checkmark-circle-outline"></ion-icon></button>`
@@ -435,6 +470,7 @@ function openHireModal() {
   document.getElementById('empStore').value = '1';
   document.getElementById('empRate').value  = '';
   document.getElementById('empHire').value  = todayStr();
+  document.getElementById('empBirth').value = '';
   document.getElementById('empPedidos').checked = false;
   document.getElementById('empRegistros').checked = false;
 
@@ -465,6 +501,7 @@ async function openEditModal(id) {
   document.getElementById('empStore').value  = emp.store || '1';
   document.getElementById('empRate').value   = emp.hourlyRate || '';
   document.getElementById('empHire').value   = emp.hireDate || '';
+  document.getElementById('empBirth').value  = emp.birthday || '';
   document.getElementById('empPedidos').checked = !!emp.canPedidos;
   document.getElementById('empRegistros').checked = !!emp.canRegistros;
   const box = document.getElementById('pinPreview');
@@ -493,6 +530,7 @@ async function doSaveEmployee() {
     jobId,
     hourlyRate: parseFloat(document.getElementById('empRate').value) || 0,
     hireDate:   document.getElementById('empHire').value,
+    birthday:   document.getElementById('empBirth').value,
     canPedidos:   document.getElementById('empPedidos').checked,
     canRegistros: document.getElementById('empRegistros').checked,
   };
@@ -558,6 +596,7 @@ async function openView(id) {
       ${infoBlock('Tarifa por Hora', '$' + Number(emp.hourlyRate||0).toFixed(2))}
       ${infoBlock('Fecha de Ingreso', formatDate(emp.hireDate))}
       ${infoBlock('Correo', emp.email || '—')}
+      ${infoBlock('Fecha de Nacimiento', emp.birthday ? formatDate(emp.birthday) : '—')}
       ${infoBlock('Teléfono', emp.phone || '—')}
       ${infoBlock('Horas del Período Actual', hrs.toFixed(2) + ' h')}
       ${infoBlock('Encargado de pedidos', emp.canPedidos ? 'Sí' : 'No')}
@@ -599,6 +638,64 @@ async function doFire() {
   } finally {
     btn.disabled = false;
   }
+}
+
+let notasEmpId = null;
+
+async function openNotas(id, nombre) {
+  notasEmpId = id;
+  document.getElementById('notasNombre').textContent = nombre;
+  document.getElementById('notaFecha').value = todayStr();
+  document.getElementById('notaTexto').value = '';
+  document.getElementById('notasLista').innerHTML =
+    '<div class="empty-state"><ion-icon name="sync-outline" class="gira"></ion-icon></div>';
+  openModal('notasModal');
+  pintarNotas();
+}
+
+async function pintarNotas() {
+  try {
+    const notas = await getNotas(notasEmpId);
+    const host = document.getElementById('notasLista');
+    host.innerHTML = notas.length ? notas.map(n => {
+      const t = NOTA_TIPOS[n.tipo] || NOTA_TIPOS.nota;
+      return `<div class="nota-row" style="--nc:${t.color};--ns:${t.soft}">
+        <ion-icon name="${t.icon}"></ion-icon>
+        <div style="flex:1;min-width:0">
+          <div class="nota-top"><strong>${t.label}</strong>
+            <span>${formatDate(n.date)}${n.por ? ' · ' + escapeHtml(n.por) : ''}</span></div>
+          <div class="nota-texto">${escapeHtml(n.texto)}</div>
+        </div>
+        <button class="btn-icon" title="Borrar" onclick="borrarNota('${n.id}')"><ion-icon name="trash-outline"></ion-icon></button>
+      </div>`;
+    }).join('')
+    : '<div class="empty-state"><ion-icon name="reader-outline"></ion-icon><p>Sin notas todavía.</p></div>';
+  } catch (err) {
+    document.getElementById('notasLista').innerHTML =
+      `<div class="empty-state" style="color:var(--danger)">Error: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function guardarNota() {
+  const texto = document.getElementById('notaTexto').value.trim();
+  if (!texto) { toast('Escribe la nota.', 'error'); return; }
+  const btn = document.getElementById('notaBtn');
+  btn.disabled = true;
+  try {
+    await addNota(notasEmpId,
+      document.getElementById('notaTipo').value,
+      texto,
+      document.getElementById('notaFecha').value || todayStr());
+    document.getElementById('notaTexto').value = '';
+    pintarNotas();
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function borrarNota(id) {
+  if (!confirm('¿Borrar esta nota?')) return;
+  try { await deleteNota(id); pintarNotas(); }
+  catch (err) { toast('Error: ' + err.message, 'error'); }
 }
 
 async function doRehire(id) {

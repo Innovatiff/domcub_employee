@@ -49,6 +49,8 @@
 
     <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
     <a href="registros.html" data-manager-only class="nav-link"><ion-icon name="car-outline"></ion-icon><span>Registros</span></a>
+    <a href="tareas.html" data-manager-only class="nav-link"><ion-icon name="checkbox-outline"></ion-icon><span>Tareas</span></a>
+    <a href="reportes.html" data-manager-only class="nav-link"><ion-icon name="warning-outline"></ion-icon><span>Reportes</span></a>
     <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
       </div></div>
     </div>
@@ -84,6 +86,8 @@
     </div>
     <button class="btn btn-primary" onclick="openClockModal()"><ion-icon name="finger-print-outline"></ion-icon> Marcar Entrada / Salida</button>
   </div>
+
+  <div id="festejosCard" style="display:none"></div>
 
   <div class="stats-grid" id="statsGrid">
     <div class="skeleton-card"></div><div class="skeleton-card"></div>
@@ -166,6 +170,7 @@ async function render() {
       getClockIns({ date: todayStr() }),
       getOpenClockIns()
     ]);
+    pintarFestejos(allEmps);
 
     const emps = store === 'all' ? allEmps : allEmps.filter(e => e.store === store);
     const active = emps.filter(e => e.status === 'active');
@@ -317,6 +322,56 @@ async function doClockAction() {
     toast('Error: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
+  }
+}
+// ── Cumpleaños y aniversarios de los próximos 30 días ──
+let festejos = [];
+function pintarFestejos(emps) {
+  festejos = proximosEventos(emps, 30);
+  const host = document.getElementById('festejosCard');
+  if (!festejos.length) { host.style.display = 'none'; return; }
+  host.style.display = '';
+  host.innerHTML = `
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-header">
+        <span class="card-title">🎉 Cumpleaños y aniversarios</span>
+        <span class="badge badge-purple">${festejos.length}</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+        ${festejos.map((ev, i) => `
+          <div class="festejo-row ${ev.en === 0 ? 'es-hoy' : ''}">
+            ${avatarHtml(ev.emp.name, 32)}
+            <div style="flex:1;min-width:0">
+              <strong>${escapeHtml(ev.emp.name)}</strong>
+              <div class="festejo-sub">
+                ${ev.tipo === 'cumple' ? '🎂 Cumpleaños' : `🏅 ${ev.anos} ${ev.anos===1?'año':'años'} en El Águila`}
+                · ${ev.en === 0 ? '<b>¡Hoy!</b>' : ev.en === 1 ? 'Mañana' : 'En ' + ev.en + ' días'}
+                (${formatDate(ev.fecha)})
+              </div>
+            </div>
+            ${ev.en === 0 ? `<button class="btn btn-primary btn-sm" onclick="felicitar(${i}, this)">
+              <ion-icon name="megaphone-outline"></ion-icon> Publicar anuncio</button>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// Un toque y el anuncio sale para todo el equipo.
+async function felicitar(i, btn) {
+  const ev = festejos[i];
+  if (!ev) return;
+  btn.disabled = true;
+  try {
+    await ensureAnuncios();
+    const msg = ev.tipo === 'cumple'
+      ? `🎂🎉 ¡Feliz cumpleaños, ${ev.emp.name}! Todo el equipo de El Águila te desea un día increíble. 🥳`
+      : `🏅🎉 ¡Felicidades, ${ev.emp.name}! Hoy cumples ${ev.anos} ${ev.anos===1?'año':'años'} con nosotros en El Águila. ¡Gracias por tu trabajo!`;
+    await sendMessage(ANUNCIOS_ID, msg);
+    toast('Anuncio publicado para todo el equipo', 'success');
+    btn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Publicado';
+  } catch (err) {
+    btn.disabled = false;
+    toast('No se pudo publicar: ' + err.message, 'error');
   }
 }
 </script>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tareas — El Águila</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">El Águila</div>
+        <div class="brand-sub">Portal de Colaboradores</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="store-switcher" id="storeSwitcher"></div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-group" data-group="principal">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Principal</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="operacion">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Operación</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="registros.html" data-manager-only class="nav-link"><ion-icon name="car-outline"></ion-icon><span>Registros</span></a>
+    <a href="tareas.html" data-manager-only class="nav-link active"><ion-icon name="checkbox-outline"></ion-icon><span>Tareas</span></a>
+    <a href="reportes.html" data-manager-only class="nav-link"><ion-icon name="warning-outline"></ion-icon><span>Reportes</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="tiempo">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Tiempo</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="horario.html" data-manager-only class="nav-link"><ion-icon name="grid-outline"></ion-icon><span>Horario</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
+      </div></div>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div id="sidebarUser"></div>
+    <button class="sidebar-signout" onclick="signOut()">
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Tareas</h1>
+      <p>Checklists de la tienda: apertura, cierre, limpieza, conteos.</p>
+    </div>
+    <button class="btn btn-primary" onclick="abrirTarea()"><ion-icon name="add-outline"></ion-icon> Nueva checklist</button>
+  </div>
+
+  <!-- Hoy -->
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-header">
+      <span class="card-title"><ion-icon name="today-outline" style="vertical-align:-2px;margin-right:6px"></ion-icon>Hoy · <span id="hoyLabel"></span></span>
+      <span class="badge badge-blue" id="hoyResumen">Cargando...</span>
+    </div>
+    <div class="card-body" id="hoyBody"></div>
+  </div>
+
+  <!-- Todas las plantillas -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Todas las checklists</span>
+      <span class="badge badge-blue" id="tplCount"></span>
+    </div>
+    <div class="card-body" id="tplBody"></div>
+  </div>
+</main>
+
+<!-- Modal crear/editar checklist -->
+<div class="modal-overlay" id="tareaModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="tareaTitulo">Nueva checklist</h3>
+      <button class="modal-close" onclick="closeModal('tareaModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tId">
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" id="tNombre" placeholder="Apertura, Cierre, Limpieza semanal...">
+      </div>
+      <div class="form-group">
+        <label>Renglones * <span style="font-weight:400;color:var(--text-muted)">— uno por línea</span></label>
+        <textarea id="tItems" rows="6" placeholder="Encender equipos&#10;Revisar neveras&#10;Barrer el frente"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Días <span style="font-weight:400;color:var(--text-muted)">— sin marcar ninguno aplica todos los días</span></label>
+        <div class="dias-pick" id="tDias"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="tBorrar" style="margin-right:auto;display:none" onclick="borrarTarea()">Eliminar</button>
+      <button class="btn btn-outline" onclick="closeModal('tareaModal')">Cancelar</button>
+      <button class="btn btn-primary" id="tGuardar" onclick="guardarTarea()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script>
+const DIA_NOMBRE = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+let tareas = [], hechos = {};
+
+requireAuth(() => render(), { allow:['manager'] });
+
+async function render() {
+  const store = getSelectedStore();
+  const hoy = todayStr();
+  document.getElementById('hoyLabel').textContent = formatDate(hoy);
+  document.getElementById('hoyBody').innerHTML = skeletonRows ? '<div class="empty-state"><ion-icon name="sync-outline" class="gira"></ion-icon></div>' : '';
+  try {
+    [tareas, hechos] = await Promise.all([getTareas(store), getHechosDe(hoy, store)]);
+    pintarHoy();
+    pintarPlantillas();
+  } catch (err) {
+    toast('No se pudieron cargar las tareas: ' + err.message, 'error');
+  }
+}
+
+function pintarHoy() {
+  const hoyDow = new Date().getDay();
+  const deHoy = tareas.filter(t => tareaAplicaHoy(t, hoyDow));
+  const body = document.getElementById('hoyBody');
+
+  let total = 0, listos = 0;
+  const html = deHoy.map(t => {
+    const h = (hechos[t.id] && hechos[t.id].hechos) || {};
+    const items = t.items || [];
+    const n = items.filter((_,i) => h[i]).length;
+    total += items.length; listos += n;
+    const pct = items.length ? Math.round(n/items.length*100) : 0;
+    return `<div class="chk-card ${n===items.length && items.length ? 'lista' : ''}">
+      <div class="chk-head">
+        <strong>${escapeHtml(t.titulo)}</strong>
+        <div class="chk-progreso"><div class="chk-barra"><span style="width:${pct}%"></span></div>
+          <em>${n} de ${items.length}</em></div>
+      </div>
+      ${items.map((it, i) => {
+        const q = h[i];
+        return `<label class="chk-item ${q ? 'ok' : ''}">
+          <input type="checkbox" ${q?'checked':''} onchange="toggleItem('${t.id}',${i},this)">
+          <span class="chk-caja"><ion-icon name="checkmark-outline"></ion-icon></span>
+          <span class="chk-texto">${escapeHtml(it)}</span>
+          ${q ? `<span class="chk-quien">${escapeHtml(q.nombre||'')} · ${new Date(q.at).toLocaleTimeString('es',{hour:'numeric',minute:'2-digit'})}</span>` : ''}
+        </label>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+
+  body.innerHTML = deHoy.length ? html
+    : `<div class="empty-state"><ion-icon name="checkbox-outline"></ion-icon><p>No hay checklists para hoy en esta tienda. Crea la primera.</p></div>`;
+  document.getElementById('hoyResumen').textContent =
+    total ? `${listos} de ${total} · ${Math.round(listos/total*100)}%` : 'Sin tareas hoy';
+  document.getElementById('hoyResumen').className =
+    'badge ' + (total && listos === total ? 'badge-green' : 'badge-blue');
+}
+
+async function toggleItem(tareaId, idx, chk) {
+  chk.disabled = true;
+  try {
+    await marcarItem(tareaId, todayStr(), getSelectedStore(), idx, chk.checked);
+    // Estado local al día sin recargar todo
+    const doc = hechos[tareaId] || (hechos[tareaId] = { hechos:{} });
+    if (chk.checked) doc.hechos[idx] = { nombre: SESSION.name, at: Date.now() };
+    else delete doc.hechos[idx];
+    pintarHoy();
+  } catch (err) {
+    chk.checked = !chk.checked;
+    toast('No se pudo guardar: ' + err.message, 'error');
+  } finally { chk.disabled = false; }
+}
+
+function pintarPlantillas() {
+  const body = document.getElementById('tplBody');
+  document.getElementById('tplCount').textContent =
+    tareas.length + (tareas.length === 1 ? ' checklist' : ' checklists');
+  body.innerHTML = tareas.length ? tareas.map(t => `
+    <div class="tpl-row" onclick="abrirTarea('${t.id}')">
+      <ion-icon name="checkbox-outline"></ion-icon>
+      <div style="flex:1;min-width:0">
+        <strong>${escapeHtml(t.titulo)}</strong>
+        <div class="tpl-sub">${(t.items||[]).length} renglones ·
+          ${!t.dias || !t.dias.length ? 'Todos los días' : t.dias.map(d=>DIA_NOMBRE[d]).join(', ')}</div>
+      </div>
+      <ion-icon name="create-outline" style="color:var(--text-light)"></ion-icon>
+    </div>`).join('')
+    : `<div class="empty-state"><ion-icon name="checkbox-outline"></ion-icon><p>Sin checklists todavía.</p></div>`;
+}
+
+function abrirTarea(id) {
+  const t = id ? tareas.find(x => x.id === id) : null;
+  document.getElementById('tareaTitulo').textContent = t ? 'Editar checklist' : 'Nueva checklist';
+  document.getElementById('tId').value = t ? t.id : '';
+  document.getElementById('tNombre').value = t ? t.titulo : '';
+  document.getElementById('tItems').value = t ? (t.items||[]).join('\n') : '';
+  document.getElementById('tBorrar').style.display = t ? '' : 'none';
+  const dias = (t && t.dias) || [];
+  document.getElementById('tDias').innerHTML = [1,2,3,4,5,6,0].map(d =>
+    `<label class="dia-chip ${dias.includes(d)?'on':''}">
+       <input type="checkbox" value="${d}" ${dias.includes(d)?'checked':''}
+              onchange="this.parentElement.classList.toggle('on', this.checked)">${DIA_NOMBRE[d]}</label>`).join('');
+  openModal('tareaModal');
+}
+
+async function guardarTarea() {
+  const titulo = document.getElementById('tNombre').value.trim();
+  const items = document.getElementById('tItems').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if (!titulo) { toast('Ponle nombre a la checklist.', 'error'); return; }
+  if (!items.length) { toast('Escribe al menos un renglón.', 'error'); return; }
+  const dias = [...document.querySelectorAll('#tDias input:checked')].map(i => Number(i.value));
+  const btn = document.getElementById('tGuardar');
+  btn.disabled = true;
+  try {
+    await saveTarea(document.getElementById('tId').value || null,
+                    { titulo, items, dias, store: getSelectedStore() });
+    closeModal('tareaModal');
+    toast('Checklist guardada', 'success');
+    render();
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function borrarTarea() {
+  const id = document.getElementById('tId').value;
+  if (!id) return;
+  if (!confirm('¿Eliminar esta checklist? Lo hecho en días anteriores no se borra.')) return;
+  try {
+    await deleteTarea(id);
+    closeModal('tareaModal');
+    toast('Checklist eliminada', 'info');
+    render();
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+}
+</script>
+</body>
+</html>

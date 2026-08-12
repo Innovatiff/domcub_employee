@@ -31,7 +31,18 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
-    // Nada fuera de las fotos del chat
+    // Fotos de los reportes de incidentes. Mismo criterio que el chat:
+    // la URL viaja dentro del reporte, y quién lee un reporte lo deciden
+    // las reglas de Firestore.
+    match /reportes/{archivo} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.size < 12 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow update, delete: if false;
+    }
+
+    // Nada fuera de las fotos del chat y de los reportes
     match /{todo=**} {
       allow read, write: if false;
     }
