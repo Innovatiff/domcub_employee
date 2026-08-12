@@ -193,6 +193,36 @@ service cloud.firestore {
       allow delete: if isManager();
     }
 
+    // ── Tareas (checklists) ──
+    // La plantilla la arma la gerencia; lo hecho de cada día lo marca
+    // cualquiera con sesión e identidad (colaboradores y gerencia).
+    match /Tareas/{id} {
+      allow read:  if signedIn();
+      allow write: if isManager();
+    }
+    match /TareasHechas/{id} {
+      allow read: if signedIn();
+      allow create, update: if isManager() || (signedIn() && haveIndex());
+      allow delete: if isManager();
+    }
+
+    // ── Notas de desempeño ──
+    // Privadas: sólo la gerencia. Los colaboradores no las ven.
+    match /NotasPersonal/{id} {
+      allow read, write: if isManager();
+    }
+
+    // ── Reportes de incidentes ──
+    // Cada quien crea los suyos y ve sólo los suyos; la gerencia lo ve
+    // todo y es la única que marca revisado o borra.
+    match /Reportes/{id} {
+      allow read: if isManager()
+        || (haveIndex() && resource.data.por == myPid());
+      allow create: if signedIn() && haveIndex()
+        && request.resource.data.por == myPid();
+      allow update, delete: if isManager();
+    }
+
     // ── Pedidos ──
     match /Pedidos/{id} {
       allow read:   if signedIn();

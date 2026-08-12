@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reportes — El Águila</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">El Águila</div>
+        <div class="brand-sub">Portal de Colaboradores</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="store-switcher" id="storeSwitcher"></div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-group" data-group="principal">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Principal</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="operacion">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Operación</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="registros.html" data-manager-only class="nav-link"><ion-icon name="car-outline"></ion-icon><span>Registros</span></a>
+    <a href="tareas.html" data-manager-only class="nav-link"><ion-icon name="checkbox-outline"></ion-icon><span>Tareas</span></a>
+    <a href="reportes.html" data-manager-only class="nav-link active"><ion-icon name="warning-outline"></ion-icon><span>Reportes</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="tiempo">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Tiempo</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="horario.html" data-manager-only class="nav-link"><ion-icon name="grid-outline"></ion-icon><span>Horario</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
+      </div></div>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div id="sidebarUser"></div>
+    <button class="sidebar-signout" onclick="signOut()">
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Reportes</h1>
+      <p>Incidentes y novedades reportadas por el equipo, con foto.</p>
+    </div>
+    <button class="btn btn-primary" onclick="abrirNuevoRep()"><ion-icon name="add-outline"></ion-icon> Nuevo reporte</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="filtrarRep('nuevo',this)">Nuevos</button>
+    <button class="tab-btn" onclick="filtrarRep('revisado',this)">Revisados</button>
+    <button class="tab-btn" onclick="filtrarRep('todos',this)">Todos</button>
+  </div>
+
+  <div id="repLista"></div>
+</main>
+
+<!-- Modal nuevo reporte -->
+<div class="modal-overlay" id="repModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo reporte</h3>
+      <button class="modal-close" onclick="closeModal('repModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>¿Qué pasó? *</label>
+        <textarea id="repTexto" rows="4" placeholder="Describe el incidente o la novedad..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Foto <span style="font-weight:400;color:var(--text-muted)">— opcional</span></label>
+        <input type="file" id="repFoto" accept="image/*">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('repModal')">Cancelar</button>
+      <button class="btn btn-primary" id="repGuardar" onclick="guardarRep()">Enviar reporte</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script>
+let reportes = [], filtroRep = 'nuevo';
+
+requireAuth(() => render(), { allow:['manager'] });
+
+async function render() {
+  const host = document.getElementById('repLista');
+  host.innerHTML = '<div class="empty-state"><ion-icon name="sync-outline" class="gira"></ion-icon></div>';
+  try {
+    reportes = await getReportes();
+    pintar();
+  } catch (err) {
+    host.innerHTML = `<div class="empty-state" style="color:var(--danger)">Error: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function filtrarRep(f, btn) {
+  filtroRep = f;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  pintar();
+}
+
+function pintar() {
+  const store = getSelectedStore();
+  const lista = reportes
+    .filter(r => r.store === store)
+    .filter(r => filtroRep === 'todos' || (r.status || 'nuevo') === filtroRep);
+  const host = document.getElementById('repLista');
+  if (!lista.length) {
+    host.innerHTML = `<div class="card"><div class="card-body">
+      <div class="empty-state"><ion-icon name="shield-checkmark-outline"></ion-icon>
+      <p>${filtroRep === 'nuevo' ? 'No hay reportes nuevos en esta tienda.' : 'Nada por aquí.'}</p></div></div></div>`;
+    return;
+  }
+  host.innerHTML = lista.map(r => {
+    const d = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate() : null;
+    const nuevo = (r.status || 'nuevo') === 'nuevo';
+    return `<div class="card rep-card ${nuevo ? 'rep-nuevo' : ''}">
+      <div class="card-body" style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        ${r.foto ? `<img class="rep-foto" src="${r.foto}" alt="Foto del reporte" loading="lazy"
+                         style="aspect-ratio:${(r.w||4)}/${(r.h||3)}" onclick="verFoto('${r.foto}')">` : ''}
+        <div style="flex:1;min-width:220px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            ${avatarHtml(r.nombre || '?', 30)}
+            <strong>${escapeHtml(r.nombre || '—')}</strong>
+            ${nuevo ? '<span class="badge badge-red">Nuevo</span>'
+                    : `<span class="badge badge-green">Revisado${r.revisadoPor ? ' · ' + escapeHtml(r.revisadoPor) : ''}</span>`}
+            <span style="margin-left:auto;color:var(--text-light);font-size:12px">
+              ${d ? formatDate(toDateStr(d)) + ' · ' + d.toLocaleTimeString('es',{hour:'numeric',minute:'2-digit'}) : ''}</span>
+          </div>
+          <p style="margin:10px 0 0;font-size:14px;line-height:1.6;white-space:pre-wrap">${escapeHtml(r.texto || '')}</p>
+          <div style="display:flex;gap:8px;margin-top:14px">
+            ${nuevo ? `<button class="btn btn-primary btn-sm" onclick="revisarRep('${r.id}',this)">
+                         <ion-icon name="checkmark-outline"></ion-icon> Marcar revisado</button>` : ''}
+            <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="borrarRep('${r.id}',this)">
+              <ion-icon name="trash-outline"></ion-icon> Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function revisarRep(id, btn) {
+  btn.disabled = true;
+  try {
+    await marcarReporteVisto(id);
+    const r = reportes.find(x => x.id === id);
+    if (r) { r.status = 'revisado'; r.revisadoPor = SESSION.name; }
+    pintar();
+    toast('Reporte marcado como revisado', 'success');
+  } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
+}
+
+async function borrarRep(id, btn) {
+  if (!confirm('¿Eliminar este reporte definitivamente?')) return;
+  btn.disabled = true;
+  try {
+    await deleteReporte(id);
+    reportes = reportes.filter(x => x.id !== id);
+    pintar();
+    toast('Reporte eliminado', 'info');
+  } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
+}
+
+function abrirNuevoRep() {
+  document.getElementById('repTexto').value = '';
+  document.getElementById('repFoto').value = '';
+  openModal('repModal');
+}
+
+async function guardarRep() {
+  const texto = document.getElementById('repTexto').value.trim();
+  if (!texto) { toast('Describe lo que pasó.', 'error'); return; }
+  const file = document.getElementById('repFoto').files[0] || null;
+  const btn = document.getElementById('repGuardar');
+  btn.disabled = true;
+  btn.innerHTML = '<ion-icon name="sync-outline" class="gira"></ion-icon> Enviando...';
+  try {
+    await crearReporte({ texto, store: getSelectedStore(), file }, pct => {
+      if (pct !== null) btn.innerHTML = `Subiendo foto ${pct}%`;
+    });
+    closeModal('repModal');
+    toast('Reporte enviado', 'success');
+    render();
+  } catch (err) { toast('No se pudo enviar: ' + err.message, 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = 'Enviar reporte'; }
+}
+
+// Ver la foto en grande (mismo visor que el chat)
+function verFoto(url) {
+  let v = document.getElementById('visorFoto');
+  if (!v) {
+    v = document.createElement('div');
+    v.id = 'visorFoto'; v.className = 'visor-foto';
+    v.onclick = () => v.classList.remove('on');
+    v.innerHTML = '<button class="visor-x" aria-label="Cerrar"><ion-icon name="close-outline"></ion-icon></button><img alt="Foto">';
+    document.body.appendChild(v);
+  }
+  v.querySelector('img').src = url;
+  v.classList.add('on');
+}
+</script>
+</body>
+</html>

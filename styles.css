@@ -2043,3 +2043,84 @@ ion-icon {
    contra el borde de la tarjeta. */
 .anuncio-rx .rx-bar { left:0; transform:scale(.55); transform-origin:bottom left; }
 .anuncio-rx .rx-wrap.rx-open .rx-bar { transform:scale(1); }
+
+/* ══ Tareas (checklists) ══ */
+.chk-card {
+  border:1px solid var(--border); border-radius:12px;
+  padding:14px 16px; margin-bottom:12px; background:var(--surface-alt);
+  transition:border-color .2s ease, background .2s ease;
+}
+.chk-card.lista { border-color:var(--success); background:var(--success-soft); }
+.chk-head { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin-bottom:10px; flex-wrap:wrap; }
+.chk-progreso { display:flex; align-items:center; gap:8px; }
+.chk-progreso em { font-style:normal; font-size:12px; color:var(--text-muted); white-space:nowrap; }
+.chk-barra { width:120px; height:6px; border-radius:999px; background:var(--border); overflow:hidden; }
+.chk-barra span { display:block; height:100%; border-radius:999px; background:var(--success);
+  transition:width .35s cubic-bezier(.22,1,.36,1); }
+.chk-item {
+  display:flex; align-items:center; gap:10px; padding:8px 6px;
+  border-radius:8px; cursor:pointer; transition:background .15s ease;
+}
+.chk-item:hover { background:rgba(0,0,0,.03); }
+.chk-item input { display:none; }
+.chk-caja {
+  width:20px; height:20px; border-radius:6px; border:2px solid var(--border-strong);
+  display:grid; place-items:center; color:#fff; flex-shrink:0;
+  transition:background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.chk-caja ion-icon { font-size:13px; opacity:0; transition:opacity .15s ease; }
+.chk-item.ok .chk-caja { background:var(--success); border-color:var(--success);
+  animation:rxPop .3s cubic-bezier(.34,1.56,.64,1); }
+.chk-item.ok .chk-caja ion-icon { opacity:1; }
+.chk-texto { font-size:13.5px; flex:1; min-width:0; }
+.chk-item.ok .chk-texto { color:var(--text-muted); text-decoration:line-through; }
+.chk-quien { font-size:11px; color:var(--text-light); white-space:nowrap; }
+
+.tpl-row {
+  display:flex; align-items:center; gap:12px; padding:12px 8px;
+  border-bottom:1px solid var(--border); cursor:pointer; border-radius:8px;
+  transition:background .15s ease;
+}
+.tpl-row:hover { background:var(--surface-alt); }
+.tpl-row:last-child { border-bottom:0; }
+.tpl-row > ion-icon:first-child { font-size:19px; color:var(--primary); }
+.tpl-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
+
+.dias-pick { display:flex; gap:6px; flex-wrap:wrap; }
+.dia-chip {
+  padding:7px 12px; border-radius:999px; border:1.5px solid var(--border-strong);
+  font-size:12.5px; font-weight:600; cursor:pointer; user-select:none;
+  transition:all .15s ease;
+}
+.dia-chip input { display:none; }
+.dia-chip.on { background:var(--primary); border-color:var(--primary); color:#fff; }
+
+/* ══ Notas de desempeño ══ */
+.nota-form { display:grid; grid-template-columns:170px 150px 1fr auto; gap:8px; }
+@media (max-width:720px) { .nota-form { grid-template-columns:1fr 1fr; } }
+.nota-row {
+  display:flex; align-items:flex-start; gap:12px; padding:12px 14px;
+  border-left:3px solid var(--nc); background:var(--ns);
+  border-radius:10px; margin-bottom:8px; animation:vistoIn .25s ease both;
+}
+.nota-row > ion-icon { font-size:17px; color:var(--nc); margin-top:1px; }
+.nota-top { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px; }
+.nota-top span { color:var(--text-muted); font-size:11.5px; }
+.nota-texto { font-size:13.5px; margin-top:3px; line-height:1.5; }
+
+/* ══ Cumpleaños y aniversarios ══ */
+.festejo-row {
+  display:flex; align-items:center; gap:12px; padding:10px 12px;
+  border:1px solid var(--border); border-radius:10px;
+}
+.festejo-row.es-hoy { border-color:#f0abfc; background:#fdf4ff; }
+.festejo-sub { font-size:12.5px; color:var(--text-muted); margin-top:2px; }
+
+/* ══ Reportes ══ */
+.rep-card { margin-bottom:14px; }
+.rep-card.rep-nuevo { border-left:3px solid var(--danger); }
+.rep-foto {
+  width:180px; max-width:38vw; border-radius:10px; cursor:zoom-in;
+  object-fit:cover; border:1px solid var(--border);
+}

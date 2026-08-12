@@ -1562,3 +1562,163 @@ document.addEventListener('pointermove', e => {
   btn.style.setProperty('--x', `${((e.clientX-r.left)/r.width)*100}%`);
   btn.style.setProperty('--y', `${((e.clientY-r.top)/r.height)*100}%`);
 });
+
+// ══════════════════════════════════════════════════════════
+//  Tareas (checklists por tienda)
+//
+//  Tareas/{id} es la plantilla: qué hay que hacer y qué días. Lo hecho de
+//  cada día vive aparte en TareasHechas/{tareaId_fecha}, así la plantilla
+//  nunca se ensucia y el historial de cada día queda guardado.
+// ══════════════════════════════════════════════════════════
+
+async function getTareas(store) {
+  const snap = await db.collection('Tareas').where('store','==',store).get();
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }))
+    .sort((a,b) => String(a.titulo||'').localeCompare(String(b.titulo||'')));
+}
+
+async function saveTarea(id, data) {
+  if (id) await db.collection('Tareas').doc(id).update(data);
+  else    await db.collection('Tareas').add({ ...data,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+
+async function deleteTarea(id) { await db.collection('Tareas').doc(id).delete(); }
+
+// ¿Toca hoy? Sin días marcados aplica todos los días.
+function tareaAplicaHoy(t, dow) {
+  const d = dow === undefined ? new Date().getDay() : dow;
+  return !Array.isArray(t.dias) || !t.dias.length || t.dias.includes(d);
+}
+
+// Lo hecho de un día: mapa tareaId -> { hechos: {indice: {nombre, at}} }
+async function getHechosDe(date, store) {
+  const snap = await db.collection('TareasHechas')
+    .where('date','==',date).where('store','==',store).get();
+  const por = {};
+  snap.docs.forEach(d => { por[d.data().tareaId] = { id:d.id, ...d.data() }; });
+  return por;
+}
+
+// Marcar o desmarcar un renglón. El documento del día se crea solo.
+async function marcarItem(tareaId, date, store, idx, hecho) {
+  const quien = hecho
+    ? { nombre: SESSION.name, pid: SESSION.pid, at: Date.now() }
+    : firebase.firestore.FieldValue.delete();
+  await db.collection('TareasHechas').doc(tareaId + '_' + date).set({
+    tareaId, date, store, hechos: { [idx]: quien }
+  }, { merge:true });
+}
+
+// ══════════════════════════════════════════════════════════
+//  Notas de desempeño (privadas de la gerencia)
+// ══════════════════════════════════════════════════════════
+
+const NOTA_TIPOS = {
+  positivo:  { label:'Reconocimiento', icon:'star-outline',          color:'var(--success)', soft:'var(--success-soft)' },
+  incidente: { label:'Incidente',      icon:'alert-circle-outline',  color:'var(--danger)',  soft:'var(--danger-soft)' },
+  tarde:     { label:'Llegada tarde',  icon:'time-outline',          color:'var(--warning)', soft:'var(--warning-soft)' },
+  nota:      { label:'Nota',           icon:'document-text-outline', color:'var(--info)',    soft:'var(--info-soft)' },
+};
+
+async function getNotas(empId) {
+  const snap = await db.collection('NotasPersonal').where('employeeId','==',empId).get();
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }))
+    .sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
+}
+
+async function addNota(empId, tipo, texto, date) {
+  await db.collection('NotasPersonal').add({
+    employeeId: empId, tipo, texto, date,
+    por: SESSION.name,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function deleteNota(id) { await db.collection('NotasPersonal').doc(id).delete(); }
+
+// ══════════════════════════════════════════════════════════
+//  Cumpleaños y aniversarios
+// ══════════════════════════════════════════════════════════
+
+// Próximos eventos del equipo en los siguientes `dias` días (incluye hoy).
+// Devuelve [{emp, tipo:'cumple'|'aniversario', fecha:'YYYY-MM-DD', en, anos}]
+function proximosEventos(emps, dias = 30) {
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const out = [];
+  const siguiente = iso => {
+    // La próxima vez que caiga ese mes/día (maneja el año bisiesto: 29/2
+    // en año normal cae el 28/2).
+    const [ , m, d ] = String(iso).split('-').map(Number);
+    if (!m || !d) return null;
+    for (let y = hoy.getFullYear(); y <= hoy.getFullYear()+1; y++) {
+      const f = new Date(y, m-1, Math.min(d, new Date(y, m, 0).getDate()));
+      if (f >= hoy) return f;
+    }
+    return null;
+  };
+  emps.filter(e => e.status === 'active').forEach(e => {
+    [['cumple', e.birthday], ['aniversario', e.hireDate]].forEach(([tipo, iso]) => {
+      if (!iso) return;
+      const f = siguiente(iso);
+      if (!f) return;
+      const en = Math.round((f - hoy) / 86400000);
+      if (en > dias) return;
+      const anos = f.getFullYear() - Number(String(iso).slice(0,4));
+      if (tipo === 'aniversario' && anos < 1) return;   // recién contratado
+      out.push({ emp:e, tipo, fecha: toDateStr(f), en, anos });
+    });
+  });
+  return out.sort((a,b) => a.en - b.en);
+}
+
+// ══════════════════════════════════════════════════════════
+//  Reportes de incidentes (con foto)
+// ══════════════════════════════════════════════════════════
+
+async function getReportes() {
+  const snap = await db.collection('Reportes').get();
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }))
+    .sort((a,b) => {
+      const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+      const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+      return tb - ta;
+    });
+}
+
+// Crear un reporte; si trae foto se reduce y se sube primero.
+async function crearReporte({ texto, store, file }, onProgreso) {
+  let foto = null, w = 0, h = 0;
+  if (file) {
+    if (file.type && !file.type.startsWith('image/')) throw new Error('Sólo se pueden adjuntar imágenes');
+    if (file.size > 12 * 1024 * 1024) throw new Error('La imagen es demasiado grande');
+    if (onProgreso) onProgreso(null);
+    let blob;
+    try { ({ blob, w, h } = await encogerImagen(file)); }
+    catch (e) { console.warn('se sube original:', e); blob = file; }
+    const nombre = `${Date.now()}_${Math.random().toString(36).slice(2,9)}.jpg`;
+    const ref = firebase.storage().ref(`reportes/${nombre}`);
+    const tarea = ref.put(blob, { contentType: blob.type || 'image/jpeg' });
+    await new Promise((ok, fail) => {
+      tarea.on('state_changed',
+        s => { if (onProgreso && s.totalBytes) onProgreso(Math.round(s.bytesTransferred/s.totalBytes*100)); },
+        fail, ok);
+    });
+    foto = await ref.getDownloadURL();
+  }
+  await db.collection('Reportes').add({
+    por: SESSION.pid, nombre: SESSION.name, store,
+    texto: String(texto||'').trim(), foto, w, h,
+    date: todayStr(), status: 'nuevo',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function marcarReporteVisto(id) {
+  await db.collection('Reportes').doc(id).update({
+    status: 'revisado', revisadoPor: SESSION.name,
+    revisadoAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function deleteReporte(id) { await db.collection('Reportes').doc(id).delete(); }
