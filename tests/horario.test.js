@@ -1,0 +1,64 @@
+// Prueba de la lógica del horario, sin navegador ni Firestore.
+// Se ejecuta con:  node tests/horario.test.js
+const fs = require('fs');
+const src = fs.readFileSync(require('path').join(__dirname,'..','app.js'), 'utf8');
+const trozo = (a,b) => src.slice(src.indexOf(a), src.indexOf(b));
+
+const toDateStr = d => { const x=new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; };
+const parseLocalDate = v => new Date(String(v).includes('T') ? v : v+'T00:00:00');
+const STORE_IDS = ['1','2'];
+
+// Firestore de mentira
+let DOCS = {};
+const db = { collection: c => ({ doc: id => ({
+  get: async () => ({ exists: !!DOCS[c+'/'+id], data: () => DOCS[c+'/'+id] }),
+  set: async d => { DOCS[c+'/'+id] = JSON.parse(JSON.stringify(d)); }
+}), where: () => ({ get: async () => ({ docs: [] }) }) }) };
+const firebase = { firestore: { FieldValue: { serverTimestamp: () => 'ts' } } };
+
+const code = trozo('/** El lunes de la semana', '/** Permisos aprobados');
+const api = new Function('toDateStr','parseLocalDate','STORE_IDS','db','firebase',
+  code + '\nreturn { lunesDe, diasDeSemana, getHorario, saveHorario, quitarDelHorario };')(
+  toDateStr, parseLocalDate, STORE_IDS, db, firebase);
+
+let fallos = 0;
+const ok = (c, q) => { console.log((c?'  ok   ':'  FALLA')+'  '+q); if(!c) fallos++; };
+
+(async () => {
+  // lunesDe en todos los días de la semana
+  ok(api.lunesDe('2026-08-12') === '2026-08-10', 'miércoles 12 ago -> lunes 10');
+  ok(api.lunesDe('2026-08-10') === '2026-08-10', 'un lunes es su propio lunes');
+  ok(api.lunesDe('2026-08-16') === '2026-08-10', 'domingo 16 pertenece a la semana del 10');
+  ok(api.lunesDe('2026-08-17') === '2026-08-17', 'lunes 17 arranca semana nueva');
+
+  const dias = api.diasDeSemana('2026-08-10');
+  ok(dias.length === 7 && dias[0] === '2026-08-10' && dias[6] === '2026-08-16',
+     'la semana va de lunes a domingo');
+
+  // quitarDelHorario respeta fechas y tiendas
+  DOCS = {
+    'Horarios/2026-08-10_1': { weekStart:'2026-08-10', store:'1', shifts: {
+      ana:  { '2026-08-11': {in:'09:00',out:'17:00'}, '2026-08-13': {in:'09:00',out:'17:00'} },
+      beto: { '2026-08-11': {in:'12:00',out:'20:00'} }
+    }},
+    'Horarios/2026-08-17_1': { weekStart:'2026-08-17', store:'1', shifts: {
+      ana: { '2026-08-18': {in:'09:00',out:'17:00'} }
+    }}
+  };
+  // Permiso de Ana del 12 al 18: cruza dos semanas
+  const n = await api.quitarDelHorario('ana', '2026-08-12', '2026-08-18');
+  ok(n === 2, 'quita los 2 turnos de Ana dentro del permiso (13 y 18)');
+  const s1 = DOCS['Horarios/2026-08-10_1'].shifts;
+  ok(!!s1.ana['2026-08-11'], 'conserva el turno de Ana anterior al permiso (día 11)');
+  ok(!s1.ana['2026-08-13'], 'quita el del 13');
+  ok(!!s1.beto['2026-08-11'], 'no toca a Beto');
+  ok(!DOCS['Horarios/2026-08-17_1'].shifts.ana, 'en la otra semana Ana desaparece del todo');
+
+  // Permiso sin turnos: no rompe nada
+  const n2 = await api.quitarDelHorario('caro', '2026-08-12', '2026-08-13');
+  ok(n2 === 0, 'un permiso sin turnos asignados no quita nada');
+
+  console.log(fallos ? `\n${fallos} FALLOS` : '\nHorario: todo correcto');
+  process.exit(fallos ? 1 : 0);
+})();

@@ -65,6 +65,7 @@
       </button>
       <div class="nav-group-body"><div class="nav-group-inner">
 
+    <a href="horario.html" data-manager-only class="nav-link"><ion-icon name="grid-outline"></ion-icon><span>Horario</span></a>
     <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
     <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
     <a href="time-off.html" class="nav-link active"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
@@ -382,6 +383,22 @@ async function doUpdateStatus(id, status) {
   allTOCache = await getTimeOff();
   const labels = { approved: 'Solicitud aprobada', denied: 'Solicitud denegada', pending: 'Solicitud restablecida a pendiente' };
   toast(labels[status], status === 'denied' ? 'info' : status === 'approved' ? 'success' : 'info');
+
+  // Al aprobar, la persona sale sola del horario de esos días: es la parte
+  // del permiso que antes había que acordarse de hacer a mano.
+  if (status === 'approved') {
+    const t = allTOCache.find(x => x.id === id);
+    if (t) {
+      try {
+        const n = await quitarDelHorario(t.employeeId, t.startDate, t.endDate);
+        if (n) setTimeout(() => toast(
+          `${n} ${n === 1 ? 'turno quitado' : 'turnos quitados'} del horario`, 'info'), 800);
+      } catch (err) {
+        console.error('quitarDelHorario', err);
+        setTimeout(() => toast('Revisa el horario: no se pudieron quitar sus turnos.', 'error'), 800);
+      }
+    }
+  }
   renderCalendar();
   renderList();
 }

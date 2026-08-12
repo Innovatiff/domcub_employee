@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horario — El Águila</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">El Águila</div>
+        <div class="brand-sub">Portal de Colaboradores</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="store-switcher" id="storeSwitcher"></div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-group" data-group="principal">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Principal</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="operacion">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Operación</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="tiempo">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Tiempo</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="horario.html" data-manager-only class="nav-link active"><ion-icon name="grid-outline"></ion-icon><span>Horario</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
+      </div></div>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div id="sidebarUser"></div>
+    <button class="sidebar-signout" onclick="signOut()">
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Horario</h1>
+      <p>Asigna los turnos de la semana. Los permisos aprobados quitan a la persona solos.</p>
+    </div>
+    <button class="btn btn-outline" id="copiarBtn" onclick="copiarSemanaAnterior()">
+      <ion-icon name="copy-outline"></ion-icon> Copiar semana anterior
+    </button>
+  </div>
+
+  <!-- Navegación de semana -->
+  <div class="card" style="padding:13px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <button class="btn-icon" onclick="moverSemana(-1)" title="Semana anterior"><ion-icon name="chevron-back-outline"></ion-icon></button>
+    <div style="flex:1;min-width:200px;text-align:center">
+      <div id="semanaLabel" style="font-size:15px;font-weight:650"></div>
+      <div id="semanaSub" style="font-size:11.5px;color:var(--text-muted)"></div>
+    </div>
+    <button class="btn-icon" onclick="moverSemana(1)" title="Semana siguiente"><ion-icon name="chevron-forward-outline"></ion-icon></button>
+    <button class="btn btn-outline btn-sm" onclick="irAHoy()">Hoy</button>
+  </div>
+
+  <div id="horarioWrap"></div>
+</main>
+
+<!-- Modal de turno -->
+<div class="modal-overlay" id="turnoModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3 id="turnoTitulo">Turno</h3>
+      <button class="modal-close" onclick="closeModal('turnoModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="turnoSub" style="font-size:13px;color:var(--text-muted);margin-bottom:14px"></p>
+
+      <div class="turno-presets" id="turnoPresets"></div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Entrada</label>
+          <input type="time" id="turnoIn">
+        </div>
+        <div class="form-group">
+          <label>Salida</label>
+          <input type="time" id="turnoOut">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-outline" id="turnoQuitar" onclick="quitarTurno()">
+        <ion-icon name="trash-outline"></ion-icon> Quitar
+      </button>
+      <div style="display:flex;gap:9px">
+        <button class="btn btn-outline" onclick="closeModal('turnoModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarTurno()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script>
+// El horario de cada tienda es independiente; el conmutador de la barra
+// lateral decide cuál se está editando. "Ambas" no tiene sentido aquí
+// —no se puede asignar un turno a dos tiendas a la vez—, así que en ese
+// caso se trabaja sobre Despensas y se avisa.
+
+let lunes   = lunesDe(new Date());
+let emps    = [];        // colaboradores activos de la tienda visible
+let horario = null;      // { weekStart, store, shifts }
+let permisos = {};       // empId -> [permisos aprobados de la semana]
+let celda   = null;      // { empId, fecha } que se está editando
+
+const DIA_CORTO = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+// Los últimos horarios usados salen como atajos en el modal: lo normal es
+// que una tienda tenga dos o tres turnos de siempre.
+const PRESETS_KEY = 'elaguila_turnos_frecuentes';
+
+function tiendaActiva() {
+  const s = getSelectedStore();
+  return s === 'all' ? '1' : s;
+}
+
+requireAuth(() => { render(); });
+function onStoreChange() { render(); }
+
+function moverSemana(n) {
+  const d = parseLocalDate(lunes);
+  d.setDate(d.getDate() + n * 7);
+  lunes = toDateStr(d);
+  render();
+}
+function irAHoy() { lunes = lunesDe(new Date()); render(); }
+
+async function render() {
+  const store = tiendaActiva();
+  const dias  = diasDeSemana(lunes);
+
+  // Cabecera de la semana
+  const a = parseLocalDate(dias[0]), b = parseLocalDate(dias[6]);
+  document.getElementById('semanaLabel').textContent =
+    `${a.getDate()} ${MESES_CORTOS[a.getMonth()]} – ${b.getDate()} ${MESES_CORTOS[b.getMonth()]}, ${b.getFullYear()}`;
+  const esActual = lunes === lunesDe(new Date());
+  document.getElementById('semanaSub').textContent =
+    (esActual ? 'Semana actual · ' : '') + storeName(store) +
+    (getSelectedStore() === 'all' ? ' (elige una tienda en la barra lateral para la otra)' : '');
+
+  document.getElementById('horarioWrap').innerHTML =
+    '<div class="card"><div class="loading-state"><ion-icon name="sync-outline" class="gira"></ion-icon></div></div>';
+
+  try {
+    const [todos, h, perm] = await Promise.all([
+      getEmployees(), getHorario(lunes, store), permisosDeSemana(lunes)
+    ]);
+    emps = todos.filter(e => e.status === 'active' && e.store === store)
+                .sort((x, y) => x.name.localeCompare(y.name));
+    horario = h;
+    permisos = perm;
+    pintar();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('horarioWrap').innerHTML =
+      `<div class="card"><div class="empty-state"><ion-icon name="alert-circle-outline"></ion-icon><p>${escapeHtml(err.message)}</p></div></div>`;
+  }
+}
+
+function conPermiso(empId, fecha) {
+  return (permisos[empId] || []).some(t => fecha >= t.startDate && fecha <= t.endDate);
+}
+
+function horasDe(turno) {
+  if (!turno) return 0;
+  const [h1, m1] = turno.in.split(':').map(Number);
+  const [h2, m2] = turno.out.split(':').map(Number);
+  return Math.max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60);
+}
+
+function pintar() {
+  const dias = diasDeSemana(lunes);
+  const hoy  = todayStr();
+
+  if (!emps.length) {
+    document.getElementById('horarioWrap').innerHTML =
+      `<div class="card"><div class="empty-state"><ion-icon name="people-outline"></ion-icon>
+        <p>No hay colaboradores activos en ${storeName(tiendaActiva())}.</p></div></div>`;
+    return;
+  }
+
+  const filas = emps.map(e => {
+    const mios = (horario.shifts || {})[e.id] || {};
+    const totalSemana = dias.reduce((s, f) => s + horasDe(mios[f]), 0);
+
+    const celdas = dias.map(f => {
+      const t = mios[f];
+      if (conPermiso(e.id, f)) {
+        return `<td class="hcell permiso" title="Permiso aprobado">
+          <div class="hcell-permiso"><ion-icon name="airplane-outline"></ion-icon> Permiso</div></td>`;
+      }
+      if (t) {
+        return `<td class="hcell con-turno" onclick="abrirTurno('${e.id}','${f}')">
+          <div class="hcell-turno">
+            <span class="hcell-horas">${t.in} – ${t.out}</span>
+            <span class="hcell-dur">${numES(horasDe(t), 1)} h</span>
+          </div></td>`;
+      }
+      return `<td class="hcell libre" onclick="abrirTurno('${e.id}','${f}')">
+        <span class="hcell-mas">+</span></td>`;
+    }).join('');
+
+    return `<tr>
+      <th class="hemp">
+        <div class="employee-info">${avatarHtml(e.name, 30)}
+          <div><div class="employee-name">${escapeHtml(e.name)}</div>
+          <div class="hemp-total">${numES(totalSemana, 1)} h esta semana</div></div>
+        </div>
+      </th>
+      ${celdas}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('horarioWrap').innerHTML = `
+    <div class="card">
+      <div class="table-wrap">
+        <table class="htabla">
+          <thead><tr>
+            <th class="hemp"></th>
+            ${dias.map((f, i) => {
+              const d = parseLocalDate(f);
+              return `<th class="hdia ${f === hoy ? 'hoy' : ''}">
+                <div>${DIA_CORTO[i]}</div><span>${d.getDate()}</span></th>`;
+            }).join('')}
+          </tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
+      Toca una casilla para asignar o cambiar un turno. Cuando apruebas un permiso,
+      la persona sale sola de esos días.
+    </p>`;
+}
+
+// ── Modal de turno ──
+
+function presets() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PRESETS_KEY) || '[]');
+    if (p.length) return p;
+  } catch (e) {}
+  return [{ in: '09:00', out: '17:00' }, { in: '12:00', out: '20:00' }];
+}
+
+function recordarPreset(t) {
+  const lista = [t, ...presets().filter(p => p.in !== t.in || p.out !== t.out)].slice(0, 3);
+  try { localStorage.setItem(PRESETS_KEY, JSON.stringify(lista)); } catch (e) {}
+}
+
+function abrirTurno(empId, fecha) {
+  celda = { empId, fecha };
+  const e = emps.find(x => x.id === empId);
+  const t = ((horario.shifts || {})[empId] || {})[fecha];
+  const d = parseLocalDate(fecha);
+
+  document.getElementById('turnoTitulo').textContent = e ? e.name : 'Turno';
+  document.getElementById('turnoSub').textContent =
+    `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
+  document.getElementById('turnoIn').value  = t ? t.in  : presets()[0].in;
+  document.getElementById('turnoOut').value = t ? t.out : presets()[0].out;
+  document.getElementById('turnoQuitar').style.display = t ? '' : 'none';
+
+  document.getElementById('turnoPresets').innerHTML = presets().map(p =>
+    `<button type="button" class="turno-preset" onclick="usarPreset('${p.in}','${p.out}')">${p.in} – ${p.out}</button>`
+  ).join('');
+
+  openModal('turnoModal');
+}
+
+function usarPreset(inn, out) {
+  document.getElementById('turnoIn').value  = inn;
+  document.getElementById('turnoOut').value = out;
+}
+
+async function guardarTurno() {
+  const inn = document.getElementById('turnoIn').value;
+  const out = document.getElementById('turnoOut').value;
+  if (!inn || !out) { toast('Escribe la entrada y la salida.', 'error'); return; }
+  if (out <= inn)   { toast('La salida debe ser posterior a la entrada.', 'error'); return; }
+
+  const shifts = horario.shifts || {};
+  (shifts[celda.empId] = shifts[celda.empId] || {})[celda.fecha] = { in: inn, out };
+  horario.shifts = shifts;
+  recordarPreset({ in: inn, out });
+
+  closeModal('turnoModal');
+  pintar();                                     // se ve al instante
+  try {
+    await saveHorario(lunes, tiendaActiva(), shifts);
+  } catch (err) {
+    toast('No se pudo guardar: ' + err.message, 'error');
+    render();                                   // recarga lo que sí quedó
+  }
+}
+
+async function quitarTurno() {
+  const shifts = horario.shifts || {};
+  if (shifts[celda.empId]) {
+    delete shifts[celda.empId][celda.fecha];
+    if (!Object.keys(shifts[celda.empId]).length) delete shifts[celda.empId];
+  }
+  closeModal('turnoModal');
+  pintar();
+  try {
+    await saveHorario(lunes, tiendaActiva(), shifts);
+  } catch (err) {
+    toast('No se pudo guardar: ' + err.message, 'error');
+    render();
+  }
+}
+
+// ── Copiar la semana anterior ──
+//
+// El horario de una tienda casi no cambia de una semana a otra: esto deja
+// la semana lista en un clic y sólo se retocan las excepciones. Si algún
+// día de la nueva semana cae en permiso aprobado, esa persona no se copia
+// en esos días.
+async function copiarSemanaAnterior() {
+  const btn = document.getElementById('copiarBtn');
+  const d = parseLocalDate(lunes); d.setDate(d.getDate() - 7);
+  const anterior = toDateStr(d);
+
+  btn.disabled = true;
+  try {
+    const prev = await getHorario(anterior, tiendaActiva());
+    const origen = prev.shifts || {};
+    if (!Object.keys(origen).length) {
+      toast('La semana anterior no tiene horario en esta tienda.', 'info');
+      return;
+    }
+
+    const diasPrev  = diasDeSemana(anterior);
+    const diasNuevo = diasDeSemana(lunes);
+    const activos = new Set(emps.map(e => e.id));
+    const shifts = {};
+    let saltadosPermiso = 0;
+
+    for (const empId of Object.keys(origen)) {
+      if (!activos.has(empId)) continue;         // ya no está en la tienda
+      for (let i = 0; i < 7; i++) {
+        const t = origen[diasPrev[i]];
+        if (!t) continue;
+        if (conPermiso(empId, diasNuevo[i])) { saltadosPermiso++; continue; }
+        (shifts[empId] = shifts[empId] || {})[diasNuevo[i]] = { ...t };
+      }
+    }
+
+    horario.shifts = shifts;
+    pintar();
+    await saveHorario(lunes, tiendaActiva(), shifts);
+    toast('Horario copiado' + (saltadosPermiso
+      ? ` · ${saltadosPermiso} ${saltadosPermiso === 1 ? 'día saltado por permiso' : 'días saltados por permiso'}` : ''), 'success');
+  } catch (err) {
+    toast('No se pudo copiar: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
