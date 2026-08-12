@@ -7,7 +7,6 @@
 <title>El Águila — Iniciar Sesión</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -355,6 +354,8 @@
     .form-row { grid-template-columns: 1fr; }
   }
 </style>
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
@@ -369,12 +370,12 @@
   </div>
 
   <ul class="feature-list">
-    <li><i class="fa-solid fa-clock"></i> Control de horas en tiempo real</li>
-    <li><i class="fa-solid fa-users"></i> Colaboradores en Despensas y Cocina</li>
-    <li><i class="fa-solid fa-file-invoice-dollar"></i> Nómina automatizada</li>
-    <li><i class="fa-solid fa-calendar-days"></i> Gestión de permisos</li>
-    <li><i class="fa-solid fa-comments"></i> Anuncios y mensajes privados</li>
-    <li><i class="fa-solid fa-shield-halved"></i> Acceso seguro y por roles</li>
+    <li><ion-icon name="time-outline"></ion-icon> Control de horas en tiempo real</li>
+    <li><ion-icon name="people-outline"></ion-icon> Colaboradores en Despensas y Cocina</li>
+    <li><ion-icon name="receipt-outline"></ion-icon> Nómina automatizada</li>
+    <li><ion-icon name="calendar-outline"></ion-icon> Gestión de permisos</li>
+    <li><ion-icon name="chatbubbles-outline"></ion-icon> Anuncios y mensajes privados</li>
+    <li><ion-icon name="shield-checkmark-outline"></ion-icon> Acceso seguro y por roles</li>
   </ul>
 
   <div class="version-tag">El Águila v3.0 · Despensas · Cocina</div>
@@ -397,7 +398,7 @@
 
     <!-- Alert -->
     <div class="auth-alert" id="authAlert">
-      <i class="fa-solid fa-circle-exclamation"></i>
+      <ion-icon name="alert-circle-outline"></ion-icon>
       <span id="authAlertMsg"></span>
     </div>
 
@@ -406,20 +407,20 @@
       <div class="form-group">
         <label>Correo Electrónico</label>
         <div class="input-wrap">
-          <i class="fa-solid fa-envelope"></i>
+          <ion-icon name="mail-outline"></ion-icon>
           <input type="email" id="loginEmail" placeholder="tu@elaguila.com" required autocomplete="email">
         </div>
       </div>
       <div class="form-group">
         <label>Contraseña</label>
         <div class="input-wrap">
-          <i class="fa-solid fa-lock"></i>
+          <ion-icon name="lock-closed-outline"></ion-icon>
           <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
-          <button type="button" class="toggle-pw" onclick="togglePw('loginPassword', this)"><i class="fa-solid fa-eye"></i></button>
+          <button type="button" class="toggle-pw" onclick="togglePw('loginPassword', this)"><ion-icon name="eye-outline"></ion-icon></button>
         </div>
       </div>
       <button type="submit" class="btn-auth" id="loginBtn">
-        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        <ion-icon name="log-in-outline"></ion-icon>
         Iniciar Sesión
       </button>
     </form>
@@ -435,7 +436,7 @@
         <div class="pw-hint" style="text-align:center">Tu gerente te entregó este PIN al contratarte.</div>
       </div>
       <button type="submit" class="btn-auth" id="pinBtn">
-        <i class="fa-solid fa-right-to-bracket"></i>
+        <ion-icon name="log-in-outline"></ion-icon>
         Entrar
       </button>
     </form>
@@ -501,21 +502,21 @@ async function doPinLogin(e) {
     const pinDoc = await db.collection('Pins').doc(pin).get();
     if (!pinDoc.exists) {
       await auth.signOut();
-      setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+      setLoading('pinBtn', false, 'Entrar', 'log-in-outline');
       showAlert('PIN no reconocido. Verifícalo con tu gerente.', 'error');
       return;
     }
     const empDoc = await db.collection('Employees').doc(pinDoc.data().employeeId).get();
     if (!empDoc.exists) {
       await auth.signOut();
-      setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+      setLoading('pinBtn', false, 'Entrar', 'log-in-outline');
       showAlert('PIN no reconocido. Verifícalo con tu gerente.', 'error');
       return;
     }
     const emp = { id: empDoc.id, ...empDoc.data() };
     if (emp.status !== 'active') {
       await auth.signOut();
-      setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+      setLoading('pinBtn', false, 'Entrar', 'log-in-outline');
       showAlert('Esta cuenta está inactiva. Comunícate con tu gerente.', 'error');
       return;
     }
@@ -523,7 +524,7 @@ async function doPinLogin(e) {
     localStorage.setItem('elaguila_key', pin);
     window.location.href = 'grupo.html';
   } catch (err) {
-    setLoading('pinBtn', false, 'Entrar', 'fa-solid fa-right-to-bracket');
+    setLoading('pinBtn', false, 'Entrar', 'log-in-outline');
     const msg = err.code === 'auth/operation-not-allowed'
       ? 'El acceso por PIN no está habilitado. Activa "Anónimo" en Firebase Authentication.'
       : err.message;
@@ -546,13 +547,13 @@ function clearAlert() {
 
 function togglePw(inputId, btn) {
   const input = document.getElementById(inputId);
-  const icon  = btn.querySelector('i');
+  const icon  = btn.querySelector('ion-icon');
   if (input.type === 'password') {
     input.type = 'text';
-    icon.className = 'fa-solid fa-eye-slash';
+    icon.setAttribute('name','eye-off-outline');
   } else {
     input.type = 'password';
-    icon.className = 'fa-solid fa-eye';
+    icon.setAttribute('name','eye-outline');
   }
 }
 
@@ -560,8 +561,8 @@ function setLoading(btnId, loading, label, icon) {
   const btn = document.getElementById(btnId);
   btn.disabled = loading;
   btn.innerHTML = loading
-    ? `<i class="fa-solid fa-spinner fa-spin"></i> Espera un momento...`
-    : `<i class="${icon}"></i> ${label}`;
+    ? `<ion-icon name="sync-outline" class="gira"></ion-icon> Espera un momento...`
+    : `<ion-icon name="${icon}"></ion-icon> ${label}`;
 }
 
 async function doLogin(e) {
@@ -574,7 +575,7 @@ async function doLogin(e) {
     await auth.signInWithEmailAndPassword(email, password);
     // onAuthStateChanged will redirect
   } catch (err) {
-    setLoading('loginBtn', false, 'Iniciar Sesión', 'fa-solid fa-arrow-right-to-bracket');
+    setLoading('loginBtn', false, 'Iniciar Sesión', 'log-in-outline');
     const msgs = {
       'auth/user-not-found': 'No existe ninguna cuenta con este correo.',
       'auth/wrong-password': 'Contraseña incorrecta. Inténtalo de nuevo.',

@@ -6,7 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puestos — El Águila</title>
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
@@ -25,22 +26,22 @@
 
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
-    <a href="index.html" data-manager-only class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
-    <a href="employees.html" data-manager-only class="nav-link"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
-    <a href="jobs.html" data-manager-only class="nav-link active"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link active"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
     <div class="nav-section-label">Operación</div>
-    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
-    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
     <div class="nav-section-label">Tiempo</div>
-    <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
-    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
   </nav>
 
   <div class="sidebar-footer">
     <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -51,7 +52,7 @@
       <h1>Puestos de Trabajo</h1>
       <p>Administra los puestos disponibles en ambas tiendas de El Águila.</p>
     </div>
-    <button class="btn btn-primary" onclick="openJobModal()"><i class="fa-solid fa-plus"></i> Agregar Puesto</button>
+    <button class="btn btn-primary" onclick="openJobModal()"><ion-icon name="add-outline"></ion-icon> Agregar Puesto</button>
   </div>
 
   <div class="jobs-grid" id="jobsGrid">
@@ -135,7 +136,7 @@ async function render() {
 
     if (jobs.length === 0) {
       grid.innerHTML = `<div class="card" style="grid-column:1/-1;padding:48px;text-align:center;color:var(--text-muted)">
-        <i class="fa-solid fa-briefcase" style="font-size:36px;margin-bottom:12px;display:block;color:var(--text-light)"></i>
+        <ion-icon name="briefcase-outline" style="font-size:36px;margin-bottom:12px;display:block;color:var(--text-light)"></ion-icon>
         <p>Aún no hay puestos. Agrega uno para comenzar.</p>
       </div>`;
       return;
@@ -151,10 +152,10 @@ async function render() {
             <div class="job-dept">${j.department || '—'}</div>
           </div>
         </div>
-        <div class="job-count"><i class="fa-solid fa-user" style="color:var(--text-light)"></i>${count} ${count === 1 ? 'colaborador' : 'colaboradores'} en este puesto</div>
+        <div class="job-count"><ion-icon name="person-outline" style="color:var(--text-light)"></ion-icon>${count} ${count === 1 ? 'colaborador' : 'colaboradores'} en este puesto</div>
         <div class="job-actions">
-          <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><i class="fa-solid fa-pen"></i> Editar</button>
-          <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="openDelete('${j.id}','${j.title.replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i> Eliminar</button>
+          <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><ion-icon name="create-outline"></ion-icon> Editar</button>
+          <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="openDelete('${j.id}','${j.title.replace(/'/g,"\\'")}')"><ion-icon name="trash-outline"></ion-icon> Eliminar</button>
         </div>
       </div>`;
     }).join('');

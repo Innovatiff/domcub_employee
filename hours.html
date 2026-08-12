@@ -6,7 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Horas — El Águila</title>
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
@@ -25,22 +26,22 @@
 
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
-    <a href="index.html" data-manager-only class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
-    <a href="employees.html" data-manager-only class="nav-link"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
-    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
     <div class="nav-section-label">Operación</div>
-    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
-    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
     <div class="nav-section-label">Tiempo</div>
-    <a href="hours.html" data-manager-only class="nav-link active"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
-    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="hours.html" data-manager-only class="nav-link active"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
   </nav>
 
   <div class="sidebar-footer">
     <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -52,19 +53,19 @@
       <p>Consulta y administra las horas de los colaboradores por período de pago.</p>
     </div>
     <div style="display:flex;gap:10px">
-      <button class="btn btn-outline" onclick="openAddEntry()"><i class="fa-solid fa-plus"></i> Agregar Registro</button>
-      <button class="btn btn-primary" onclick="openSavePeriod()"><i class="fa-solid fa-floppy-disk"></i> Guardar Período</button>
+      <button class="btn btn-outline" onclick="openAddEntry()"><ion-icon name="add-outline"></ion-icon> Agregar Registro</button>
+      <button class="btn btn-primary" onclick="openSavePeriod()"><ion-icon name="save-outline"></ion-icon> Guardar Período</button>
     </div>
   </div>
 
   <!-- Navegación de Período -->
   <div class="period-nav">
-    <button class="btn-icon" onclick="shiftPeriod(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+    <button class="btn-icon" onclick="shiftPeriod(-1)"><ion-icon name="chevron-back-outline"></ion-icon></button>
     <div style="flex:1;text-align:center">
       <div class="period-label" id="periodLabel">—</div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="periodSub"></div>
     </div>
-    <button class="btn-icon" onclick="shiftPeriod(1)"><i class="fa-solid fa-chevron-right"></i></button>
+    <button class="btn-icon" onclick="shiftPeriod(1)"><ion-icon name="chevron-forward-outline"></ion-icon></button>
   </div>
 
   <!-- Resumen -->
@@ -192,7 +193,7 @@ async function render() {
 
   const acc = document.getElementById('hoursAccordion');
   if (emps.length === 0) {
-    acc.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><i class="fa-solid fa-clock"></i><p>No hay colaboradores para mostrar.</p></div></div></div>`;
+    acc.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><ion-icon name="time-outline"></ion-icon><p>No hay colaboradores para mostrar.</p></div></div></div>`;
     return;
   }
 
@@ -226,7 +227,7 @@ async function render() {
         <td>${ci.clockOut ? formatTime(ci.clockOut) : '<span class="badge badge-green">En curso</span>'}</td>
         <td><strong>${ci.clockOut ? (ci.hours||0).toFixed(2)+'h' : '—'}</strong></td>
         <td>${ci.clockOut ? '<span class="badge badge-green">Completo</span>' : '<span class="badge badge-yellow">En curso</span>'}</td>
-        <td><button class="btn-icon btn-sm" onclick="doDeleteEntry('${ci.id}')" title="Eliminar"><i class="fa-solid fa-xmark" style="font-size:11px"></i></button></td>
+        <td><button class="btn-icon btn-sm" onclick="doDeleteEntry('${ci.id}')" title="Eliminar"><ion-icon name="close-outline" style="font-size:11px"></ion-icon></button></td>
       </tr>`).join('');
     }).join('');
 
@@ -243,7 +244,7 @@ async function render() {
         <div class="hours-emp-right">
           <div class="hours-total">${totalH.toFixed(2)} h en total</div>
           <span class="badge badge-gray">$${estPay} aprox.</span>
-          <i class="fa-solid fa-chevron-down" style="color:var(--text-muted);font-size:12px;transition:transform 0.2s"></i>
+          <ion-icon name="chevron-down-outline" style="color:var(--text-muted);font-size:12px;transition:transform 0.2s"></ion-icon>
         </div>
       </div>
       <div class="hours-emp-body">
@@ -260,7 +261,7 @@ async function render() {
 
 function toggleEmp(header) {
   const body = header.nextElementSibling;
-  const icon = header.querySelector('.fa-chevron-down');
+  const icon = header.querySelector('ion-icon');
   body.classList.toggle('open');
   if (icon) icon.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
 }

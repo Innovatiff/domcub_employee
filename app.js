@@ -10,21 +10,21 @@
 // Los valores '1' y '2' se conservan en la base de datos; sólo
 // cambia el nombre que se muestra.
 const STORES = {
-  '1': { id:'1', name:'Tienda Despensas', short:'Despensas', color:'#b45309', soft:'#fef3c7', icon:'fa-basket-shopping' },
-  '2': { id:'2', name:'Tienda Cocina',    short:'Cocina',    color:'#0e7490', soft:'#cffafe', icon:'fa-utensils' }
+  '1': { id:'1', name:'Tienda Despensas', short:'Despensas', color:'#b45309', soft:'#fef3c7', icon:'basket-outline' },
+  '2': { id:'2', name:'Tienda Cocina',    short:'Cocina',    color:'#0e7490', soft:'#cffafe', icon:'restaurant-outline' }
 };
 const STORE_IDS = ['1','2'];
 
 function storeName(id)  { return (STORES[id] || {}).name  || '—'; }
 function storeShort(id) { return (STORES[id] || {}).short || '—'; }
 function storeColor(id) { return (STORES[id] || {}).color || '#667085'; }
-function storeIcon(id)  { return (STORES[id] || {}).icon  || 'fa-store'; }
+function storeIcon(id)  { return (STORES[id] || {}).icon  || 'storefront-outline'; }
 
 function storeBadge(id) {
   const s = STORES[id];
   if (!s) return '<span class="badge badge-gray">—</span>';
   return `<span class="badge" style="background:${s.soft};color:${s.color}">
-    <i class="fa-solid ${s.icon}" style="font-size:9px"></i>${s.short}</span>`;
+    <ion-icon name="${s.icon}" style="font-size:10px"></ion-icon>${s.short}</span>`;
 }
 
 function storeOptions(selected) {
@@ -210,13 +210,12 @@ function renderStoreSwitcher() {
 
   if (isColaborador()) {
     const s = STORES[cur];
-    host.innerHTML = `<div class="store-chip locked" style="--sc:${s.color}">
-      <i class="fa-solid ${s.icon}"></i><span>${s.name}</span></div>`;
+    host.innerHTML = `<div class="store-chip locked" style="--sc:${s.color}">${s.name}</div>`;
     document.body.setAttribute('data-store', cur);
     return;
   }
 
-  const opts = [{ id:'all', name:'Ambas Tiendas', icon:'fa-layer-group', color:'#4f46e5' }]
+  const opts = [{ id:'all', name:'Ambas Tiendas', short:'Ambas', color:'#4f46e5' }]
     .concat(STORE_IDS.map(id => STORES[id]));
 
   host.innerHTML = `
@@ -224,10 +223,7 @@ function renderStoreSwitcher() {
     <div class="store-switch">
       ${opts.map(o => `
         <button class="store-opt ${cur===o.id?'active':''}" style="--sc:${o.color}"
-                onclick="switchStore('${o.id}')" title="${o.name}">
-          <i class="fa-solid ${o.icon}"></i>
-          <span>${o.id==='all' ? 'Ambas' : o.short}</span>
-        </button>`).join('')}
+                onclick="switchStore('${o.id}')" title="${o.name}">${o.short}</button>`).join('')}
     </div>`;
   document.body.setAttribute('data-store', cur);
 }
@@ -818,7 +814,7 @@ function mountNotifications() {
   bar.id = 'notifBar';
   bar.innerHTML = `
     <button class="notif-btn" id="notifBtn" title="Avisos" aria-label="Avisos">
-      <i class="fa-solid fa-bell"></i>
+      <ion-icon name="notifications-outline"></ion-icon>
       <span class="notif-dot" id="notifDot" hidden></span>
     </button>
     <div class="notif-panel" id="notifPanel" hidden>
@@ -844,7 +840,7 @@ function mountNotifications() {
     const body = document.getElementById('notifPanelBody');
     if (!ultimos.length) {
       body.innerHTML = `<div class="notif-empty">
-        <i class="fa-regular fa-bell-slash"></i>
+        <ion-icon name="notifications-off-outline"></ion-icon>
         <div>Nada nuevo por ahora</div></div>`;
       return;
     }
@@ -854,8 +850,8 @@ function mountNotifications() {
         : ((c.names && c.names[c.lastSender]) || 'Mensaje nuevo');
       return `<a class="notif-item" href="grupo.html?chat=${encodeURIComponent(c.id)}">
         <div class="notif-item-icon">${c.id === ANUNCIOS_ID
-          ? '<i class="fa-solid fa-bullhorn"></i>'
-          : '<i class="fa-solid fa-comment"></i>'}</div>
+          ? '<ion-icon name="megaphone-outline"></ion-icon>'
+          : '<ion-icon name="chatbubble-outline"></ion-icon>'}</div>
         <div style="min-width:0;flex:1">
           <div class="notif-item-name">${escapeHtml(quien)}</div>
           <div class="notif-item-text">${escapeHtml(c.lastMessage || 'Mensaje nuevo')}</div>
@@ -993,7 +989,7 @@ async function setupPush() {
   if (!bar) return;
   const btn = document.createElement('button');
   btn.className = 'push-ask';
-  btn.innerHTML = '<i class="fa-solid fa-bell"></i> Activar avisos';
+  btn.innerHTML = '<ion-icon name="notifications-outline"></ion-icon> Activar avisos';
   btn.title = 'Recibir un aviso aunque tengas la página cerrada';
   btn.onclick = async () => {
     btn.disabled = true;
@@ -1025,11 +1021,11 @@ function skeletonCards(n) {
 function toast(message, type) {
   let host = document.querySelector('.toast-host');
   if (!host) { host = document.createElement('div'); host.className = 'toast-host'; document.body.appendChild(host); }
-  const icons = { success:'fa-solid fa-circle-check', error:'fa-solid fa-circle-exclamation', info:'fa-solid fa-circle-info' };
+  const icons = { success:'checkmark-circle-outline', error:'alert-circle-outline', info:'information-circle-outline' };
   const kind = type || 'info';
   const el = document.createElement('div');
   el.className = 'toast ' + kind;
-  el.innerHTML = `<i class="${icons[kind]}"></i><span>${escapeHtml(message)}</span>`;
+  el.innerHTML = `<ion-icon name="${icons[kind]}"></ion-icon><span>${escapeHtml(message)}</span>`;
   host.appendChild(el);
   setTimeout(() => { el.classList.add('hide'); setTimeout(() => el.remove(), 240); }, 3400);
 }

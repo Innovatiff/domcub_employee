@@ -50,7 +50,12 @@ jobs:
       - name: Desplegar
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/cuenta.json
-        run: npx --yes firebase-tools@latest deploy --only functions --project domcub --non-interactive
+        # --force acepta la política de limpieza de imágenes de construcción.
+        # Sin ella el despliegue termina bien pero pide confirmación al final,
+        # y como aquí no hay nadie que confirme, el flujo se marcaba en rojo
+        # con la función ya creada. De paso, la política evita que las
+        # imágenes viejas se acumulen y acaben costando dinero.
+        run: npx --yes firebase-tools@latest deploy --only functions --project domcub --non-interactive --force
 
       - name: Borrar la credencial
         if: always()
