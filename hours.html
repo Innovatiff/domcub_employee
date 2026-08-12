@@ -143,6 +143,32 @@
   </div>
 </div>
 
+<!-- Modal Cerrar Turno -->
+<div class="modal-overlay" id="cerrarModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Cerrar turno</h3>
+      <button class="modal-close" onclick="closeModal('cerrarModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cerrarId">
+      <p id="cerrarTexto" style="font-size:13.5px;color:var(--text-muted);margin-bottom:14px"></p>
+      <div class="form-group">
+        <label>Hora de salida</label>
+        <input type="time" id="cerrarHora">
+      </div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin-top:10px">
+        Las horas se recalculan solas. Vuelve a generar la nómina del período
+        para que este turno entre en el recibo.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('cerrarModal')">Cancelar</button>
+      <button class="btn btn-primary" id="cerrarBtn" onclick="doCerrarTurno()">Cerrar turno</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Guardar Período -->
 <div class="modal-overlay" id="savePeriodModal">
   <div class="modal modal-sm">
@@ -252,10 +278,17 @@ async function render() {
         <td>${formatDateShort(ci.date)}</td>
         <td>${DAY_NAMES[d2.getDay()]}</td>
         <td>${formatTime(ci.clockIn)}</td>
-        <td>${ci.clockOut ? formatTime(ci.clockOut) : '<span class="badge badge-green">En curso</span>'}</td>
+        <td>${ci.clockOut ? formatTime(ci.clockOut)
+              : (ci.date < todayStr() ? '<span class="badge badge-yellow">Sin cerrar</span>'
+                                      : '<span class="badge badge-green">En curso</span>')}</td>
         <td><strong>${ci.clockOut ? numES(ci.hours, 2)+' h' : '—'}</strong></td>
-        <td>${ci.clockOut ? '<span class="badge badge-green">Completo</span>' : '<span class="badge badge-yellow">En curso</span>'}</td>
-        <td><button class="btn-icon btn-sm" onclick="doDeleteEntry('${ci.id}')" title="Eliminar"><ion-icon name="close-outline" style="font-size:11px"></ion-icon></button></td>
+        <td>${ci.clockOut ? '<span class="badge badge-green">Completo</span>'
+              : (ci.date < todayStr() ? '<span class="badge badge-yellow">Olvidó marcar salida</span>'
+                                      : '<span class="badge badge-yellow">En curso</span>')}</td>
+        <td><div class="td-actions">
+          ${!ci.clockOut ? `<button class="btn btn-sm btn-outline" onclick="openCerrarTurno('${ci.id}','${ci.date}')">Cerrar turno</button>` : ''}
+          <button class="btn-icon btn-sm" onclick="doDeleteEntry('${ci.id}')" title="Eliminar"><ion-icon name="close-outline" style="font-size:11px"></ion-icon></button>
+        </div></td>
       </tr>`).join('');
     }).join('');
 
@@ -335,6 +368,55 @@ async function doSaveEntry() {
     render();
   } catch (err) {
     toast('Error al guardar: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/**
+ * Cierra a mano un turno que se quedó abierto.
+ *
+ * Sin esto, un olvido no tenía arreglo: el registro no se podía completar,
+ * sólo borrar —y borrarlo es perder las horas de ese día—. Un turno sin
+ * cerrar no cuenta para la nómina, así que esas horas no se pagaban.
+ */
+function openCerrarTurno(id, fecha) {
+  document.getElementById('cerrarId').value = id;
+  document.getElementById('cerrarTexto').textContent =
+    `Turno del ${formatDate(fecha)}. Escribe la hora a la que terminó.`;
+  document.getElementById('cerrarHora').value = '17:00';
+  openModal('cerrarModal');
+}
+
+async function doCerrarTurno() {
+  const id   = document.getElementById('cerrarId').value;
+  const hora = document.getElementById('cerrarHora').value;
+  if (!hora) { toast('Escribe la hora de salida.', 'error'); return; }
+
+  const btn = document.getElementById('cerrarBtn');
+  btn.disabled = true;
+  try {
+    const doc = await db.collection('ClockIns').doc(id).get();
+    if (!doc.exists) { toast('Ese registro ya no existe.', 'error'); return; }
+    const ci = doc.data();
+
+    const salida = new Date(`${ci.date}T${hora}:00`);
+    const entrada = ci.clockIn.toDate();
+    if (salida <= entrada) {
+      toast('La salida tiene que ser posterior a la entrada (' + formatTime(ci.clockIn) + ').', 'error');
+      return;
+    }
+    const horas = Math.round(((salida - entrada) / 3600000) * 100) / 100;
+
+    await db.collection('ClockIns').doc(id).update({
+      clockOut: firebase.firestore.Timestamp.fromDate(salida),
+      hours: horas
+    });
+    closeModal('cerrarModal');
+    toast(`Turno cerrado · ${numES(horas, 2)} h`, 'success');
+    render();
+  } catch (err) {
+    toast('No se pudo cerrar: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
   }

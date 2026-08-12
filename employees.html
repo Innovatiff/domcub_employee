@@ -493,8 +493,8 @@ async function doSaveEmployee() {
       await updateEmployee(docId, data);
       const box = document.getElementById('pinPreview');
       if (box.dataset.pin && box.dataset.pin !== box.dataset.old) {
+        // setEmployeePin ya suelta el reclamo del PIN anterior
         await setEmployeePin(docId, box.dataset.pin, box.dataset.old || null);
-        await releaseIdentity(docId);   // el PIN viejo deja de servir
       }
       toast(`${name} actualizado`, 'success');
     } else {
