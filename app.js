@@ -787,12 +787,14 @@ const ANUNCIOS_ID = 'anuncios';
 /**
  * Reduce la foto antes de subirla.
  *
- * Una foto de teléfono ronda los 4 MB. Subirla tal cual tarda, gasta datos
- * del colaborador y no se ve mejor en una burbuja de chat. Se redibuja a
- * 1600 px de lado mayor y se guarda como JPEG, que deja el archivo en
- * torno a 200 KB sin pérdida apreciable en pantalla.
+ * Una foto de teléfono ronda los 4 MB y por datos móviles eso son varios
+ * segundos de espera. Se redibuja a 1200 px de lado mayor con calidad 0,68,
+ * que deja el archivo en unos 90 KB: en una burbuja de chat no se nota la
+ * diferencia, y un papel o una etiqueta fotografiada de cerca se siguen
+ * leyendo. Es el punto donde la espera desaparece sin que la foto deje de
+ * servir para lo que se usa.
  */
-function encogerImagen(file, maxLado = 1600, calidad = 0.82) {
+function encogerImagen(file, maxLado = 1200, calidad = 0.68) {
   return new Promise((ok, fail) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -816,14 +818,22 @@ function encogerImagen(file, maxLado = 1600, calidad = 0.82) {
 
 const MAX_FOTO = 12 * 1024 * 1024;   // lo que llega del teléfono, antes de encoger
 
-async function enviarFoto(chatId, file) {
+async function enviarFoto(chatId, file, onProgreso) {
   if (!file.type.startsWith('image/')) throw new Error('Sólo se pueden enviar imágenes');
   if (file.size > MAX_FOTO)            throw new Error('La imagen es demasiado grande');
 
   const { blob, w, h } = await encogerImagen(file);
   const nombre = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}.jpg`;
   const ref = firebase.storage().ref(`chat/${chatId}/${nombre}`);
-  await ref.put(blob, { contentType: 'image/jpeg' });
+
+  // Con el porcentaje a la vista la espera se hace corta; sin él, cualquier
+  // segundo parece que se colgó.
+  const tarea = ref.put(blob, { contentType: 'image/jpeg' });
+  await new Promise((ok, fail) => {
+    tarea.on('state_changed',
+      s => { if (onProgreso && s.totalBytes) onProgreso(Math.round(s.bytesTransferred / s.totalBytes * 100)); },
+      fail, ok);
+  });
   const url = await ref.getDownloadURL();
 
   await db.collection('Messages').add({

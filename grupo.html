@@ -335,14 +335,19 @@ async function doFoto(input) {
 
   const btn = document.getElementById('fotoBtn');
   btn.disabled = true;
-  btn.innerHTML = '<ion-icon name="sync-outline" class="gira"></ion-icon>';
+  btn.classList.add('subiendo');
+  btn.innerHTML = '<span class="pct">0%</span>';
   try {
-    await enviarFoto(activeChat.id, file);
+    await enviarFoto(activeChat.id, file, pct => {
+      const p = btn.querySelector('.pct');
+      if (p) p.textContent = pct + '%';
+    });
   } catch (err) {
     console.error('enviar foto', err);
     toast('No se pudo enviar la foto: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
+    btn.classList.remove('subiendo');
     btn.innerHTML = '<ion-icon name="image-outline"></ion-icon>';
   }
 }
