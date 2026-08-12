@@ -135,9 +135,7 @@
 <script src="app.js"></script>
 <script>
 // El horario de cada tienda es independiente; el conmutador de la barra
-// lateral decide cuál se está editando. "Ambas" no tiene sentido aquí
-// —no se puede asignar un turno a dos tiendas a la vez—, así que en ese
-// caso se trabaja sobre Despensas y se avisa.
+// lateral decide cuál se está editando.
 
 let lunes   = lunesDe(new Date());
 let emps    = [];        // colaboradores activos de la tienda visible
@@ -151,10 +149,7 @@ const DIA_CORTO = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 // que una tienda tenga dos o tres turnos de siempre.
 const PRESETS_KEY = 'elaguila_turnos_frecuentes';
 
-function tiendaActiva() {
-  const s = getSelectedStore();
-  return s === 'all' ? '1' : s;
-}
+function tiendaActiva() { return getSelectedStore(); }
 
 requireAuth(() => { render(); });
 function onStoreChange() { render(); }
@@ -177,8 +172,7 @@ async function render() {
     `${a.getDate()} ${MESES_CORTOS[a.getMonth()]} – ${b.getDate()} ${MESES_CORTOS[b.getMonth()]}, ${b.getFullYear()}`;
   const esActual = lunes === lunesDe(new Date());
   document.getElementById('semanaSub').textContent =
-    (esActual ? 'Semana actual · ' : '') + storeName(store) +
-    (getSelectedStore() === 'all' ? ' (elige una tienda en la barra lateral para la otra)' : '');
+    (esActual ? 'Semana actual · ' : '') + storeName(store);
 
   document.getElementById('horarioWrap').innerHTML =
     '<div class="card"><div class="loading-state"><ion-icon name="sync-outline" class="gira"></ion-icon></div></div>';
