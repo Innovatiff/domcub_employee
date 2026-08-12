@@ -454,7 +454,11 @@ async function getEmployeePin(id) {
 }
 
 async function setEmployeePin(id, newPin, oldPin) {
-  if (oldPin) { try { await db.collection('Pins').doc(String(oldPin)).delete(); } catch {} }
+  if (oldPin) {
+    try { await db.collection('Pins').doc(String(oldPin)).delete(); } catch (e) {}
+    // Y su reclamo, o el aparato viejo seguiría teniendo identidad válida
+    await releaseIdentity(oldPin);
+  }
   await db.collection('Pins').doc(String(newPin)).set({ employeeId: id });
   await db.collection('Employees').doc(id).collection('secure').doc('pin').set({ pin: String(newPin) });
 }
@@ -629,9 +633,17 @@ async function vincularCuenta(app2, uid, employeeId, email) {
   await db.collection('Employees').doc(employeeId).update({ authUid: uid, portalReady: true });
 }
 
-// Libera la identidad para que el colaborador pueda entrar en otro equipo
-async function releaseIdentity(employeeId) {
-  try { await db.collection('PidClaims').doc('emp:' + employeeId).delete(); } catch {}
+/**
+ * Suelta el reclamo de un PIN que deja de valer.
+ *
+ * Los reclamos se guardan bajo el PIN —PidClaims/{pin}—, no bajo el
+ * identificador del colaborador. Esto borraba 'emp:<id>', un documento que
+ * no existe en ninguna parte, así que no hacía nada: al cambiarle el PIN a
+ * alguien, el reclamo viejo se quedaba ahí.
+ */
+async function releaseIdentity(pin) {
+  if (!pin) return;
+  try { await db.collection('PidClaims').doc(String(pin)).delete(); } catch (e) {}
 }
 
 // Entradas y salidas
@@ -661,12 +673,29 @@ async function clockOut(clockInId) {
   await db.collection('ClockIns').doc(clockInId).update({ clockOut:now, hours });
   return hours;
 }
+/**
+ * El turno abierto de un colaborador, sea de hoy o de otro día.
+ *
+ * Antes esto exigía que la marca fuera de hoy, y ahí estaba el problema:
+ * quien olvidaba marcar salida quedaba con un turno abierto invisible: al
+ * día siguiente el reloj no lo veía, abría otro, y el primero se quedaba
+ * sin cerrar para siempre. Un turno sin cerrar no tiene horas, así que esas
+ * horas no entraban en la nómina y nadie se enteraba.
+ */
 async function getActiveClockIn(employeeId) {
   const snap = await db.collection('ClockIns')
-    .where('employeeId','==',employeeId).where('date','==',todayStr())
-    .where('clockOut','==',null).limit(1).get();
+    .where('employeeId','==',employeeId).where('clockOut','==',null).get();
   if (snap.empty) return null;
-  return { id:snap.docs[0].id, ...snap.docs[0].data() };
+  const abiertos = snap.docs.map(d => ({ id:d.id, ...d.data() }))
+    .sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')));
+  return abiertos[0];
+}
+
+/** Todos los turnos sin cerrar. Sólo la gerencia puede consultarlos. */
+async function getOpenClockIns() {
+  const snap = await db.collection('ClockIns').where('clockOut','==',null).get();
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }))
+    .sort((a,b) => String(a.date||'').localeCompare(String(b.date||'')));
 }
 async function deleteClockIn(id) { await db.collection('ClockIns').doc(id).delete(); }
 

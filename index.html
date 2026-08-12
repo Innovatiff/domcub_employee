@@ -155,16 +155,22 @@ async function render() {
   document.getElementById('todayTable').innerHTML   = skeletonRows(6, 3);
   try {
     const store = getSelectedStore();
-    const [allEmps, jobs, todayCIs] = await Promise.all([
+    // Los turnos abiertos se piden aparte y sin filtrar por fecha: uno que
+    // se quedó sin cerrar ayer sigue abierto hoy, y si sólo se miraran las
+    // marcas de hoy no aparecería por ninguna parte.
+    const [allEmps, jobs, todayCIs, abiertos] = await Promise.all([
       getEmployees(),
       getJobs(),
-      getClockIns({ date: todayStr() })
+      getClockIns({ date: todayStr() }),
+      getOpenClockIns()
     ]);
 
     const emps = store === 'all' ? allEmps : allEmps.filter(e => e.store === store);
     const active = emps.filter(e => e.status === 'active');
 
-    const workingCIs = todayCIs.filter(c => !c.clockOut && (store === 'all' || c.store === store));
+    const hoy = todayStr();
+    const workingCIs = abiertos.filter(c => store === 'all' || c.store === store);
+    const olvidados  = workingCIs.filter(c => c.date && c.date < hoy);
     const doneCIs    = todayCIs.filter(c => c.clockOut  && (store === 'all' || c.store === store));
     const todayHours = doneCIs.reduce((s, c) => s + (c.hours || 0), 0);
 
@@ -180,7 +186,9 @@ async function render() {
         <div class="stat-icon green"><ion-icon name="exit-outline"></ion-icon></div>
         <div class="stat-label">Trabajando Ahora</div>
         <div class="stat-value">${workingCIs.length}</div>
-        <div class="stat-sub">Con entrada marcada hoy</div>
+        <div class="stat-sub">${olvidados.length
+          ? olvidados.length + (olvidados.length === 1 ? ' sin cerrar de días anteriores' : ' sin cerrar de días anteriores')
+          : 'Con entrada marcada hoy'}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon yellow"><ion-icon name="time-outline"></ion-icon></div>
@@ -209,9 +217,13 @@ async function render() {
         if (!emp) return '';
         const job = jobs.find(j => j.id === emp.jobId);
         const ci  = c.clockIn && c.clockIn.toDate ? c.clockIn.toDate() : new Date(c.clockIn);
-        const hrs = ((Date.now() - ci.getTime()) / 3600000).toFixed(1);
-        return `<tr>
-          <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}</div></div></td>
+        const hrs = numES((Date.now() - ci.getTime()) / 3600000, 1);
+        // Un turno de otro día es casi siempre un olvido, no alguien que
+        // lleva veinte horas trabajando: conviene que salte a la vista.
+        const olvido = c.date && c.date < hoy;
+        return `<tr${olvido ? ' style="background:var(--warning-soft)"' : ''}>
+          <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}${
+            olvido ? ` <span class="badge badge-yellow" style="margin-left:6px">Sin cerrar desde el ${formatDate(c.date)}</span>` : ''}</div></div></td>
           <td>${job ? `<span class="badge" style="background:${job.color}22;color:${job.color}">${job.title}</span>` : '—'}</td>
           <td>${storeBadge(emp.store)}</td>
           <td>${formatTime(c.clockIn)}</td>
