@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registros — El Águila</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><svg class="brand-mark" viewBox="7 0 44 44" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z"/></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">El Águila</div>
+        <div class="brand-sub">Portal de Colaboradores</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="store-switcher" id="storeSwitcher"></div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-group" data-group="principal">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Principal</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="operacion">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Operación</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="registros.html" data-manager-only class="nav-link active"><ion-icon name="car-outline"></ion-icon><span>Registros</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="tiempo">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)" aria-expanded="true">
+        <span>Tiempo</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+    <a href="horario.html" data-manager-only class="nav-link"><ion-icon name="grid-outline"></ion-icon><span>Horario</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
+      </div></div>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div id="sidebarUser"></div>
+    <button class="sidebar-signout" onclick="signOut()">
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
+    </button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header-row">
+    <div class="page-header">
+      <h1>Registros</h1>
+      <p>Viajes a las farmacias: kilometraje y horas de cada carro.</p>
+    </div>
+  </div>
+
+  <!-- Rango -->
+  <div class="card" style="padding:13px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="tabs" style="margin:0">
+      <button class="tab-btn active" onclick="rangoRapido('hoy', this)">Hoy</button>
+      <button class="tab-btn" onclick="rangoRapido('semana', this)">Esta semana</button>
+      <button class="tab-btn" onclick="rangoRapido('mes', this)">Este mes</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <input type="date" id="regDesde" onchange="rangoManual()" style="width:auto">
+      <span style="color:var(--text-light)">–</span>
+      <input type="date" id="regHasta" onchange="rangoManual()" style="width:auto">
+    </div>
+  </div>
+
+  <!-- Estadísticas -->
+  <div class="stats-grid" id="regStats" style="margin-bottom:20px">
+    <div class="skeleton-card"></div><div class="skeleton-card"></div>
+    <div class="skeleton-card"></div><div class="skeleton-card"></div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Viajes</span>
+      <span class="badge badge-blue" id="regCount">—</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Fecha</th>
+          <th>Colaborador</th>
+          <th>Vehículo</th>
+          <th>Salida</th>
+          <th>Llegada</th>
+          <th>Km</th>
+          <th>Duración</th>
+          <th>Estado</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="regTable"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script>
+let desde = todayStr(), hasta = todayStr();
+
+requireAuth(() => { ponerFechas(); render(); });
+function onStoreChange() { render(); }
+
+function ponerFechas() {
+  document.getElementById('regDesde').value = desde;
+  document.getElementById('regHasta').value = hasta;
+}
+
+function rangoRapido(cual, btn) {
+  document.querySelectorAll('.tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const n = new Date();
+  if (cual === 'hoy') { desde = hasta = todayStr(); }
+  else if (cual === 'semana') { desde = lunesDe(n); hasta = todayStr(); }
+  else { desde = toDateStr(new Date(n.getFullYear(), n.getMonth(), 1)); hasta = todayStr(); }
+  ponerFechas(); render();
+}
+
+function rangoManual() {
+  const a = document.getElementById('regDesde').value;
+  const b = document.getElementById('regHasta').value;
+  if (!a || !b) return;
+  if (b < a) { toast('La fecha final no puede ser anterior a la inicial.', 'error'); return; }
+  desde = a; hasta = b;
+  document.querySelectorAll('.tabs .tab-btn').forEach(x => x.classList.remove('active'));
+  render();
+}
+
+async function render() {
+  document.getElementById('regTable').innerHTML = skeletonRows(9, 3);
+  try {
+    const regs = await getRegistros({ store: getSelectedStore(), desde, hasta });
+
+    const completos = regs.filter(r => r.status === 'completado');
+    const enRuta    = regs.filter(r => r.status === 'en-ruta');
+    const kmTotal   = completos.reduce((s, r) => s + (Number(r.km) || 0), 0);
+    const minTotal  = completos.reduce((s, r) => s + (Number(r.minutos) || 0), 0);
+
+    document.getElementById('regStats').innerHTML = `
+      <div class="stat-card"><div class="stat-icon purple"><ion-icon name="car-outline"></ion-icon></div>
+        <div class="stat-label">Viajes</div><div class="stat-value">${regs.length}</div></div>
+      <div class="stat-card"><div class="stat-icon cyan"><ion-icon name="speedometer-outline"></ion-icon></div>
+        <div class="stat-label">Km recorridos</div><div class="stat-value">${numES(kmTotal, 1)}</div></div>
+      <div class="stat-card"><div class="stat-icon yellow"><ion-icon name="time-outline"></ion-icon></div>
+        <div class="stat-label">Tiempo en ruta</div><div class="stat-value" style="font-size:20px">${duracionLabel(minTotal)}</div></div>
+      <div class="stat-card"><div class="stat-icon green"><ion-icon name="navigate-outline"></ion-icon></div>
+        <div class="stat-label">En ruta ahora</div><div class="stat-value">${enRuta.length}</div></div>`;
+    animateValues('regStats');
+
+    document.getElementById('regCount').textContent =
+      regs.length + (regs.length === 1 ? ' viaje' : ' viajes');
+
+    const tb = document.getElementById('regTable');
+    if (!regs.length) {
+      tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><ion-icon name="car-outline"></ion-icon>
+        <p>No hay viajes en este rango. Los colaboradores con permiso los registran desde su portal.</p></div></td></tr>`;
+      return;
+    }
+
+    tb.innerHTML = regs.map(r => {
+      const abierto = r.status === 'en-ruta';
+      return `<tr${abierto ? ' style="background:var(--success-soft)"' : ''}>
+        <td>${formatDateShort(r.date)}</td>
+        <td><div class="employee-info">${avatarHtml(r.employeeName)}<div class="employee-name">${escapeHtml(r.employeeName || '—')}</div></div></td>
+        <td>${escapeHtml(r.vehiculo || '—')}</td>
+        <td>${formatTime(r.horaSalida)}<div class="reg-km">${numES(r.kmSalida, 1)} km</div></td>
+        <td>${abierto ? '—' : `${formatTime(r.horaLlegada)}<div class="reg-km">${numES(r.kmLlegada, 1)} km</div>`}</td>
+        <td><strong>${abierto ? '—' : numES(r.km, 1)}</strong></td>
+        <td>${abierto ? '—' : duracionLabel(r.minutos)}</td>
+        <td>${abierto
+          ? '<span class="badge badge-green live">En ruta</span>'
+          : '<span class="badge badge-gray">Completado</span>'}</td>
+        <td><div class="td-actions">
+          ${abierto ? `<button class="btn btn-sm btn-outline" onclick="cerrarDesdeGerencia('${r.id}')">Cerrar viaje</button>` : ''}
+          <button class="btn-icon btn-sm" onclick="borrarRegistro('${r.id}')" title="Eliminar"><ion-icon name="close-outline" style="font-size:11px"></ion-icon></button>
+        </div></td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    toast('Error al cargar: ' + err.message, 'error');
+  }
+}
+
+/**
+ * Cerrar desde aquí es para el olvido: el colaborador salió, volvió y no
+ * registró la llegada. La gerencia pone el kilometraje final y la hora se
+ * pide también, porque "ahora" ya no es la hora real de llegada.
+ */
+async function cerrarDesdeGerencia(id) {
+  const kmTxt = prompt('Kilometraje de llegada:');
+  if (kmTxt === null) return;
+  const km = parseFloat(String(kmTxt).replace(',', '.'));
+  if (isNaN(km) || km <= 0) { toast('Escribe un kilometraje válido.', 'error'); return; }
+
+  const horaTxt = prompt('Hora de llegada (HH:MM, 24 horas):');
+  if (horaTxt === null) return;
+  const m = String(horaTxt).trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m || +m[1] > 23 || +m[2] > 59) { toast('Escribe la hora como HH:MM.', 'error'); return; }
+
+  try {
+    const doc = await db.collection('Registros').doc(id).get();
+    const fecha = doc.exists ? doc.data().date : todayStr();
+    const llegada = firebase.firestore.Timestamp.fromDate(
+      new Date(`${fecha}T${String(m[1]).padStart(2, '0')}:${m[2]}:00`));
+    const r = await cerrarViaje(id, km, llegada);
+    if (r.km < 0) toast('Ojo: la llegada quedó con menos kilómetros que la salida.', 'error');
+    else toast(`Viaje cerrado · ${numES(r.km, 1)} km`, 'success');
+    render();
+  } catch (err) {
+    toast('No se pudo cerrar: ' + err.message, 'error');
+  }
+}
+
+async function borrarRegistro(id) {
+  if (!confirm('¿Eliminar este registro de viaje?')) return;
+  await deleteRegistro(id);
+  toast('Registro eliminado', 'info');
+  render();
+}
+</script>
+</body>
+</html>

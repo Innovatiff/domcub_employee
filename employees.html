@@ -48,6 +48,7 @@
       <div class="nav-group-body"><div class="nav-group-inner">
 
     <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="registros.html" data-manager-only class="nav-link"><ion-icon name="car-outline"></ion-icon><span>Registros</span></a>
     <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
       </div></div>
     </div>
@@ -162,6 +163,14 @@
           <span>
             <strong>Encargado de pedidos</strong>
             <em>Puede crear y editar las listas de pedidos de su tienda.</em>
+          </span>
+        </label>
+        <label class="switch-row" style="margin-top:10px">
+          <input type="checkbox" id="empRegistros">
+          <span class="switch"></span>
+          <span>
+            <strong>Registra viajes</strong>
+            <em>Puede registrar desde su portal el kilometraje y las horas de los viajes a las farmacias.</em>
           </span>
         </label>
       </div>
@@ -427,6 +436,7 @@ function openHireModal() {
   document.getElementById('empRate').value  = '';
   document.getElementById('empHire').value  = todayStr();
   document.getElementById('empPedidos').checked = false;
+  document.getElementById('empRegistros').checked = false;
 
   // Generate PIN preview
   const pin = generatePin();
@@ -456,6 +466,7 @@ async function openEditModal(id) {
   document.getElementById('empRate').value   = emp.hourlyRate || '';
   document.getElementById('empHire').value   = emp.hireDate || '';
   document.getElementById('empPedidos').checked = !!emp.canPedidos;
+  document.getElementById('empRegistros').checked = !!emp.canRegistros;
   const box = document.getElementById('pinPreview');
   box.style.display = 'block';
   const curPin = await getEmployeePin(emp.id);
@@ -482,7 +493,8 @@ async function doSaveEmployee() {
     jobId,
     hourlyRate: parseFloat(document.getElementById('empRate').value) || 0,
     hireDate:   document.getElementById('empHire').value,
-    canPedidos: document.getElementById('empPedidos').checked,
+    canPedidos:   document.getElementById('empPedidos').checked,
+    canRegistros: document.getElementById('empRegistros').checked,
   };
 
   const btn = document.getElementById('saveEmpBtn');
