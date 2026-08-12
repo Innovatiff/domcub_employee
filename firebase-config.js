@@ -14,7 +14,7 @@ const firebaseConfig = {
 // Certificados push web → Generar par de claves, y se pega aquí.
 // Mientras esté vacía, las notificaciones con la app cerrada quedan
 // desactivadas; todo lo demás funciona igual.
-const VAPID_KEY = "";
+const VAPID_KEY = "BDyHLK04-tsVFXfN8sIXgKgGmM0qZpYgoblgKqVLIWgH8J0oktFacUXlTIKt2nFQPMqPmzamcTt3S7zOkIRjB74";
 
 firebase.initializeApp(firebaseConfig);
 
