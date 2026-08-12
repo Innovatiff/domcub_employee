@@ -75,6 +75,9 @@
       <h1>Registros</h1>
       <p>Viajes a las farmacias: kilometraje y horas de cada carro.</p>
     </div>
+    <button class="btn btn-primary" onclick="abrirNuevo()">
+      <ion-icon name="add-outline"></ion-icon> Nuevo registro
+    </button>
   </div>
 
   <!-- Rango -->
@@ -121,6 +124,62 @@
     </div>
   </div>
 </main>
+
+<!-- Modal: registro manual de la gerencia -->
+<div class="modal-overlay" id="nuevoModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Nuevo registro de viaje</h3>
+      <button class="modal-close" onclick="closeModal('nuevoModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Colaborador *</label>
+          <select id="nvEmp"></select>
+        </div>
+        <div class="form-group">
+          <label>Fecha *</label>
+          <input type="date" id="nvFecha">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Carro *</label>
+        <input type="text" id="nvCarro" list="nvCarros" placeholder="Ej: Toyota blanco"
+               onchange="nvPrecargarKm()">
+        <datalist id="nvCarros"></datalist>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Hora de salida *</label>
+          <input type="time" id="nvHoraSalida">
+        </div>
+        <div class="form-group">
+          <label>Kilometraje de salida *</label>
+          <input type="number" id="nvKmSalida" step="0.1" min="0" placeholder="Lo que marcaba el tablero">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Hora de llegada</label>
+          <input type="time" id="nvHoraLlegada">
+        </div>
+        <div class="form-group">
+          <label>Kilometraje de llegada</label>
+          <input type="number" id="nvKmLlegada" step="0.1" min="0">
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted)">
+        Deja la llegada vacía para dejar el viaje abierto — el colaborador la
+        registra al volver desde su portal.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('nuevoModal')">Cancelar</button>
+      <button class="btn btn-primary" id="nvBtn" onclick="guardarNuevo()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -241,6 +300,93 @@ async function cerrarDesdeGerencia(id) {
     render();
   } catch (err) {
     toast('No se pudo cerrar: ' + err.message, 'error');
+  }
+}
+
+// ── Registro manual de la gerencia ──
+// Para el viaje que se hizo sin registrar, o para quien no usa el portal.
+
+let nvCarrosKm = {};   // carro -> último kilometraje de llegada
+
+async function abrirNuevo() {
+  const store = getSelectedStore();
+  const [emps, vehiculos] = await Promise.all([getEmployees(), vehiculosDe(store)]);
+  const activos = emps.filter(e => e.status === 'active' && e.store === store)
+                      .sort((a, b) => a.name.localeCompare(b.name));
+  if (!activos.length) { toast('No hay colaboradores activos en esta tienda.', 'error'); return; }
+
+  document.getElementById('nvEmp').innerHTML =
+    activos.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+  document.getElementById('nvCarros').innerHTML =
+    vehiculos.map(v => `<option value="${escapeHtml(v)}">`).join('');
+  document.getElementById('nvFecha').value = todayStr();
+  ['nvCarro','nvHoraSalida','nvKmSalida','nvHoraLlegada','nvKmLlegada']
+    .forEach(id => document.getElementById(id).value = '');
+
+  // Se cargan de una vez los últimos kilometrajes, para precargar al elegir
+  nvCarrosKm = {};
+  for (const v of vehiculos) nvCarrosKm[v] = await ultimoKmDe(v, store);
+
+  openModal('nuevoModal');
+}
+
+function nvPrecargarKm() {
+  const v = document.getElementById('nvCarro').value.trim();
+  const km = nvCarrosKm[v];
+  const input = document.getElementById('nvKmSalida');
+  if (km != null && !input.value) input.value = km;
+}
+
+async function guardarNuevo() {
+  const empId  = document.getElementById('nvEmp').value;
+  const fecha  = document.getElementById('nvFecha').value;
+  const carro  = document.getElementById('nvCarro').value.trim();
+  const hSal   = document.getElementById('nvHoraSalida').value;
+  const kmSal  = parseFloat(document.getElementById('nvKmSalida').value);
+  const hLleg  = document.getElementById('nvHoraLlegada').value;
+  const kmLlegTxt = document.getElementById('nvKmLlegada').value;
+  const kmLleg = kmLlegTxt === '' ? null : parseFloat(kmLlegTxt);
+
+  if (!empId || !fecha || !carro) { toast('Completa colaborador, fecha y carro.', 'error'); return; }
+  if (!hSal || isNaN(kmSal) || kmSal < 0) { toast('Completa la hora y el kilometraje de salida.', 'error'); return; }
+
+  // La llegada va completa o no va: media llegada no dice nada
+  const conLlegada = hLleg !== '' || kmLleg !== null;
+  if (conLlegada && (hLleg === '' || kmLleg === null || isNaN(kmLleg))) {
+    toast('La llegada necesita hora y kilometraje, o déjala vacía del todo.', 'error'); return;
+  }
+  if (conLlegada && kmLleg < kmSal) {
+    toast(`La llegada no puede ser menor que la salida (${numES(kmSal, 1)} km).`, 'error'); return;
+  }
+  if (conLlegada && hLleg <= hSal) {
+    toast('La hora de llegada debe ser posterior a la de salida.', 'error'); return;
+  }
+
+  const btn = document.getElementById('nvBtn');
+  btn.disabled = true;
+  try {
+    const emp = (await getEmployees()).find(e => e.id === empId);
+    const salida = firebase.firestore.Timestamp.fromDate(new Date(`${fecha}T${hSal}:00`));
+
+    const id = await abrirViaje({
+      employeeId: empId, employeeName: emp ? emp.name : '—',
+      store: getSelectedStore(), vehiculo: carro, date: fecha,
+      kmSalida: kmSal, horaSalida: salida
+    });
+
+    if (conLlegada) {
+      const llegada = firebase.firestore.Timestamp.fromDate(new Date(`${fecha}T${hLleg}:00`));
+      const r = await cerrarViaje(id, kmLleg, llegada);
+      toast(`Registro guardado · ${numES(r.km, 1)} km`, 'success');
+    } else {
+      toast('Viaje abierto. El colaborador registra la llegada desde su portal.', 'success');
+    }
+    closeModal('nuevoModal');
+    render();
+  } catch (err) {
+    toast('No se pudo guardar: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
   }
 }
 
