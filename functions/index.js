@@ -75,7 +75,10 @@ exports.avisarMensaje = onDocumentCreated('Messages/{id}', async event => {
     notification: { title: titulo, body: cuerpo },
     data: { chatId: msg.chatId },
     webpush: {
-      fcmOptions: { link: '/grupo.html?chat=' + encodeURIComponent(msg.chatId) },
+      // Sin `link` a propósito. Un mismo mensaje va a la gerencia y al
+      // portal, que son dos sitios distintos: cualquier ruta que se ponga
+      // aquí acaba dando 404 en el otro. Al tocar el aviso decide el
+      // trabajador de servicio de cada app, que sí sabe qué páginas tiene.
       notification: { icon: '/icon-192.png', tag: msg.chatId, renotify: true }
     }
   });
