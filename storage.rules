@@ -19,11 +19,11 @@ service firebase.storage {
     match /chat/{chatId}/{archivo} {
       allow read: if request.auth != null;
 
-      // Sólo imágenes, y con un tope de tamaño. La aplicación ya las
-      // reduce antes de subirlas; esto es el cinturón por si alguien
-      // intentara subir algo por su cuenta.
+      // Sólo imágenes, y con un tope de tamaño. La aplicación las reduce
+      // antes de subirlas, pero si el teléfono no puede reducirlas sube el
+      // original —una foto de iPhone sin tocar cabe de sobra en 12 MB—.
       allow create: if request.auth != null
-        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.size < 12 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
 
       // Una foto enviada no se reemplaza ni se borra: el chat es un
