@@ -159,10 +159,42 @@ body {
 
 .sidebar-nav { flex: 1; padding: 10px 12px; overflow-y: auto; }
 
-.nav-section-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.09em;
-  text-transform: uppercase; color: rgba(255,255,255,0.26);
-  padding: 16px 10px 7px;
+.nav-group { margin-bottom: 2px; }
+
+/* Cabecera plegable de cada sección */
+.nav-group-head {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%;
+  padding: 13px 12px 7px;
+  background: none; border: none;
+  font-family: inherit;
+  font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.32);
+  cursor: pointer;
+  transition: color var(--t) var(--ease);
+}
+.nav-group-head:hover { color: rgba(255, 255, 255, 0.6); }
+.nav-group-head span { flex: 1; text-align: left; }
+
+.nav-caret {
+  font-size: 13px;
+  transition: transform var(--t) var(--ease-out);
+}
+.nav-group.cerrado .nav-caret { transform: rotate(-90deg); }
+
+/* Se pliega con filas de rejilla: anima sin tener que medir la altura */
+.nav-group-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--t-slow) var(--ease-out),
+              opacity var(--t) var(--ease);
+}
+.nav-group.cerrado .nav-group-body { grid-template-rows: 0fr; opacity: 0; }
+.nav-group-inner { min-height: 0; overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-group-body { transition: none; }
 }
 
 .nav-link {
@@ -1043,8 +1075,13 @@ select {
 @media (max-width: 900px) {
   :root { --sidebar-w: 66px; }
   .sidebar .brand-name, .sidebar .brand-sub,
-  .sidebar .nav-link span, .sidebar .nav-section-label,
-  .sidebar-user, .store-selector { display: none; }
+  .sidebar .nav-link span, .sidebar-user, .store-selector { display: none; }
+  /* Con la barra reducida a iconos no cabe el título de la sección, y sin
+     él no habría forma de volver a abrir lo que se plegara: se ocultan las
+     cabeceras y los grupos quedan siempre abiertos. */
+  .nav-group-head { display: none; }
+  .nav-group-body { grid-template-rows: 1fr !important; opacity: 1 !important; }
+  .nav-group + .nav-group { border-top: 1px solid rgba(255,255,255,0.07); padding-top: 6px; margin-top: 6px; }
   .sidebar-brand { padding: 18px 14px; }
   .brand-logo    { justify-content: center; }
   .sidebar-nav   { padding: 10px 9px; }

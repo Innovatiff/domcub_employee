@@ -25,18 +25,46 @@
   <div class="store-switcher" id="storeSwitcher"></div>
 
   <nav class="sidebar-nav">
-    <div class="nav-section-label">Principal</div>
+
+        <div class="nav-group" data-group="principal">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)"
+              aria-expanded="true">
+        <span>Principal</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+
     <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
     <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
     <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
-    <div class="nav-section-label">Operación</div>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="operacion">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)"
+              aria-expanded="true">
+        <span>Operación</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+
     <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
     <a href="grupo.html" class="nav-link active"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
-    <div class="nav-section-label">Tiempo</div>
+      </div></div>
+    </div>
+    <div class="nav-group" data-group="tiempo">
+      <button class="nav-group-head" type="button" onclick="toggleNavGroup(this)"
+              aria-expanded="true">
+        <span>Tiempo</span>
+        <ion-icon name="chevron-down-outline" class="nav-caret"></ion-icon>
+      </button>
+      <div class="nav-group-body"><div class="nav-group-inner">
+
     <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
     <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
     <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
-  </nav>
+      </div></div>
+    </div>
+</nav>
 
   <div class="sidebar-footer">
     <div id="sidebarUser"></div>
