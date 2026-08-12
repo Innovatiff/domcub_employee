@@ -6,11 +6,14 @@
  * porque cualquiera podría leerla. Por eso este trozo corre en Cloud
  * Functions, donde la credencial es la del propio proyecto.
  *
- * Avisa de dos cosas:
+ * Avisa de cuatro cosas:
  *   · mensajes nuevos — al privado sólo sus participantes, y de los
  *     anuncios todo el equipo, en ambos casos menos quien escribió;
  *   · recibos de pago — al colaborador cuando el suyo queda disponible y
- *     cuando se marca como pagado.
+ *     cuando se marca como pagado;
+ *   · viajes — a la gerencia cuando alguien sale a la farmacia y cuando
+ *     vuelve;
+ *   · pedidos — a la gerencia cuando se crea uno.
  *
  * Los destinos salen de PushTokens/{token} = { pid }, que cada dispositivo
  * escribe al conceder el permiso. Un mismo pid puede tener varios (el
@@ -84,6 +87,50 @@ async function enviar(tokens, titulo, cuerpo, datos, etiqueta) {
               `${muertos.length} tokens caducados`);
   return res;
 }
+
+/** Tokens de todos los dispositivos de la gerencia. */
+async function tokensGerencia() {
+  const mgrs = await db.collection('Main').get();
+  return tokensDe(mgrs.docs.map(d => 'mgr:' + d.id));
+}
+
+// ── Viajes a las farmacias ──
+//
+// Dos momentos: al salir la gerencia sabe quién anda fuera y con qué
+// carro, y al volver le llegan los kilómetros sin abrir nada.
+exports.avisarViaje = onDocumentWritten('Registros/{id}', async event => {
+  const antes = event.data.before.exists ? event.data.before.data() : null;
+  const ahora = event.data.after.exists  ? event.data.after.data()  : null;
+  if (!ahora) return;                                // borrado
+
+  const tienda = ahora.store === '1' ? 'Despensas' : ahora.store === '2' ? 'Cocina' : '';
+  let titulo, cuerpo;
+  if (!antes && ahora.status === 'en-ruta') {
+    titulo = 'Salió a la farmacia';
+    cuerpo = `${ahora.employeeName || 'Alguien'} · ${ahora.vehiculo || 'sin carro'} · ${tienda}`;
+  } else if (antes && antes.status === 'en-ruta' && ahora.status === 'completado') {
+    titulo = 'Viaje completado';
+    cuerpo = `${ahora.employeeName || 'Alguien'} · ${ahora.km != null ? ahora.km + ' km' : ''} · ${tienda}`;
+  } else {
+    return;                                          // ediciones sin cambio de fase
+  }
+
+  const tokens = await tokensGerencia();
+  await enviar(tokens, titulo, cuerpo, { tipo: 'viaje' }, 'viaje-' + event.params.id);
+});
+
+// ── Pedidos ──
+exports.avisarPedido = onDocumentCreated('Pedidos/{id}', async event => {
+  const p = event.data && event.data.data();
+  if (!p) return;
+  const tienda = p.store === '1' ? 'Despensas' : p.store === '2' ? 'Cocina' : '';
+  const n = Array.isArray(p.items) ? p.items.length : 0;
+  const tokens = await tokensGerencia();
+  await enviar(tokens,
+    'Pedido nuevo' + (tienda ? ' · ' + tienda : ''),
+    `${p.title || 'Pedido'} · ${p.createdByName || '—'} · ${n} ${n === 1 ? 'artículo' : 'artículos'}`,
+    { tipo: 'pedido' }, 'pedido-' + event.params.id);
+});
 
 // ── Recibos de pago ──
 
