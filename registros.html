@@ -129,10 +129,11 @@
 <div class="modal-overlay" id="nuevoModal">
   <div class="modal">
     <div class="modal-header">
-      <h3>Nuevo registro de viaje</h3>
+      <h3 id="nvTitulo">Nuevo registro de viaje</h3>
       <button class="modal-close" onclick="closeModal('nuevoModal')">&times;</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="nvId">
       <div class="form-row">
         <div class="form-group">
           <label>Colaborador *</label>
@@ -263,6 +264,7 @@ async function render() {
           : '<span class="badge badge-gray">Completado</span>'}</td>
         <td><div class="td-actions">
           ${abierto ? `<button class="btn btn-sm btn-outline" onclick="cerrarDesdeGerencia('${r.id}')">Cerrar viaje</button>` : ''}
+          <button class="btn-icon btn-sm" onclick="editarRegistro('${r.id}')" title="Editar"><ion-icon name="create-outline" style="font-size:12px"></ion-icon></button>
           <button class="btn-icon btn-sm" onclick="borrarRegistro('${r.id}')" title="Eliminar"><ion-icon name="close-outline" style="font-size:11px"></ion-icon></button>
         </div></td>
       </tr>`;
@@ -319,6 +321,9 @@ async function abrirNuevo() {
     activos.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
   document.getElementById('nvCarros').innerHTML =
     vehiculos.map(v => `<option value="${escapeHtml(v)}">`).join('');
+  document.getElementById('nvId').value = '';
+  document.getElementById('nvTitulo').textContent = 'Nuevo registro de viaje';
+  document.getElementById('nvEmp').disabled = false;
   document.getElementById('nvFecha').value = todayStr();
   ['nvCarro','nvHoraSalida','nvKmSalida','nvHoraLlegada','nvKmLlegada']
     .forEach(id => document.getElementById(id).value = '');
@@ -335,6 +340,44 @@ function nvPrecargarKm() {
   const km = nvCarrosKm[v];
   const input = document.getElementById('nvKmSalida');
   if (km != null && !input.value) input.value = km;
+}
+
+/**
+ * Edita un registro existente en el mismo modal del nuevo. El colaborador
+ * no se cambia: corregir un dato del viaje es una cosa, y atribuirle el
+ * viaje a otra persona es otra —para eso se borra y se crea bien—.
+ */
+async function editarRegistro(id) {
+  const doc = await db.collection('Registros').doc(id).get();
+  if (!doc.exists) { toast('Ese registro ya no existe.', 'error'); render(); return; }
+  const r = doc.data();
+
+  const store = getSelectedStore();
+  const [emps, vehiculos] = await Promise.all([getEmployees(), vehiculosDe(store)]);
+
+  document.getElementById('nvEmp').innerHTML =
+    `<option value="${r.employeeId}">${escapeHtml(r.employeeName || '—')}</option>`;
+  document.getElementById('nvEmp').disabled = true;
+  document.getElementById('nvCarros').innerHTML =
+    vehiculos.map(v => `<option value="${escapeHtml(v)}">`).join('');
+
+  document.getElementById('nvId').value = id;
+  document.getElementById('nvTitulo').textContent = 'Editar registro de viaje';
+  document.getElementById('nvFecha').value = r.date || todayStr();
+  document.getElementById('nvCarro').value = r.vehiculo || '';
+  document.getElementById('nvKmSalida').value = r.kmSalida ?? '';
+  document.getElementById('nvKmLlegada').value = r.kmLlegada ?? '';
+
+  const horaDe = ts => {
+    if (!ts || !ts.toDate) return '';
+    const d = ts.toDate();
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  };
+  document.getElementById('nvHoraSalida').value = horaDe(r.horaSalida);
+  document.getElementById('nvHoraLlegada').value = horaDe(r.horaLlegada);
+
+  nvCarrosKm = {};
+  openModal('nuevoModal');
 }
 
 async function guardarNuevo() {
@@ -365,21 +408,41 @@ async function guardarNuevo() {
   const btn = document.getElementById('nvBtn');
   btn.disabled = true;
   try {
-    const emp = (await getEmployees()).find(e => e.id === empId);
+    const editando = document.getElementById('nvId').value;
     const salida = firebase.firestore.Timestamp.fromDate(new Date(`${fecha}T${hSal}:00`));
+    const llegada = conLlegada
+      ? firebase.firestore.Timestamp.fromDate(new Date(`${fecha}T${hLleg}:00`)) : null;
 
-    const id = await abrirViaje({
-      employeeId: empId, employeeName: emp ? emp.name : '—',
-      store: getSelectedStore(), vehiculo: carro, date: fecha,
-      kmSalida: kmSal, horaSalida: salida
-    });
-
-    if (conLlegada) {
-      const llegada = firebase.firestore.Timestamp.fromDate(new Date(`${fecha}T${hLleg}:00`));
-      const r = await cerrarViaje(id, kmLleg, llegada);
-      toast(`Registro guardado · ${numES(r.km, 1)} km`, 'success');
+    if (editando) {
+      // Quitarle la llegada a un registro lo devuelve a "en ruta"; los
+      // totales se recalculan siempre a partir de lo que quedó escrito.
+      const patch = {
+        vehiculo: carro, date: fecha,
+        kmSalida: kmSal, horaSalida: salida,
+        kmLlegada: conLlegada ? kmLleg : null,
+        horaLlegada: llegada,
+        km: conLlegada ? Math.round((kmLleg - kmSal) * 10) / 10 : null,
+        minutos: conLlegada
+          ? Math.max(0, Math.round((llegada.toMillis() - salida.toMillis()) / 60000)) : null,
+        status: conLlegada ? 'completado' : 'en-ruta'
+      };
+      await db.collection('Registros').doc(editando).update(patch);
+      toast(conLlegada
+        ? `Registro actualizado · ${numES(patch.km, 1)} km`
+        : 'Registro actualizado · quedó en ruta', 'success');
     } else {
-      toast('Viaje abierto. El colaborador registra la llegada desde su portal.', 'success');
+      const emp = (await getEmployees()).find(e => e.id === empId);
+      const id = await abrirViaje({
+        employeeId: empId, employeeName: emp ? emp.name : '—',
+        store: getSelectedStore(), vehiculo: carro, date: fecha,
+        kmSalida: kmSal, horaSalida: salida
+      });
+      if (conLlegada) {
+        const r = await cerrarViaje(id, kmLleg, llegada);
+        toast(`Registro guardado · ${numES(r.km, 1)} km`, 'success');
+      } else {
+        toast('Viaje abierto. El colaborador registra la llegada desde su portal.', 'success');
+      }
     }
     closeModal('nuevoModal');
     render();
