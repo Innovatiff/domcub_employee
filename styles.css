@@ -1961,3 +1961,85 @@ ion-icon {
 
 /* ══ Registros de viaje ══ */
 .reg-km { font-size: 10.5px; color: var(--text-muted); }
+
+/* ══ Chat: visto y reacciones ══ */
+
+/* La burbuja ahora vive en una columna junto a sus reacciones y su estado.
+   El ancho máximo pasa a la columna: contra el padre real, no contra sí misma. */
+.bubble-col { display:flex; flex-direction:column; align-items:flex-start;
+              max-width:min(74%, 520px); min-width:0; }
+.bubble-row.mine .bubble-col { align-items:flex-end; }
+.bubble-col .bubble { max-width:100%; }
+
+/* Botón para reaccionar: discreto, aparece al pasar el ratón */
+.rx-wrap { position:relative; align-self:center; flex-shrink:0; }
+.rx-tap {
+  border:0; background:none; padding:4px; cursor:pointer; border-radius:50%;
+  color:var(--text-light); font-size:17px; line-height:1;
+  opacity:0; transition:opacity .15s ease, background .15s ease, transform .15s ease;
+}
+.bubble-row:hover .rx-tap, .anuncio:hover .rx-tap, .rx-open .rx-tap { opacity:.85; }
+.rx-tap:hover { background:var(--primary-soft); color:var(--primary); transform:scale(1.12); }
+
+/* Barra flotante con los tres emojis */
+.rx-bar {
+  position:absolute; bottom:calc(100% + 6px); left:50%;
+  transform:translateX(-50%) scale(.55); transform-origin:bottom center;
+  opacity:0; pointer-events:none;
+  display:flex; gap:2px; background:#fff; border:1px solid var(--border);
+  border-radius:999px; padding:4px 7px; box-shadow:0 8px 22px rgba(13,20,36,.14);
+  transition:opacity .16s ease, transform .18s cubic-bezier(.34,1.56,.64,1); z-index:30;
+}
+.bubble-row.mine .rx-bar { left:auto; right:0; transform:scale(.55); transform-origin:bottom right; }
+.rx-open .rx-bar { opacity:1; pointer-events:auto; transform:translateX(-50%) scale(1); }
+.bubble-row.mine .rx-wrap.rx-open .rx-bar { transform:scale(1); }
+.rx-bar button {
+  border:0; background:none; font-size:19px; line-height:1; cursor:pointer;
+  padding:4px; border-radius:50%; transition:transform .14s ease, background .14s ease;
+}
+.rx-bar button:hover { transform:scale(1.3) translateY(-2px); }
+.rx-bar button.mia { background:var(--primary-soft); }
+
+/* Pastillas con el conteo bajo la burbuja */
+.rx-pills { display:flex; gap:4px; margin-top:3px; flex-wrap:wrap; }
+.rx-pill {
+  display:inline-flex; align-items:center; gap:4px; cursor:pointer;
+  border:1px solid var(--border); background:#fff; border-radius:999px;
+  padding:2px 8px; font-size:12.5px; line-height:1.3; color:var(--text-muted);
+  animation:rxPop .28s cubic-bezier(.34,1.56,.64,1) both;
+  transition:border-color .15s ease, background .15s ease;
+}
+.rx-pill span { font-size:11px; font-weight:700; }
+.rx-pill.mia { border-color:var(--primary); background:var(--primary-soft); color:var(--primary); }
+.rx-pill:hover { border-color:var(--border-strong); }
+
+/* Estado bajo mi último mensaje: Enviando… → Enviado → Visto */
+.msg-estado {
+  display:flex; align-items:center; gap:4px; margin:4px 2px 0;
+  font-size:11px; color:var(--text-light); animation:vistoIn .25s ease both;
+}
+.msg-estado ion-icon { font-size:13px; }
+.msg-estado.visto { color:var(--text-muted); font-weight:600; }
+.msg-estado.visto .avatar { width:16px !important; height:16px !important;
+  font-size:8px !important; box-shadow:0 0 0 2px #fff; }
+.msg-estado.visto .avatar + .avatar { margin-left:-6px; }
+
+/* Reacciones en los anuncios */
+.anuncio-rx { display:flex; align-items:center; gap:6px; margin-top:8px; min-height:22px; }
+.anuncio-rx .rx-pills { margin-top:0; }
+.anuncio .msg-estado { margin-top:6px; }
+
+@keyframes rxPop {
+  from { transform:scale(.3); opacity:0; }
+  60%  { transform:scale(1.14); }
+  to   { transform:scale(1); opacity:1; }
+}
+@keyframes vistoIn {
+  from { opacity:0; transform:translateY(3px); }
+  to   { opacity:1; transform:none; }
+}
+
+/* En los anuncios la barra sale anclada a la izquierda para no cortarse
+   contra el borde de la tarjeta. */
+.anuncio-rx .rx-bar { left:0; transform:scale(.55); transform-origin:bottom left; }
+.anuncio-rx .rx-wrap.rx-open .rx-bar { transform:scale(1); }
