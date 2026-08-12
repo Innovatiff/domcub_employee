@@ -9,3 +9,5 @@ Thumbs.db
 *.swp
 .vscode/
 .idea/
+functions/node_modules/
+functions/package-lock.json

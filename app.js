@@ -98,6 +98,7 @@ function requireAuth(callback, opts) {
       updateSidebarUser(SESSION);
       renderStoreSwitcher();
       mountNotifications();
+      setupPush();
       if (callback) callback(SESSION);
     } catch (err) {
       console.error('Auth error:', err);
@@ -893,6 +894,114 @@ function mountNotifications() {
       toast('Nuevo mensaje de ' + quien, 'success');
     }
   });
+}
+
+// ══ Notificaciones con la app cerrada (Firebase Cloud Messaging) ══
+//
+// Los avisos de arriba sólo existen mientras la página está abierta. Para
+// que llegue algo con la pestaña cerrada hace falta una push de verdad:
+//
+//   1. este equipo pide permiso al navegador y obtiene un token
+//   2. el token se guarda en PushTokens/{token} = { pid }
+//   3. al escribirse un mensaje, una Cloud Function busca los tokens de
+//      los destinatarios y les manda la push
+//
+// El envío no puede hacerse desde aquí: requiere una credencial de
+// servidor, y en el código de la página cualquiera podría leerla.
+
+function pushDisponible() {
+  return typeof VAPID_KEY === 'string' && VAPID_KEY
+      && 'serviceWorker' in navigator
+      && 'Notification' in window
+      && typeof firebase.messaging === 'function';
+}
+
+// El SDK de mensajería no está en todas las páginas, así que se trae sólo
+// cuando de verdad se va a usar.
+function cargarSdkMensajeria() {
+  if (window.__msgSdk) return window.__msgSdk;
+  window.__msgSdk = new Promise((ok, fail) => {
+    if (firebase.messaging) return ok();
+    const s = document.createElement('script');
+    s.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js';
+    s.onload = () => ok();
+    s.onerror = () => fail(new Error('No se pudo cargar el SDK de mensajería'));
+    document.head.appendChild(s);
+  });
+  return window.__msgSdk;
+}
+
+async function guardarToken(token) {
+  await db.collection('PushTokens').doc(token).set({
+    pid: SESSION.pid,
+    name: SESSION.name,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge:true });
+}
+
+/**
+ * Pide permiso, registra el dispositivo y deja escuchando los avisos que
+ * lleguen con la página abierta. Devuelve true si quedó activo.
+ */
+async function activarPush() {
+  try {
+    await cargarSdkMensajeria();
+    if (!pushDisponible()) return false;
+
+    const permiso = await Notification.requestPermission();
+    if (permiso !== 'granted') {
+      if (permiso === 'denied') {
+        toast('Los avisos están bloqueados en este navegador. Actívalos en el candado de la barra de direcciones.', 'error');
+      }
+      return false;
+    }
+
+    const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    const messaging = firebase.messaging();
+    const token = await messaging.getToken({
+      vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) return false;
+
+    await guardarToken(token);
+
+    // Con la página abierta el navegador NO muestra la push; llega aquí.
+    // La campana ya avisa por su cuenta, así que sólo se escucha para no
+    // perder nada si la escucha en vivo estuviera caída.
+    messaging.onMessage(payload => {
+      const n = payload.notification || {};
+      if (n.title) toast(n.title + ': ' + (n.body || 'mensaje nuevo'), 'success');
+    });
+    return true;
+  } catch (err) {
+    console.error('activarPush:', err);
+    return false;
+  }
+}
+
+/**
+ * Si ya se dio permiso alguna vez, se renueva el token en silencio (cambia
+ * al reinstalar o al limpiar el navegador). Si no, se ofrece un botón:
+ * pedir el permiso de golpe al entrar es justo lo que la gente rechaza.
+ */
+async function setupPush() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') { activarPush(); return; }
+  if (Notification.permission === 'denied')  return;
+  if (localStorage.getItem('elaguila_push_no')) return;
+
+  const bar = document.getElementById('notifBar');
+  if (!bar) return;
+  const btn = document.createElement('button');
+  btn.className = 'push-ask';
+  btn.innerHTML = '<i class="fa-solid fa-bell"></i> Activar avisos';
+  btn.title = 'Recibir un aviso aunque tengas la página cerrada';
+  btn.onclick = async () => {
+    btn.disabled = true;
+    const ok = await activarPush();
+    if (ok) { toast('Avisos activados en este equipo', 'success'); btn.remove(); }
+    else { btn.disabled = false; localStorage.setItem('elaguila_push_no', '1'); }
+  };
+  bar.insertBefore(btn, bar.firstChild);
 }
 
 // ── Estados de carga ──

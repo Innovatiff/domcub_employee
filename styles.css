@@ -1738,3 +1738,18 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .chat-unread, .notif-btn.has-news i { animation: none; }
 }
+
+/* Ofrecimiento de activar los avisos del sistema */
+.push-ask {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-right: 10px; padding: 0 14px; height: 40px;
+  border: 1px solid var(--primary); border-radius: 12px;
+  background: var(--primary-soft); color: var(--primary);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t) var(--ease), transform var(--t) var(--ease);
+  animation: fadeInUp 320ms var(--ease) both;
+}
+.push-ask:hover { background: #e0e7ff; transform: translateY(-1px); }
+.push-ask:disabled { opacity: .6; cursor: default; transform: none; }
+@media print { .push-ask { display: none !important; } }
