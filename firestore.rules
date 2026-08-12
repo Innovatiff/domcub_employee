@@ -173,6 +173,26 @@ service cloud.firestore {
       allow write: if isManager();
     }
 
+    // ── Registros de viaje (kilometraje) ──
+    // El colaborador registra sólo si la gerencia le dio el permiso, que
+    // vive en su propia ficha y sólo la gerencia puede cambiar. Se leen
+    // con sesión: el kilometraje de salida se rellena con la llegada del
+    // último viaje de ese carro, lo haya hecho quien lo haya hecho.
+    match /Registros/{id} {
+      function puedeRegistrar(empId) {
+        return get(/databases/$(database)/documents/Employees/$(empId)).data.canRegistros == true;
+      }
+      allow read: if signedIn();
+      allow create: if isManager()
+        || (haveIndex()
+            && ('emp:' + request.resource.data.employeeId) == myPid()
+            && puedeRegistrar(request.resource.data.employeeId));
+      // Actualizar es cerrar el viaje: sólo el dueño o la gerencia
+      allow update: if isManager()
+        || (haveIndex() && ('emp:' + resource.data.employeeId) == myPid());
+      allow delete: if isManager();
+    }
+
     // ── Pedidos ──
     match /Pedidos/{id} {
       allow read:   if signedIn();

@@ -1958,3 +1958,6 @@ ion-icon {
   .htabla th.hemp { width: 128px; }
   .hcell-horas { font-size: 10px; }
 }
+
+/* ══ Registros de viaje ══ */
+.reg-km { font-size: 10.5px; color: var(--text-muted); }

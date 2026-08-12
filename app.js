@@ -877,6 +877,90 @@ async function permisosDeSemana(lunes) {
   return porEmp;
 }
 
+// ══ Registros de viaje (kilometraje a las farmacias) ══
+//
+// Un documento por viaje:
+//   Registros/{id} = { employeeId, employeeName, store, vehiculo, date,
+//                      kmSalida, horaSalida, kmLlegada, horaLlegada,
+//                      km, minutos, status: 'en-ruta' | 'completado' }
+//
+// El viaje se abre al salir y se cierra al llegar; mientras tanto queda
+// 'en-ruta', que es lo que permite el botón de un toque para la llegada.
+
+async function getRegistros(filtros) {
+  let q = db.collection('Registros');
+  if (filtros && filtros.employeeId) q = q.where('employeeId', '==', filtros.employeeId);
+  else if (filtros && filtros.store) q = q.where('store', '==', filtros.store);
+  const snap = await q.get();
+  let rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // Fechas en el cliente: rango + igualdad exigiría índice compuesto
+  if (filtros && filtros.desde) rows = rows.filter(r => r.date >= filtros.desde);
+  if (filtros && filtros.hasta) rows = rows.filter(r => r.date <= filtros.hasta);
+  return rows.sort((a, b) => String(b.date).localeCompare(String(a.date))
+    || millisRegistro(b.horaSalida) - millisRegistro(a.horaSalida));
+}
+
+function millisRegistro(ts) { return ts && ts.toMillis ? ts.toMillis() : 0; }
+
+/** El viaje abierto de un colaborador, si lo hay. */
+async function registroAbierto(employeeId) {
+  const snap = await db.collection('Registros')
+    .where('employeeId', '==', employeeId)
+    .where('status', '==', 'en-ruta').get();
+  if (snap.empty) return null;
+  const abiertos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => millisRegistro(b.horaSalida) - millisRegistro(a.horaSalida));
+  return abiertos[0];
+}
+
+/**
+ * Dónde quedó el cuentakilómetros de un vehículo la última vez.
+ * Es la automatización que evita teclear: el kilometraje de salida de hoy
+ * es casi siempre el de llegada de ayer.
+ */
+async function ultimoKmDe(vehiculo, store) {
+  const regs = await getRegistros({ store });
+  const del = regs.filter(r => r.vehiculo === vehiculo && r.status === 'completado' && r.kmLlegada);
+  return del.length ? del[0].kmLlegada : null;
+}
+
+/** Vehículos ya usados en la tienda, para no teclearlos dos veces. */
+async function vehiculosDe(store) {
+  const regs = await getRegistros({ store });
+  return [...new Set(regs.map(r => (r.vehiculo || '').trim()).filter(Boolean))];
+}
+
+async function abrirViaje(datos) {
+  const ref = await db.collection('Registros').add({
+    ...datos, status: 'en-ruta',
+    kmLlegada: null, horaLlegada: null, km: null, minutos: null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  return ref.id;
+}
+
+async function cerrarViaje(id, kmLlegada, horaLlegada) {
+  const doc = await db.collection('Registros').doc(id).get();
+  if (!doc.exists) throw new Error('Ese viaje ya no existe');
+  const r = doc.data();
+  const km = Math.round((kmLlegada - r.kmSalida) * 10) / 10;
+  const minutos = r.horaSalida && horaLlegada
+    ? Math.max(0, Math.round((horaLlegada.toMillis() - r.horaSalida.toMillis()) / 60000))
+    : null;
+  await db.collection('Registros').doc(id).update({
+    kmLlegada, horaLlegada, km, minutos, status: 'completado'
+  });
+  return { km, minutos };
+}
+
+async function deleteRegistro(id) { await db.collection('Registros').doc(id).delete(); }
+
+function duracionLabel(min) {
+  if (min == null) return '—';
+  const h = Math.floor(min / 60), m = min % 60;
+  return h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`;
+}
+
 // ── Pedidos ──
 // Se ordena en el cliente para no exigir índices compuestos en Firestore.
 async function getPedidos(store) {
