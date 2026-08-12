@@ -135,8 +135,9 @@
 let people      = [];     // {pid, name, sub, store, kind}
 let activeChat  = null;   // {id, type, title, sub, canPost}
 let unsubMsgs   = null;
-let chatMeta    = {};     // id -> {lastMessage, lastAt}
+let chatMeta    = {};     // id -> {lastMessage, lastAt, vistos}
 let unsubChats  = null;
+let msgsCache   = [];     // para repintar cuando cambian los "vistos"
 
 requireAuth(async () => {
   await buildPeople();
@@ -152,7 +153,12 @@ requireAuth(async () => {
     chatMeta = {};
     list.forEach(c => chatMeta[c.id] = c);
     // Lo que llega al chat que tengo abierto ya lo estoy viendo
-    if (activeChat) markChatRead(activeChat.id);
+    if (activeChat) {
+      markChatRead(activeChat.id);
+      marcarVisto(activeChat.id, millisOf((chatMeta[activeChat.id]||{}).lastAt));
+      // El "Visto" del otro lado viene en el documento del chat: repintar
+      if (msgsCache.length) paintMsgs(msgsCache);
+    }
     paintList();
   });
 }, { allow: ['manager','colaborador'] });
@@ -245,6 +251,7 @@ async function openDm(otherPid) {
 
 function mountChat() {
   markChatRead(activeChat.id);   // abrirlo cuenta como leerlo
+  marcarVisto(activeChat.id, millisOf((chatMeta[activeChat.id]||{}).lastAt));
   paintList();
 
   document.getElementById('chatHead').innerHTML = activeChat.type === 'anuncios'
@@ -264,7 +271,83 @@ function mountChat() {
   box.innerHTML = `<div class="chat-placeholder"><ion-icon name="sync-outline" class="gira"></ion-icon></div>`;
 
   if (unsubMsgs) unsubMsgs();
-  unsubMsgs = listenMessages(activeChat.id, msgs => paintMsgs(msgs));
+  msgsCache = [];
+  unsubMsgs = listenMessages(activeChat.id, msgs => { msgsCache = msgs; paintMsgs(msgs); });
+}
+
+// Nombre que mostrar para un pid (para los "Visto" de anuncios)
+function nombreDePid(pid) {
+  const p = people.find(x => x.pid === pid);
+  if (p) return p.name;
+  const meta = chatMeta[activeChat && activeChat.id] || {};
+  return (meta.names && meta.names[pid]) || '·';
+}
+
+// ── Reacciones: barra flotante 👍 ❤️ 👎 ──
+function rxToggle(e, btn) {
+  e.stopPropagation();
+  const w = btn.parentElement;
+  const abierto = w.classList.contains('rx-open');
+  cerrarRx();
+  if (!abierto) w.classList.add('rx-open');
+}
+function cerrarRx() {
+  document.querySelectorAll('.rx-open').forEach(x => x.classList.remove('rx-open'));
+}
+document.addEventListener('click', cerrarRx);
+
+function reacTap(e, msgId, tipo) {
+  e.stopPropagation();
+  cerrarRx();
+  const m = msgsCache.find(x => x.id === msgId);
+  const actual = m && m.reacciones ? m.reacciones[SESSION.pid] : null;
+  reaccionar(msgId, tipo, actual)
+    .catch(err => toast('No se pudo reaccionar: ' + err.message, 'error'));
+}
+
+function rxUi(m) {
+  const rx = m.reacciones || {};
+  return `<div class="rx-wrap">
+    <button type="button" class="rx-tap" onclick="rxToggle(event,this)" aria-label="Reaccionar">
+      <ion-icon name="happy-outline"></ion-icon></button>
+    <div class="rx-bar">
+      ${['up','love','down'].map(t =>
+        `<button type="button" class="${rx[SESSION.pid]===t?'mia':''}"
+                 onclick="reacTap(event,'${m.id}','${t}')">${REACCION[t]}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function rxPills(m) {
+  const rx = m.reacciones || {};
+  const conteo = { up:[], love:[], down:[] };
+  Object.keys(rx).forEach(p => { if (conteo[rx[p]]) conteo[rx[p]].push(p); });
+  const pills = ['up','love','down'].filter(t => conteo[t].length).map(t =>
+    `<button type="button" class="rx-pill ${rx[SESSION.pid]===t?'mia':''}"
+             title="${conteo[t].map(nombreDePid).map(escapeHtml).join(', ')}"
+             onclick="reacTap(event,'${m.id}','${t}')">${REACCION[t]}<span>${conteo[t].length}</span></button>`).join('');
+  return pills ? `<div class="rx-pills">${pills}</div>` : '';
+}
+
+// Estado bajo mi último mensaje: Enviando… → Enviado → Visto (con iniciales)
+function estadoDe(m) {
+  const meta   = chatMeta[activeChat.id] || {};
+  const vistos = meta.vistos || {};
+  const tMs = m.createdAt && m.createdAt.toMillis ? m.createdAt.toMillis() : 0;
+  if (!tMs) return `<div class="msg-estado"><ion-icon name="time-outline"></ion-icon> Enviando…</div>`;
+
+  if (activeChat.type === 'anuncios') {
+    const quienes = Object.keys(vistos)
+      .filter(p => p !== SESSION.pid && millisOf(vistos[p]) >= tMs);
+    return quienes.length
+      ? `<div class="msg-estado visto">${quienes.slice(0,5).map(p => avatarHtml(nombreDePid(p), 16)).join('')} Visto por ${quienes.length}</div>`
+      : `<div class="msg-estado"><ion-icon name="checkmark-done-outline"></ion-icon> Enviado</div>`;
+  }
+  const otroPid = activeChat.other ? activeChat.other.pid
+    : ((meta.participants || []).find(p => p !== SESSION.pid) || '');
+  return millisOf(vistos[otroPid]) >= tMs
+    ? `<div class="msg-estado visto">${avatarHtml(activeChat.title, 16)} Visto</div>`
+    : `<div class="msg-estado"><ion-icon name="checkmark-done-outline"></ion-icon> Enviado</div>`;
 }
 
 function paintMsgs(msgs) {
@@ -300,6 +383,7 @@ function paintMsgs(msgs) {
     const sig = msgs[i+1];
     const ultimo = !sig || sig.senderId !== m.senderId;
     prev = m;
+    const esUltimoMio = mine && i === msgs.length - 1;
     if (activeChat.type === 'anuncios') {
       html += `<div class="anuncio">
         <div class="anuncio-head">
@@ -311,18 +395,22 @@ function paintMsgs(msgs) {
         <div class="anuncio-body">${m.type === 'image'
           ? `<img class="anuncio-foto" src="${m.url}" alt="Foto" loading="lazy" onclick="verFoto('${m.url}')">`
           : escapeHtml(m.text).replace(/\n/g,'<br>')}</div>
+        <div class="anuncio-rx">${rxPills(m)}${rxUi(m)}</div>
+        ${esUltimoMio ? estadoDe(m) : ''}
       </div>`;
     } else {
-      html += `<div class="bubble-row ${mine?'mine':''} ${seguido?'seguido':''} ${ultimo?'ultimo':''}">
-        ${mine ? '' : (seguido ? '<div class="bubble-hueco"></div>' : avatarHtml(m.senderName, 28))}
-        <div class="bubble ${m.type==='image' ? 'bubble-foto' : ''}">
+      const burbuja = `<div class="bubble ${m.type==='image' ? 'bubble-foto' : ''}">
           ${m.type === 'image'
             ? `<img src="${m.url}" alt="Foto" loading="lazy"
                     style="aspect-ratio:${(m.w||4)}/${(m.h||3)}"
                     onclick="verFoto('${m.url}')">`
             : `<div class="bubble-text">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>`}
           <time>${formatTime(d)}</time>
-        </div>
+        </div>`;
+      const col = `<div class="bubble-col">${burbuja}${rxPills(m)}${esUltimoMio ? estadoDe(m) : ''}</div>`;
+      html += `<div class="bubble-row ${mine?'mine':''} ${seguido?'seguido':''} ${ultimo?'ultimo':''}">
+        ${mine ? '' : (seguido ? '<div class="bubble-hueco"></div>' : avatarHtml(m.senderName, 28))}
+        ${col}${rxUi(m)}
       </div>`;
     }
   });

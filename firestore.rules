@@ -254,8 +254,19 @@ service cloud.firestore {
                : myPid() in chatParticipants(request.resource.data.chatId)
            );
 
-      // Los mensajes no se editan; la gerencia sí puede borrarlos.
-      allow update: if false;
+      // Los mensajes no se editan… salvo para reaccionar. La única
+      // modificación permitida es el mapa `reacciones`, y dentro de él
+      // únicamente tu propia entrada (poner, cambiar o quitar tu emoji).
+      // El texto, el autor y la foto quedan intocables.
+      allow update: if signedIn() && haveIndex()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reacciones'])
+        && request.resource.data.get('reacciones', {})
+             .diff(resource.data.get('reacciones', {}))
+             .affectedKeys().hasOnly([myPid()])
+        && (
+             resource.data.chatId == 'anuncios'
+          || myPid() in chatParticipants(resource.data.chatId)
+        );
       allow delete: if isManager();
     }
   }

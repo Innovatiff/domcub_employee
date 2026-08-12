@@ -1252,6 +1252,36 @@ function unreadChats(chats) {
   }).sort((a,b) => millisOf(b.lastAt) - millisOf(a.lastAt));
 }
 
+// ══ Visto y reacciones ══
+//
+// "Visto" se comparte: al abrir una conversación se anota la hora en el
+// documento del chat (Chats/{id}.vistos[miPid]) y así el que envió ve el
+// "Visto" bajo su mensaje. La marca local de arriba sigue mandando para
+// la campana; esta es sólo para el otro lado.
+
+const vistoEscrito = {};   // anti-bucle: escribir dispara el snapshot, que
+                           // vuelve a llamar aquí; sólo se escribe si hay
+                           // algo más nuevo que la última escritura.
+function marcarVisto(chatId, lastAtMs) {
+  if (!SESSION) return;
+  const t = lastAtMs || Date.now();
+  if (vistoEscrito[chatId] && vistoEscrito[chatId] >= t) return;
+  vistoEscrito[chatId] = t;
+  const campo = {}; campo['vistos.' + SESSION.pid] = firebase.firestore.FieldValue.serverTimestamp();
+  db.collection('Chats').doc(chatId).update(campo)
+    .catch(e => console.warn('marcarVisto:', e));
+}
+
+const REACCION = { up:'👍', love:'❤️', down:'👎' };
+
+// Poner, cambiar o quitar (si ya era la misma) la reacción propia.
+async function reaccionar(msgId, tipo, actual) {
+  const campo = {};
+  campo['reacciones.' + SESSION.pid] =
+    actual === tipo ? firebase.firestore.FieldValue.delete() : tipo;
+  await db.collection('Messages').doc(msgId).update(campo);
+}
+
 /**
  * Coloca la campana de avisos arriba de cada página. Se inyecta desde aquí
  * para que exista en todas sin tener que tocar cada HTML.
