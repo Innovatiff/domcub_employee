@@ -6,7 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grupo — El Águila</title>
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
@@ -25,22 +26,22 @@
 
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
-    <a href="index.html" data-manager-only class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
-    <a href="employees.html" data-manager-only class="nav-link"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
-    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
     <div class="nav-section-label">Operación</div>
-    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
-    <a href="grupo.html" class="nav-link active"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link active"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
     <div class="nav-section-label">Tiempo</div>
-    <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
-    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
   </nav>
 
   <div class="sidebar-footer">
     <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -68,20 +69,20 @@
 
       <div class="chat-msgs" id="chatMsgs">
         <div class="chat-placeholder">
-          <i class="fa-regular fa-comments"></i>
+          <ion-icon name="chatbubbles-outline"></ion-icon>
           <p>Elige un chat de la izquierda para comenzar.</p>
         </div>
       </div>
 
       <footer class="chat-compose" id="chatCompose" style="display:none">
         <div id="composeLocked" class="compose-locked" style="display:none">
-          <i class="fa-solid fa-bullhorn"></i>
+          <ion-icon name="megaphone-outline"></ion-icon>
           Solo la gerencia puede publicar anuncios. Aquí puedes leerlos.
         </div>
         <form id="composeForm" onsubmit="doSend(event)">
-          <textarea id="msgInput" rows="1" placeholder="Escribe un mensaje..." onkeydown="keySend(event)"></textarea>
+          <textarea id="msgInput" rows="1" placeholder="Escribe un mensaje..." onkeydown="keySend(event)" oninput="autoCrecer(this)"></textarea>
           <button type="submit" class="btn btn-primary" id="sendBtn" title="Enviar">
-            <i class="fa-solid fa-paper-plane"></i>
+            <ion-icon name="send-outline"></ion-icon>
           </button>
         </form>
       </footer>
@@ -153,7 +154,7 @@ function paintList() {
 
   const anuncios = `
     <div class="chat-item ${activeChat && activeChat.id===ANUNCIOS_ID ? 'active':''}" onclick="openAnuncios()">
-      <div class="chat-ava anuncios"><i class="fa-solid fa-bullhorn"></i></div>
+      <div class="chat-ava anuncios"><ion-icon name="megaphone-outline"></ion-icon></div>
       <div style="min-width:0;flex:1">
         <div class="chat-item-top">
           <span class="chat-item-name">Anuncios Generales${punto(ANUNCIOS_ID)}</span>
@@ -211,10 +212,10 @@ function mountChat() {
   paintList();
 
   document.getElementById('chatHead').innerHTML = activeChat.type === 'anuncios'
-    ? `<div class="chat-ava anuncios"><i class="fa-solid fa-bullhorn"></i></div>
+    ? `<div class="chat-ava anuncios"><ion-icon name="megaphone-outline"></ion-icon></div>
        <div><div class="chat-head-name">${activeChat.title}</div>
        <div class="chat-head-sub">${activeChat.sub}</div></div>
-       <span class="badge badge-purple" style="margin-left:auto"><i class="fa-solid fa-lock" style="font-size:9px"></i>Sólo anuncios</span>`
+       <span class="badge badge-purple" style="margin-left:auto"><ion-icon name="lock-closed-outline" style="font-size:9px"></ion-icon>Sólo anuncios</span>`
     : `${avatarHtml(activeChat.title, 40)}
        <div><div class="chat-head-name">${escapeHtml(activeChat.title)}</div>
        <div class="chat-head-sub">${escapeHtml(activeChat.sub)} · Conversación privada</div></div>`;
@@ -224,7 +225,7 @@ function mountChat() {
   document.getElementById('composeForm').style.display   = activeChat.canPost ? '' : 'none';
 
   const box = document.getElementById('chatMsgs');
-  box.innerHTML = `<div class="chat-placeholder"><i class="fa-solid fa-spinner fa-spin"></i></div>`;
+  box.innerHTML = `<div class="chat-placeholder"><ion-icon name="sync-outline" class="gira"></ion-icon></div>`;
 
   if (unsubMsgs) unsubMsgs();
   unsubMsgs = listenMessages(activeChat.id, msgs => paintMsgs(msgs));
@@ -234,23 +235,35 @@ function paintMsgs(msgs) {
   const box = document.getElementById('chatMsgs');
   if (!msgs.length) {
     box.innerHTML = `<div class="chat-placeholder">
-      <i class="fa-regular fa-comment-dots"></i>
+      <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
       <p>${activeChat.type === 'anuncios'
             ? 'Todavía no hay anuncios publicados.'
             : 'No hay mensajes todavía. Escribe el primero.'}</p></div>`;
     return;
   }
 
-  let html = '', lastDay = '';
-  msgs.forEach(m => {
+  // Si estás leyendo hacia arriba no se te arrastra al final cuando entra
+  // un mensaje nuevo; sólo se baja solo si ya estabas abajo.
+  const alFinal = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
+
+  let html = '', lastDay = '', prev = null;
+  msgs.forEach((m, i) => {
     const d = m.createdAt && m.createdAt.toDate ? m.createdAt.toDate() : new Date();
     const day = toDateStr(d);
+    let diaNuevo = false;
     if (day !== lastDay) {
-      lastDay = day;
+      lastDay = day; diaNuevo = true;
       const label = day === todayStr() ? 'Hoy' : formatDate(day);
       html += `<div class="chat-day"><span>${label}</span></div>`;
     }
     const mine = m.senderId === SESSION.pid;
+    // Mensajes seguidos de la misma persona se agrupan: sin repetir el
+    // avatar y más juntos, como en cualquier mensajería.
+    const seguido = !diaNuevo && prev && prev.senderId === m.senderId
+      && (d - (prev.createdAt && prev.createdAt.toDate ? prev.createdAt.toDate() : d)) < 5*60*1000;
+    const sig = msgs[i+1];
+    const ultimo = !sig || sig.senderId !== m.senderId;
+    prev = m;
     if (activeChat.type === 'anuncios') {
       html += `<div class="anuncio">
         <div class="anuncio-head">
@@ -262,8 +275,8 @@ function paintMsgs(msgs) {
         <div class="anuncio-body">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>
       </div>`;
     } else {
-      html += `<div class="bubble-row ${mine?'mine':''}">
-        ${mine ? '' : avatarHtml(m.senderName, 28)}
+      html += `<div class="bubble-row ${mine?'mine':''} ${seguido?'seguido':''} ${ultimo?'ultimo':''}">
+        ${mine ? '' : (seguido ? '<div class="bubble-hueco"></div>' : avatarHtml(m.senderName, 28))}
         <div class="bubble">
           <div class="bubble-text">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>
           <time>${formatTime(d)}</time>
@@ -272,7 +285,12 @@ function paintMsgs(msgs) {
     }
   });
   box.innerHTML = html;
-  box.scrollTop = box.scrollHeight;
+  if (alFinal) box.scrollTop = box.scrollHeight;
+}
+
+function autoCrecer(t) {
+  t.style.height = 'auto';
+  t.style.height = Math.min(t.scrollHeight, 140) + 'px';
 }
 
 function keySend(e) {
@@ -292,7 +310,7 @@ async function doSend(e) {
   } catch (err) {
     toast('No se pudo enviar: ' + err.message, 'error');
     input.value = text;
-  } finally { btn.disabled = false; input.focus(); }
+  } finally { btn.disabled = false; autoCrecer(input); input.focus(); }
 }
 
 window.addEventListener('beforeunload', () => {

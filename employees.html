@@ -6,7 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Colaboradores — El Águila</title>
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
@@ -25,22 +26,22 @@
 
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
-    <a href="index.html" data-manager-only class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
-    <a href="employees.html" data-manager-only class="nav-link active"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
-    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link active"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
     <div class="nav-section-label">Operación</div>
-    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
-    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
     <div class="nav-section-label">Tiempo</div>
-    <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
-    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
   </nav>
 
   <div class="sidebar-footer">
     <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -51,7 +52,7 @@
       <h1>Colaboradores</h1>
       <p>Administra tu equipo en Despensas y Cocina.</p>
     </div>
-    <button class="btn btn-primary" onclick="openHireModal()"><i class="fa-solid fa-user-plus"></i> Contratar Colaborador</button>
+    <button class="btn btn-primary" onclick="openHireModal()"><ion-icon name="person-add-outline"></ion-icon> Contratar Colaborador</button>
   </div>
 
   <div id="migBanner" style="display:none"></div>
@@ -141,14 +142,14 @@
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div>
             <div style="font-size:11.5px;color:#065f46;font-weight:650;text-transform:uppercase;letter-spacing:0.05em">
-              <i class="fa-solid fa-key" style="margin-right:6px"></i>PIN del Colaborador
+              <ion-icon name="key-outline" style="margin-right:6px"></ion-icon>PIN del Colaborador
             </div>
             <div class="pin-digits" id="pinDisplay"></div>
             <div style="font-size:11.5px;color:#047857">
               Sirve para el reloj de la tienda y es la contraseña inicial del portal.
             </div>
           </div>
-          <button type="button" class="btn-icon" title="Generar un PIN nuevo" onclick="regeneratePin()"><i class="fa-solid fa-rotate"></i></button>
+          <button type="button" class="btn-icon" title="Generar un PIN nuevo" onclick="regeneratePin()"><ion-icon name="refresh-outline"></ion-icon></button>
         </div>
       </div>
     </div>
@@ -223,7 +224,7 @@ async function checkMigration() {
       <div class="card" style="border-color:#fde68a;background:var(--warning-soft);margin-bottom:16px">
         <div class="card-body">
           <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size:20px;color:var(--warning);margin-top:2px"></i>
+            <ion-icon name="warning-outline" style="font-size:20px;color:var(--warning);margin-top:2px"></ion-icon>
             <div style="flex:1;min-width:240px">
               <div style="font-weight:650;font-size:14px">Quedan colaboradores por poner al día</div>
               <ul style="font-size:12.5px;color:#92400e;margin:7px 0 0 16px;line-height:1.6">${partes.join('')}</ul>
@@ -232,7 +233,7 @@ async function checkMigration() {
               </div>
             </div>
             <button class="btn btn-primary btn-sm" id="migBtn" onclick="doMigrate()" style="flex-shrink:0">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> Poner al día
+              <ion-icon name="sparkles-outline"></ion-icon> Poner al día
             </button>
           </div>
         </div>
@@ -246,7 +247,7 @@ function mostrarAvisoClave(correos) {
     <div class="card" style="border-left:4px solid var(--danger);background:#fef2f2;margin-bottom:20px">
       <div class="card-body">
         <div style="display:flex;align-items:flex-start;gap:14px">
-          <i class="fa-solid fa-circle-exclamation" style="font-size:20px;color:var(--danger);margin-top:2px"></i>
+          <ion-icon name="alert-circle-outline" style="font-size:20px;color:var(--danger);margin-top:2px"></ion-icon>
           <div style="flex:1;min-width:240px;font-size:13px;color:#991b1b;line-height:1.6">
             <div style="font-weight:650;font-size:14px;margin-bottom:6px">
               Este correo ya tiene una cuenta con otra contraseña
@@ -271,7 +272,7 @@ async function doMigrate() {
   b.disabled = true;
   try {
     const r = await migrateAll((hecho, total) => {
-      b.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${hecho} de ${total}`;
+      b.innerHTML = `<ion-icon name="sync-outline" class="gira"></ion-icon> ${hecho} de ${total}`;
     });
 
     const bien = [];
@@ -294,7 +295,7 @@ async function doMigrate() {
     render();
   } catch (err) {
     b.disabled = false;
-    b.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Poner al día';
+    b.innerHTML = '<ion-icon name="sparkles-outline"></ion-icon> Poner al día';
     toast('Error al migrar: ' + err.message, 'error');
   }
 }
@@ -317,7 +318,7 @@ async function render() {
 
     const tb = document.getElementById('empTable');
     if (emps.length === 0) {
-      tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-users"></i><p>No se encontraron colaboradores.</p></div></td></tr>`;
+      tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><ion-icon name="people-outline"></ion-icon><p>No se encontraron colaboradores.</p></div></td></tr>`;
       return;
     }
 
@@ -339,16 +340,16 @@ async function render() {
         <td>$${Number(e.hourlyRate || 0).toFixed(2)}</td>
         <td><span class="pin-cell" id="pin-${e.id}">···</span></td>
         <td>${e.canPedidos
-          ? '<span class="badge badge-purple"><i class="fa-solid fa-clipboard-check" style="font-size:9px"></i>Encargado</span>'
+          ? '<span class="badge badge-purple"><ion-icon name="clipboard-outline" style="font-size:9px"></ion-icon>Encargado</span>'
           : '<span style="color:var(--text-light)">—</span>'}</td>
         <td><span class="badge ${e.status==='active'?'badge-green':'badge-red'}">${e.status==='active'?'Activo':'Inactivo'}</span></td>
         <td>
           <div class="td-actions">
-            <button class="btn-icon" title="Ver" onclick="openView('${e.id}')"><i class="fa-solid fa-eye"></i></button>
-            <button class="btn-icon" title="Editar" onclick="openEditModal('${e.id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-icon" title="Ver" onclick="openView('${e.id}')"><ion-icon name="eye-outline"></ion-icon></button>
+            <button class="btn-icon" title="Editar" onclick="openEditModal('${e.id}')"><ion-icon name="create-outline"></ion-icon></button>
             ${e.status==='active'
-              ? `<button class="btn-icon" title="Dar de baja" style="color:var(--danger)" onclick="openFire('${e.id}','${e.name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-user-xmark"></i></button>`
-              : `<button class="btn-icon" title="Reactivar" style="color:var(--success)" onclick="doRehire('${e.id}')"><i class="fa-solid fa-user-check"></i></button>`
+              ? `<button class="btn-icon" title="Dar de baja" style="color:var(--danger)" onclick="openFire('${e.id}','${e.name.replace(/'/g,"\\'")}')"><ion-icon name="person-remove-outline"></ion-icon></button>`
+              : `<button class="btn-icon" title="Reactivar" style="color:var(--success)" onclick="doRehire('${e.id}')"><ion-icon name="checkmark-circle-outline"></ion-icon></button>`
             }
           </div>
         </td>

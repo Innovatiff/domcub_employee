@@ -6,7 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel — El Águila</title>
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
@@ -25,22 +26,22 @@
 
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
-    <a href="index.html" data-manager-only class="nav-link active"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
-    <a href="employees.html" data-manager-only class="nav-link"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
-    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <a href="index.html" data-manager-only class="nav-link active"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
     <div class="nav-section-label">Operación</div>
-    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
-    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
     <div class="nav-section-label">Tiempo</div>
-    <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
-    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
   </nav>
 
   <div class="sidebar-footer">
     <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -51,7 +52,7 @@
       <h1 id="greeting">Panel</h1>
       <p id="todayDate"></p>
     </div>
-    <button class="btn btn-primary" onclick="openClockModal()"><i class="fa-solid fa-fingerprint"></i> Marcar Entrada / Salida</button>
+    <button class="btn btn-primary" onclick="openClockModal()"><ion-icon name="finger-print-outline"></ion-icon> Marcar Entrada / Salida</button>
   </div>
 
   <div class="stats-grid" id="statsGrid">
@@ -61,7 +62,7 @@
 
   <div class="card" style="margin-bottom:20px;animation-delay:0.1s">
     <div class="card-header">
-      <span class="card-title"><i class="fa-solid fa-bolt" style="color:var(--success)"></i> Trabajando Ahora</span>
+      <span class="card-title"><ion-icon name="flash-outline" style="color:var(--success)"></ion-icon> Trabajando Ahora</span>
       <span class="badge badge-green live" id="workingCount">—</span>
     </div>
     <div class="table-wrap">
@@ -74,7 +75,7 @@
 
   <div class="card" style="animation-delay:0.16s">
     <div class="card-header">
-      <span class="card-title"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> Turnos Completados Hoy</span>
+      <span class="card-title"><ion-icon name="checkbox-outline" style="color:var(--primary)"></ion-icon> Turnos Completados Hoy</span>
       <span class="badge badge-gray" id="doneCount">—</span>
     </div>
     <div class="table-wrap">
@@ -142,25 +143,25 @@ async function render() {
     // Stats
     document.getElementById('statsGrid').innerHTML = `
       <div class="stat-card">
-        <div class="stat-icon purple"><i class="fa-solid fa-users"></i></div>
+        <div class="stat-icon purple"><ion-icon name="people-outline"></ion-icon></div>
         <div class="stat-label">Total de Colaboradores</div>
         <div class="stat-value">${active.length}</div>
         <div class="stat-sub">${allEmps.filter(e=>e.store==='1'&&e.status==='active').length} Despensas · ${allEmps.filter(e=>e.store==='2'&&e.status==='active').length} Cocina</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon green"><i class="fa-solid fa-person-walking-arrow-right"></i></div>
+        <div class="stat-icon green"><ion-icon name="exit-outline"></ion-icon></div>
         <div class="stat-label">Trabajando Ahora</div>
         <div class="stat-value">${workingCIs.length}</div>
         <div class="stat-sub">Con entrada marcada hoy</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon yellow"><i class="fa-solid fa-clock"></i></div>
+        <div class="stat-icon yellow"><ion-icon name="time-outline"></ion-icon></div>
         <div class="stat-label">Horas de Hoy</div>
         <div class="stat-value">${todayHours.toFixed(1)}</div>
         <div class="stat-sub">Turnos completados</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon cyan"><i class="fa-solid fa-briefcase"></i></div>
+        <div class="stat-icon cyan"><ion-icon name="briefcase-outline"></ion-icon></div>
         <div class="stat-label">Puestos</div>
         <div class="stat-value">${jobs.length}</div>
         <div class="stat-sub">En ambas tiendas</div>
@@ -173,7 +174,7 @@ async function render() {
     document.getElementById('doneCount').textContent    = doneCIs.length + (doneCIs.length === 1 ? ' turno' : ' turnos');
     const wb = document.getElementById('workingTable');
     if (workingCIs.length === 0) {
-      wb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-regular fa-clock"></i><p>Ningún colaborador tiene la entrada marcada en este momento.</p></div></td></tr>`;
+      wb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><ion-icon name="time-outline"></ion-icon><p>Ningún colaborador tiene la entrada marcada en este momento.</p></div></td></tr>`;
     } else {
       wb.innerHTML = workingCIs.map(c => {
         const emp = allEmps.find(e => e.id === c.employeeId);
@@ -187,7 +188,7 @@ async function render() {
           <td>${storeBadge(emp.store)}</td>
           <td>${formatTime(c.clockIn)}</td>
           <td><strong>${hrs}h</strong></td>
-          <td><button class="btn btn-sm btn-outline" onclick="quickClockOut('${c.id}')"><i class="fa-solid fa-stop"></i> Marcar Salida</button></td>
+          <td><button class="btn btn-sm btn-outline" onclick="quickClockOut('${c.id}')"><ion-icon name="stop-circle-outline"></ion-icon> Marcar Salida</button></td>
         </tr>`;
       }).join('');
     }
@@ -195,7 +196,7 @@ async function render() {
     // Today completed
     const tb = document.getElementById('todayTable');
     if (doneCIs.length === 0) {
-      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fa-regular fa-calendar-xmark"></i><p>No hay turnos completados hoy.</p></div></td></tr>`;
+      tb.innerHTML = `<tr><td colspan="6"><div class="empty-state"><ion-icon name="calendar-clear-outline"></ion-icon><p>No hay turnos completados hoy.</p></div></td></tr>`;
     } else {
       tb.innerHTML = doneCIs.map(c => {
         const emp = allEmps.find(e => e.id === c.employeeId);
@@ -244,11 +245,11 @@ async function updateClockStatus() {
   const btn = document.getElementById('clockActionBtn');
   const st  = document.getElementById('clockStatus');
   if (activeCI) {
-    st.innerHTML = `<span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:8px"></i> Entrada marcada desde las ${formatTime(activeCI.clockIn)}</span>`;
+    st.innerHTML = `<span class="badge badge-green"><ion-icon name="ellipse" style="font-size:8px"></ion-icon> Entrada marcada desde las ${formatTime(activeCI.clockIn)}</span>`;
     btn.textContent = 'Marcar Salida';
     btn.className = 'btn btn-danger';
   } else {
-    st.innerHTML = `<span class="badge badge-gray"><i class="fa-solid fa-circle" style="font-size:8px"></i> Sin entrada marcada</span>`;
+    st.innerHTML = `<span class="badge badge-gray"><ion-icon name="ellipse" style="font-size:8px"></ion-icon> Sin entrada marcada</span>`;
     btn.textContent = 'Marcar Entrada';
     btn.className = 'btn btn-primary';
   }

@@ -6,13 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Permisos — El Águila</title>
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 .type-vacation { background: #dbeafe; color: #1e40af; }
 .type-sick     { background: #ffe4e6; color: #9f1239; }
 .type-personal { background: #fef3c7; color: #92400e; }
 .legend-dot { width: 11px; height: 11px; border-radius: 4px; display: inline-block; }
 </style>
+<script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
@@ -31,22 +32,22 @@
 
   <nav class="sidebar-nav">
     <div class="nav-section-label">Principal</div>
-    <a href="index.html" data-manager-only class="nav-link"><i class="fa-solid fa-gauge-high"></i><span>Panel</span></a>
-    <a href="employees.html" data-manager-only class="nav-link"><i class="fa-solid fa-users"></i><span>Colaboradores</span></a>
-    <a href="jobs.html" data-manager-only class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Puestos</span></a>
+    <a href="index.html" data-manager-only class="nav-link"><ion-icon name="speedometer-outline"></ion-icon><span>Panel</span></a>
+    <a href="employees.html" data-manager-only class="nav-link"><ion-icon name="people-outline"></ion-icon><span>Colaboradores</span></a>
+    <a href="jobs.html" data-manager-only class="nav-link"><ion-icon name="briefcase-outline"></ion-icon><span>Puestos</span></a>
     <div class="nav-section-label">Operación</div>
-    <a href="pedidos.html" class="nav-link"><i class="fa-solid fa-clipboard-list"></i><span>Pedidos</span></a>
-    <a href="grupo.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Grupo</span></a>
+    <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
+    <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
     <div class="nav-section-label">Tiempo</div>
-    <a href="hours.html" data-manager-only class="nav-link"><i class="fa-solid fa-clock"></i><span>Horas</span></a>
-    <a href="pay-statement.html" data-manager-only class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i><span>Nómina</span></a>
-    <a href="time-off.html" class="nav-link active"><i class="fa-solid fa-calendar-days"></i><span>Permisos</span></a>
+    <a href="hours.html" data-manager-only class="nav-link"><ion-icon name="time-outline"></ion-icon><span>Horas</span></a>
+    <a href="pay-statement.html" data-manager-only class="nav-link"><ion-icon name="receipt-outline"></ion-icon><span>Nómina</span></a>
+    <a href="time-off.html" class="nav-link active"><ion-icon name="calendar-outline"></ion-icon><span>Permisos</span></a>
   </nav>
 
   <div class="sidebar-footer">
     <div id="sidebarUser"></div>
     <button class="sidebar-signout" onclick="signOut()">
-      <i class="fa-solid fa-right-from-bracket"></i> <span>Cerrar Sesión</span>
+      <ion-icon name="log-out-outline"></ion-icon> <span>Cerrar Sesión</span>
     </button>
   </div>
 </aside>
@@ -57,20 +58,20 @@
       <h1>Permisos</h1>
       <p>Revisa y administra las solicitudes de permiso de los colaboradores.</p>
     </div>
-    <button class="btn btn-primary" onclick="openRequestModal()"><i class="fa-solid fa-plus"></i> Nueva Solicitud</button>
+    <button class="btn btn-primary" onclick="openRequestModal()"><ion-icon name="add-outline"></ion-icon> Nueva Solicitud</button>
   </div>
 
   <!-- Calendario -->
   <div class="calendar-wrap">
     <div class="cal-header">
-      <button class="btn-icon" onclick="shiftMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+      <button class="btn-icon" onclick="shiftMonth(-1)"><ion-icon name="chevron-back-outline"></ion-icon></button>
       <div>
         <div class="cal-month-label" id="calMonthLabel"></div>
       </div>
-      <button class="btn-icon" onclick="shiftMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+      <button class="btn-icon" onclick="shiftMonth(1)"><ion-icon name="chevron-forward-outline"></ion-icon></button>
     </div>
     <div class="cal-grid" id="calGrid">
-      <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--text-muted)"><i class="fa-solid fa-spinner fa-spin"></i></div>
+      <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--text-muted)"><ion-icon name="sync-outline" class="gira"></ion-icon></div>
     </div>
     <div style="display:flex;gap:20px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap">
       <span style="font-size:12.5px;color:var(--text-muted);display:flex;align-items:center;gap:7px"><span class="legend-dot" style="background:#dbeafe"></span>Vacaciones</span>
@@ -261,7 +262,7 @@ function renderList() {
 
   const tb = document.getElementById('toTable');
   if (tos.length === 0) {
-    tb.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fa-solid fa-calendar-days"></i><p>No se encontraron solicitudes de permiso.</p></div></td></tr>`;
+    tb.innerHTML = `<tr><td colspan="8"><div class="empty-state"><ion-icon name="calendar-outline"></ion-icon><p>No se encontraron solicitudes de permiso.</p></div></td></tr>`;
     return;
   }
 
@@ -284,17 +285,17 @@ function renderList() {
       <td style="max-width:220px">
         <div style="color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.note)||'—'}</div>
         ${t.status === 'denied' && t.denyReason
-          ? `<div class="deny-reason"><i class="fa-solid fa-circle-info"></i><span>${escapeHtml(t.denyReason)}</span></div>`
+          ? `<div class="deny-reason"><ion-icon name="information-circle-outline"></ion-icon><span>${escapeHtml(t.denyReason)}</span></div>`
           : ''}
       </td>
       <td><span class="badge ${statBadge[t.status]||'badge-gray'}">${statLabel[t.status]||t.status}</span></td>
       <td>
         <div class="td-actions">
           ${!isManager() ? '<span style="color:var(--text-light);font-size:12px">—</span>' : t.status === 'pending' ? `
-            <button class="btn btn-sm btn-success" onclick="doUpdateStatus('${t.id}','approved')"><i class="fa-solid fa-check"></i> Aprobar</button>
-            <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="askDeny('${t.id}')"><i class="fa-solid fa-xmark"></i> Denegar</button>
+            <button class="btn btn-sm btn-success" onclick="doUpdateStatus('${t.id}','approved')"><ion-icon name="checkmark-outline"></ion-icon> Aprobar</button>
+            <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="askDeny('${t.id}')"><ion-icon name="close-outline"></ion-icon> Denegar</button>
           ` : `<button class="btn btn-sm btn-outline" onclick="doUpdateStatus('${t.id}','pending')">Restablecer</button>`}
-          <button class="btn-icon" title="Eliminar" onclick="doDelete('${t.id}')"><i class="fa-solid fa-trash" style="font-size:12px;color:var(--danger)"></i></button>
+          <button class="btn-icon" title="Eliminar" onclick="doDelete('${t.id}')"><ion-icon name="trash-outline" style="font-size:12px;color:var(--danger)"></ion-icon></button>
         </div>
       </td>
     </tr>`;
