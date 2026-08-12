@@ -1823,3 +1823,54 @@ ion-icon {
 .btn-icon ion-icon, .nav-link ion-icon, .tab ion-icon,
 .notif-btn ion-icon, .modal-close ion-icon { vertical-align: middle; }
 .nav-link ion-icon { font-size: 18px; }
+
+/* ══ Fotos en el chat ══ */
+.compose-adj {
+  width: 42px; height: 42px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: #fff; color: var(--text-muted);
+  font-size: 18px; cursor: pointer;
+  display: grid; place-items: center;
+  transition: color var(--t) var(--ease), border-color var(--t) var(--ease);
+}
+.compose-adj:hover:not(:disabled) { color: var(--primary); border-color: var(--primary); }
+.compose-adj:disabled { opacity: .6; cursor: default; }
+
+/* Una foto no necesita el relleno de una burbuja de texto */
+.bubble-foto { padding: 4px 4px 3px; }
+.bubble-foto img {
+  display: block;
+  width: 100%; max-width: 300px; height: auto;
+  border-radius: 11px;
+  cursor: zoom-in;
+  background: var(--surface-alt);
+}
+.bubble-foto time { padding-right: 4px; }
+.anuncio-foto {
+  display: block; max-width: 100%; width: 340px; height: auto;
+  border-radius: var(--r); margin-top: 4px; cursor: zoom-in;
+  background: var(--surface-alt);
+}
+
+.visor-foto {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(9, 12, 22, 0.92);
+  display: none; align-items: center; justify-content: center;
+  padding: 30px; cursor: zoom-out;
+}
+.visor-foto.on { display: flex; animation: fadeIn 160ms var(--ease) both; }
+.visor-foto img {
+  max-width: 100%; max-height: 100%;
+  border-radius: var(--r);
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,0.7);
+  animation: popIn 220ms var(--ease-out) both;
+}
+.visor-x {
+  position: absolute; top: 20px; right: 22px;
+  width: 42px; height: 42px;
+  border: none; border-radius: 50%;
+  background: rgba(255,255,255,0.12); color: #fff;
+  font-size: 22px; cursor: pointer;
+  display: grid; place-items: center;
+}
+.visor-x:hover { background: rgba(255,255,255,0.22); }

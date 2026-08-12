@@ -372,6 +372,7 @@ function getPeriodByIndex(idx) {
   return { index: idx, start: toDateStr(start), end: toDateStr(end) };
 }
 function getCurrentPeriod() { return getPeriodByIndex(getPeriodIndex(new Date())); }
+function getPeriodByStart(start) { return getPeriodByIndex(getPeriodIndex(parseLocalDate(start))); }
 function formatPeriodLabel(p) {
   const s = parseLocalDate(p.start), e = parseLocalDate(p.end);
   return `${s.getDate()} ${MESES_CORTOS[s.getMonth()]} – ${e.getDate()} ${MESES_CORTOS[e.getMonth()]}, ${e.getFullYear()}`;
@@ -687,6 +688,64 @@ async function savePayStatement(data, id) {
   else    await db.collection('PayStatements').add({ ...data, savedAt: firebase.firestore.FieldValue.serverTimestamp() });
 }
 async function updatePayStatement(id, data) { await db.collection('PayStatements').doc(id).update(data); }
+async function deletePayStatement(id) { await db.collection('PayStatements').doc(id).delete(); }
+
+/**
+ * Arma los recibos de un período a partir de las marcas de entrada.
+ *
+ * Sólo cuenta los turnos cerrados: uno abierto todavía no tiene horas, y
+ * meterlo daría un recibo que cambia solo. Se rehacen los recibos del
+ * período, pero conservando lo ya pagado —marcar pagado es una decisión de
+ * la gerencia y no se pierde porque se vuelva a generar—.
+ */
+async function generarNomina(periodStart) {
+  const p = getPeriodByStart(periodStart);
+  const [emps, marcas, previos] = await Promise.all([
+    getEmployees(),
+    getClockInsRange(p.start, p.end),
+    getPayStatements(p.start)
+  ]);
+
+  const activos = emps.filter(e => e.status === 'active');
+  const horasPor = {};
+  marcas.filter(m => m.clockOut && m.hours).forEach(m => {
+    horasPor[m.employeeId] = (horasPor[m.employeeId] || 0) + Number(m.hours || 0);
+  });
+
+  const antes = {};
+  previos.forEach(s => { antes[s.employeeId] = s; });
+
+  const res = { creados: 0, actualizados: 0, sinHoras: 0, conservados: 0 };
+
+  for (const e of activos) {
+    const horas = Math.round((horasPor[e.id] || 0) * 100) / 100;
+    const viejo = antes[e.id];
+    delete antes[e.id];
+
+    if (!horas) { res.sinHoras++; if (!viejo) continue; }
+
+    // Un recibo ya pagado no se toca: reescribirlo cambiaría el importe de
+    // algo que ya salió de la caja.
+    if (viejo && viejo.status === 'paid') { res.conservados++; continue; }
+
+    const rate = Number(e.hourlyRate || 0);
+    const datos = {
+      employeeId: e.id, employeeName: e.name, store: e.store,
+      periodStart: p.start, periodEnd: p.end,
+      hours: horas, rate, gross: Math.round(horas * rate * 100) / 100,
+      status: 'pending', paidDate: null
+    };
+    if (viejo) { await updatePayStatement(viejo.id, datos); res.actualizados++; }
+    else if (horas)  { await savePayStatement(datos); res.creados++; }
+  }
+
+  // Recibos de gente que ya no está activa, y sin pagar: sobran
+  for (const id in antes) {
+    const s = antes[id];
+    if (s.status !== 'paid') await deletePayStatement(s.id);
+  }
+  return res;
+}
 
 // ── Pedidos ──
 // Se ordena en el cliente para no exigir índices compuestos en Firestore.
@@ -724,6 +783,63 @@ const PEDIDO_ESTADOS = {
 
 // ── Chat ──
 const ANUNCIOS_ID = 'anuncios';
+
+/**
+ * Reduce la foto antes de subirla.
+ *
+ * Una foto de teléfono ronda los 4 MB. Subirla tal cual tarda, gasta datos
+ * del colaborador y no se ve mejor en una burbuja de chat. Se redibuja a
+ * 1600 px de lado mayor y se guarda como JPEG, que deja el archivo en
+ * torno a 200 KB sin pérdida apreciable en pantalla.
+ */
+function encogerImagen(file, maxLado = 1600, calidad = 0.82) {
+  return new Promise((ok, fail) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width: w, height: h } = img;
+      const escala = Math.min(1, maxLado / Math.max(w, h));
+      w = Math.round(w * escala); h = Math.round(h * escala);
+
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      c.toBlob(b => b ? ok({ blob: b, w, h })
+                      : fail(new Error('No se pudo procesar la imagen')),
+               'image/jpeg', calidad);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('Ese archivo no es una imagen')); };
+    img.src = url;
+  });
+}
+
+const MAX_FOTO = 12 * 1024 * 1024;   // lo que llega del teléfono, antes de encoger
+
+async function enviarFoto(chatId, file) {
+  if (!file.type.startsWith('image/')) throw new Error('Sólo se pueden enviar imágenes');
+  if (file.size > MAX_FOTO)            throw new Error('La imagen es demasiado grande');
+
+  const { blob, w, h } = await encogerImagen(file);
+  const nombre = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}.jpg`;
+  const ref = firebase.storage().ref(`chat/${chatId}/${nombre}`);
+  await ref.put(blob, { contentType: 'image/jpeg' });
+  const url = await ref.getDownloadURL();
+
+  await db.collection('Messages').add({
+    chatId,
+    senderId:   SESSION.pid,
+    senderName: SESSION.name,
+    senderRole: SESSION.role,
+    type: 'image', url, w, h, text: '',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await db.collection('Chats').doc(chatId).set({
+    lastMessage: 'Foto',
+    lastSender:  SESSION.pid,
+    lastAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge:true });
+}
 
 function dmId(a, b) { return 'dm_' + [a,b].sort().join('__'); }
 
