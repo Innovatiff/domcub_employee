@@ -170,6 +170,8 @@ let unsubMsgs   = null;
 let chatMeta    = {};     // id -> {lastMessage, lastAt, vistos}
 let unsubChats  = null;
 let msgsCache   = [];     // para repintar cuando cambian los "vistos"
+let vistoFirma  = '';     // último estado de "vistos" ya pintado
+let listaFirma  = '';     // última lista de conversaciones ya pintada
 
 requireAuth(async () => {
   await buildPeople();
@@ -189,10 +191,18 @@ requireAuth(async () => {
     if (activeChat) {
       markChatRead(activeChat.id);
       marcarVisto(activeChat.id, millisOf((chatMeta[activeChat.id]||{}).lastAt));
-      // El "Visto" del otro lado viene en el documento del chat: repintar
-      if (msgsCache.length) paintMsgs(msgsCache);
+      // Repintar la conversación SÓLO si los "vistos" realmente cambiaron;
+      // el documento del chat se toca por muchas otras razones y repintar
+      // todo cada vez se sentía como un tirón en la página.
+      const firma = JSON.stringify((chatMeta[activeChat.id]||{}).vistos || {});
+      if (firma !== vistoFirma) {
+        vistoFirma = firma;
+        if (msgsCache.length) paintMsgs(msgsCache);
+      }
     }
-    paintList();
+    // La lista sólo se rearma si cambió algo que la lista muestra
+    const fl = list.map(c => [c.id, millisOf(c.lastAt), c.lastMessage, c.lastSender, c.title].join('|')).join('§');
+    if (fl !== listaFirma) { listaFirma = fl; paintList(); }
   });
 }, { allow: ['manager','colaborador'] });
 
@@ -338,6 +348,7 @@ function mountChat() {
 
   if (unsubMsgs) unsubMsgs();
   msgsCache = [];
+  vistoFirma = '';
   unsubMsgs = listenMessages(activeChat.id, msgs => { msgsCache = msgs; paintMsgs(msgs); });
 }
 
@@ -416,8 +427,12 @@ function estadoDe(m) {
     : `<div class="msg-estado"><ion-icon name="checkmark-done-outline"></ion-icon> Enviado</div>`;
 }
 
+let chatPintado = null;   // la animación de entrada sólo la primera vez
+
 function paintMsgs(msgs) {
   const box = document.getElementById('chatMsgs');
+  box.classList.toggle('sin-anim', chatPintado === activeChat.id);
+  chatPintado = activeChat.id;
   if (!msgs.length) {
     box.innerHTML = `<div class="chat-placeholder">
       <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
