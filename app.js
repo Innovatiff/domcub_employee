@@ -1722,3 +1722,77 @@ async function marcarReporteVisto(id) {
 }
 
 async function deleteReporte(id) { await db.collection('Reportes').doc(id).delete(); }
+
+// ══════════════════════════════════════════════════════════
+//  Bandeja del día — todo lo que espera una decisión, junto
+// ══════════════════════════════════════════════════════════
+
+// Reúne los pendientes de LAS DOS tiendas: lo que necesita atención no
+// debe esconderse detrás del selector de tienda.
+async function bandejaDelDia() {
+  const hoy = todayStr();
+  const [tos, reps, abiertos, pedidos, emps, mig] = await Promise.all([
+    getTimeOff(),
+    getReportes(),
+    getOpenClockIns(),
+    getPedidos('all'),
+    getEmployees(),
+    pendingMigration().catch(() => ({ pin:[], portal:[] }))
+  ]);
+  return {
+    permisos:   tos.filter(t => t.status === 'pending'),
+    reportes:   reps.filter(r => (r.status || 'nuevo') === 'nuevo'),
+    olvidados:  abiertos.filter(c => c.date && c.date < hoy),
+    pedidosEnv: pedidos.filter(p => p.status === 'enviado'),
+    cumplesHoy: proximosEventos(emps, 0),
+    migracion:  new Set([...mig.pin, ...mig.portal].map(e => e.id)).size,
+    emps
+  };
+}
+
+// Cerrar un turno olvidado con la hora que diga la gerencia.
+// Devuelve las horas resultantes; valida que la salida sea posterior.
+async function cerrarTurnoOlvidado(id, hora) {
+  const doc = await db.collection('ClockIns').doc(id).get();
+  if (!doc.exists) throw new Error('Ese registro ya no existe');
+  const ci = doc.data();
+  const salida = new Date(`${ci.date}T${hora}:00`);
+  const entrada = ci.clockIn.toDate();
+  if (isNaN(salida) || salida <= entrada) {
+    throw new Error('La salida tiene que ser posterior a la entrada (' + formatTime(ci.clockIn) + ')');
+  }
+  const horas = Math.round(((salida - entrada) / 3600000) * 100) / 100;
+  await db.collection('ClockIns').doc(id).update({
+    clockOut: firebase.firestore.Timestamp.fromDate(salida),
+    hours: horas
+  });
+  return horas;
+}
+
+// Aprobar un permiso quita a la persona del horario de esos días.
+// Devuelve cuántos turnos se quitaron.
+async function aprobarPermiso(t) {
+  await updateTimeOff(t.id, {
+    status: 'approved',
+    denyReason: firebase.firestore.FieldValue.delete(),
+    decidedBy: SESSION.name,
+    decidedAt: new Date().toISOString()
+  });
+  try { return await quitarDelHorario(t.employeeId, t.startDate, t.endDate); }
+  catch (e) { console.error('quitarDelHorario', e); return -1; }
+}
+
+async function denegarPermiso(id, motivo) {
+  await updateTimeOff(id, {
+    status: 'denied', denyReason: motivo || '',
+    decidedBy: SESSION.name, decidedAt: new Date().toISOString()
+  });
+}
+
+// ── Resumen semanal (lo escribe la función programada del domingo) ──
+async function ultimoResumen() {
+  const snap = await db.collection('Resumenes').get();
+  const docs = snap.docs.map(d => ({ id:d.id, ...d.data() }))
+    .sort((a,b) => String(b.id).localeCompare(String(a.id)));
+  return docs[0] || null;
+}

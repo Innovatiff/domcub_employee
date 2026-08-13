@@ -130,7 +130,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Colaborador</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Nota</th><th>Estado</th><th>Acciones</th></tr>
+          <tr><th style="width:34px"></th><th>Colaborador</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Nota</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
         <tbody id="toTable"></tbody>
       </table>
@@ -294,7 +294,7 @@ function renderList() {
 
   const tb = document.getElementById('toTable');
   if (tos.length === 0) {
-    tb.innerHTML = `<tr><td colspan="8"><div class="empty-state"><ion-icon name="calendar-outline"></ion-icon><p>No se encontraron solicitudes de permiso.</p></div></td></tr>`;
+    tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><ion-icon name="calendar-outline"></ion-icon><p>No se encontraron solicitudes de permiso.</p></div></td></tr>`;
     return;
   }
 
@@ -309,6 +309,8 @@ function renderList() {
     const e    = new Date(t.endDate   + 'T00:00:00');
     const days = Math.round((e - s) / 86400000) + 1;
     return `<tr>
+      <td>${isManager() && t.status === 'pending'
+        ? `<input type="checkbox" class="to-check" value="${t.id}" onchange="pintarLote()">` : ''}</td>
       <td><div class="employee-info">${emp ? avatarHtml(emp.name) : ''}<div><div class="employee-name">${emp ? emp.name : '—'}</div><div class="employee-sub">${emp ? storeName(emp.store) : ''}</div></div></div></td>
       <td><span class="badge ${typeBadge[t.type]||'badge-gray'}">${typeLabel[t.type]||t.type}</span></td>
       <td>${formatDate(t.startDate)}</td>
@@ -332,6 +334,56 @@ function renderList() {
       </td>
     </tr>`;
   }).join('');
+}
+
+// ══ Acciones en lote: aprobar varios pendientes de una vez ══
+function seleccionados() {
+  return [...document.querySelectorAll('.to-check:checked')].map(c => c.value);
+}
+
+function pintarLote() {
+  let bar = document.getElementById('loteBar');
+  const ids = seleccionados();
+  if (!ids.length) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'loteBar'; bar.className = 'lote-bar';
+    document.querySelector('main .card:last-of-type').before(bar);
+  }
+  bar.innerHTML = `
+    <ion-icon name="checkmark-done-outline"></ion-icon>
+    <strong>${ids.length}</strong> ${ids.length===1?'solicitud seleccionada':'solicitudes seleccionadas'}
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn btn-sm btn-success" onclick="aprobarLote(this)">Aprobar todas</button>
+      <button class="btn btn-sm btn-outline" onclick="document.querySelectorAll('.to-check').forEach(c=>c.checked=false);pintarLote()">Cancelar</button>
+    </div>`;
+}
+
+async function aprobarLote(btn) {
+  const ids = seleccionados();
+  if (!ids.length) return;
+  if (!confirm(`¿Aprobar ${ids.length} ${ids.length===1?'permiso':'permisos'}? Cada persona saldrá sola del horario de sus días.`)) return;
+  btn.disabled = true;
+  let quitados = 0;
+  try {
+    for (const id of ids) {
+      const t = allTOCache.find(x => x.id === id);
+      if (!t) continue;
+      await updateTimeOff(id, {
+        status:'approved',
+        denyReason: firebase.firestore.FieldValue.delete(),
+        decidedBy: SESSION.name, decidedAt: new Date().toISOString()
+      });
+      try { quitados += await quitarDelHorario(t.employeeId, t.startDate, t.endDate); }
+      catch (e) { console.error('quitarDelHorario', e); }
+    }
+    toast(`${ids.length} permisos aprobados` +
+      (quitados ? ` · ${quitados} ${quitados===1?'turno quitado':'turnos quitados'} del horario` : ''), 'success');
+    allTOCache = await getTimeOff();
+    const bar = document.getElementById('loteBar'); if (bar) bar.remove();
+    renderCalendar(); renderList();
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
 }
 
 function filterStatus(val, btn) {
