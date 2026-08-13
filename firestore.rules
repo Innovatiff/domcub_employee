@@ -264,14 +264,24 @@ service cloud.firestore {
         || resource.data.type == 'anuncios'
         || (haveIndex() && myPid() in resource.data.participants)
       );
+      // Los grupos los arma sólo la gerencia; las conversaciones privadas
+      // las abre cualquiera de sus dos participantes.
       allow create: if signedIn() && (
            request.resource.data.type == 'anuncios'
+        || (request.resource.data.type == 'grupo' && isManager())
         || (haveIndex() && myPid() in request.resource.data.participants)
       );
-      allow update: if signedIn() && (
+      // La gerencia puede cambiar lo que sea (miembros, nombre). Un
+      // participante sólo toca lo operativo: su marca de visto y el
+      // resumen del último mensaje. Así nadie se mete solo a un grupo.
+      allow update: if isManager() || (signedIn() && (
            resource.data.type == 'anuncios'
-        || (haveIndex() && myPid() in resource.data.participants)
-      );
+        || (haveIndex() && myPid() in resource.data.participants
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['vistos','lastMessage','lastSender','lastAt','names','type','participants'])
+            && request.resource.data.participants == resource.data.participants
+            && request.resource.data.type == resource.data.type)
+      ));
       allow delete: if isManager();
     }
 

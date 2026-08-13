@@ -89,6 +89,10 @@
     <aside class="chat-list">
       <div class="chat-list-head">
         <input type="text" id="chatSearch" placeholder="Buscar persona..." oninput="paintList()">
+        <button class="btn btn-primary btn-sm" id="nuevoGrupoBtn" style="display:none;flex-shrink:0"
+                onclick="abrirGrupo()" title="Crear un grupo">
+          <ion-icon name="people-outline"></ion-icon> Grupo
+        </button>
       </div>
       <div class="chat-list-body" id="chatList"></div>
     </aside>
@@ -127,6 +131,32 @@
   </div>
 </main>
 
+<!-- Modal crear/editar grupo (sólo gerencia) -->
+<div class="modal-overlay" id="grupoModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="grpTitulo">Nuevo grupo</h3>
+      <button class="modal-close" onclick="closeModal('grupoModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="grpId">
+      <div class="form-group">
+        <label>Nombre del grupo *</label>
+        <input type="text" id="grpNombre" placeholder="Equipo Cocina, Encargados, Limpieza...">
+      </div>
+      <div class="form-group">
+        <label>Miembros * <span style="font-weight:400;color:var(--text-muted)">— tú siempre estás incluida</span></label>
+        <div class="grp-lista" id="grpMiembros"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="grpBorrar" style="margin-right:auto;display:none" onclick="borrarGrupo()">Eliminar grupo</button>
+      <button class="btn btn-outline" onclick="closeModal('grupoModal')">Cancelar</button>
+      <button class="btn btn-primary" id="grpGuardar" onclick="guardarGrupo()">Crear grupo</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -143,6 +173,7 @@ let msgsCache   = [];     // para repintar cuando cambian los "vistos"
 
 requireAuth(async () => {
   await buildPeople();
+  if (isManager()) document.getElementById('nuevoGrupoBtn').style.display = '';
   paintList();
 
   // Si se llega desde un aviso (grupo.html?chat=...) se abre esa
@@ -227,11 +258,29 @@ function paintList() {
     </div>`;
   };
 
+  // Grupos de los que formo parte (o todos, si soy gerencia)
+  const grupos = Object.values(chatMeta)
+    .filter(c => c.type === 'grupo')
+    .filter(c => !q || String(c.title||'').toLowerCase().includes(q))
+    .sort((a,b) => String(a.title||'').localeCompare(String(b.title||'')));
+  const filaGrupo = c => `
+    <div class="chat-item ${activeChat && activeChat.id===c.id ? 'active':''}" onclick="openGrupo('${c.id}')">
+      <div class="chat-ava grupo"><ion-icon name="people-outline"></ion-icon></div>
+      <div style="min-width:0;flex:1">
+        <div class="chat-item-top">
+          <span class="chat-item-name">${escapeHtml(c.title || 'Grupo')}${punto(c.id)}</span>
+          <span class="chat-item-time">${c.lastAt ? relativeTime(c.lastAt) : ''}</span>
+        </div>
+        <div class="chat-item-sub">${escapeHtml(c.lastMessage || ((c.participants||[]).length + ' miembros'))}</div>
+      </div>
+    </div>`;
+
   document.getElementById('chatList').innerHTML =
     anuncios +
+    (grupos.length ? `<div class="chat-group-label">Grupos</div>${grupos.map(filaGrupo).join('')}` : '') +
     (mgrs.length ? `<div class="chat-group-label">Gerencia</div>${mgrs.map(row).join('')}` : '') +
     (cols.length ? `<div class="chat-group-label">Colaboradores</div>${cols.map(row).join('')}` : '') +
-    (!filtered.length && q ? `<div class="chat-empty-search">Sin resultados para "${escapeHtml(q)}"</div>` : '');
+    (!filtered.length && !grupos.length && q ? `<div class="chat-empty-search">Sin resultados para "${escapeHtml(q)}"</div>` : '');
 }
 
 async function openAnuncios() {
@@ -251,6 +300,15 @@ async function openDm(otherPid) {
   mountChat();
 }
 
+function openGrupo(id) {
+  const c = chatMeta[id];
+  if (!c) return;
+  const n = (c.participants || []).length;
+  activeChat = { id, type:'grupo', title: c.title || 'Grupo',
+                 sub: n + ' miembros', canPost: true };
+  mountChat();
+}
+
 function mountChat() {
   markChatRead(activeChat.id);   // abrirlo cuenta como leerlo
   marcarVisto(activeChat.id, millisOf((chatMeta[activeChat.id]||{}).lastAt));
@@ -261,6 +319,12 @@ function mountChat() {
        <div><div class="chat-head-name">${activeChat.title}</div>
        <div class="chat-head-sub">${activeChat.sub}</div></div>
        <span class="badge badge-purple" style="margin-left:auto"><ion-icon name="lock-closed-outline" style="font-size:9px"></ion-icon>Sólo anuncios</span>`
+    : activeChat.type === 'grupo'
+    ? `<div class="chat-ava grupo"><ion-icon name="people-outline"></ion-icon></div>
+       <div><div class="chat-head-name">${escapeHtml(activeChat.title)}</div>
+       <div class="chat-head-sub" id="grpHeadSub">${escapeHtml(activeChat.sub)}</div></div>
+       ${isManager() ? `<button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="abrirGrupo('${activeChat.id}')">
+         <ion-icon name="settings-outline"></ion-icon> Editar grupo</button>` : ''}`
     : `${avatarHtml(activeChat.title, 40)}
        <div><div class="chat-head-name">${escapeHtml(activeChat.title)}</div>
        <div class="chat-head-sub">${escapeHtml(activeChat.sub)} · Conversación privada</div></div>`;
@@ -338,7 +402,7 @@ function estadoDe(m) {
   const tMs = m.createdAt && m.createdAt.toMillis ? m.createdAt.toMillis() : 0;
   if (!tMs) return `<div class="msg-estado"><ion-icon name="time-outline"></ion-icon> Enviando…</div>`;
 
-  if (activeChat.type === 'anuncios') {
+  if (activeChat.type === 'anuncios' || activeChat.type === 'grupo') {
     const quienes = Object.keys(vistos)
       .filter(p => p !== SESSION.pid && millisOf(vistos[p]) >= tMs);
     return quienes.length
@@ -409,7 +473,9 @@ function paintMsgs(msgs) {
             : `<div class="bubble-text">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>`}
           <time>${formatTime(d)}</time>
         </div>`;
-      const col = `<div class="bubble-col">${burbuja}${rxPills(m)}${esUltimoMio ? estadoDe(m) : ''}</div>`;
+      const quien = !mine && activeChat.type === 'grupo' && !seguido
+        ? `<div class="bubble-quien">${escapeHtml(m.senderName || '')}</div>` : '';
+      const col = `<div class="bubble-col">${quien}${burbuja}${rxPills(m)}${esUltimoMio ? estadoDe(m) : ''}</div>`;
       html += `<div class="bubble-row ${mine?'mine':''} ${seguido?'seguido':''} ${ultimo?'ultimo':''}">
         ${mine ? '' : (seguido ? '<div class="bubble-hueco"></div>' : avatarHtml(m.senderName, 28))}
         ${col}${rxUi(m)}
@@ -493,6 +559,67 @@ window.addEventListener('beforeunload', () => {
   if (unsubMsgs) unsubMsgs();
   if (unsubChats) unsubChats();
 });
+// ══ Grupos: los crea y administra la gerencia ══
+
+function abrirGrupo(id) {
+  const c = id ? chatMeta[id] : null;
+  document.getElementById('grpTitulo').textContent = c ? 'Editar grupo' : 'Nuevo grupo';
+  document.getElementById('grpGuardar').textContent = c ? 'Guardar cambios' : 'Crear grupo';
+  document.getElementById('grpBorrar').style.display = c ? '' : 'none';
+  document.getElementById('grpId').value = c ? c.id : '';
+  document.getElementById('grpNombre').value = c ? (c.title || '') : '';
+
+  const dentro = new Set(c ? (c.participants || []) : []);
+  document.getElementById('grpMiembros').innerHTML = people.map(p => `
+    <label class="grp-miembro">
+      <input type="checkbox" value="${p.pid}" ${dentro.has(p.pid) ? 'checked' : ''}>
+      ${avatarHtml(p.name, 26)}
+      <span class="grp-nombre">${escapeHtml(p.name)}</span>
+      <span class="grp-sub">${escapeHtml(p.sub)}</span>
+    </label>`).join('');
+  openModal('grupoModal');
+}
+
+async function guardarGrupo() {
+  const nombre = document.getElementById('grpNombre').value.trim();
+  if (!nombre) { toast('Ponle nombre al grupo.', 'error'); return; }
+
+  const elegidos = [...document.querySelectorAll('#grpMiembros input:checked')].map(i => i.value);
+  if (!elegidos.length) { toast('Elige al menos un miembro.', 'error'); return; }
+
+  // La gerencia que lo crea siempre queda dentro
+  const participants = [...new Set([SESSION.pid, ...elegidos])];
+  const names = {}; names[SESSION.pid] = SESSION.name;
+  people.forEach(p => { if (participants.includes(p.pid)) names[p.pid] = p.name; });
+
+  const btn = document.getElementById('grpGuardar');
+  btn.disabled = true;
+  try {
+    const id = document.getElementById('grpId').value
+      || 'grp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    await db.collection('Chats').doc(id).set({
+      type:'grupo', title: nombre, participants, names,
+      createdBy: SESSION.pid
+    }, { merge:true });
+    closeModal('grupoModal');
+    toast(`Grupo "${nombre}" · ${participants.length} miembros`, 'success');
+    // Se abre de una vez para escribir el primer mensaje
+    setTimeout(() => { if (chatMeta[id]) openGrupo(id); }, 400);
+  } catch (err) { toast('No se pudo guardar el grupo: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function borrarGrupo() {
+  const id = document.getElementById('grpId').value;
+  if (!id) return;
+  if (!confirm('¿Eliminar este grupo? La conversación dejará de verse para todos.')) return;
+  try {
+    await db.collection('Chats').doc(id).delete();
+    closeModal('grupoModal');
+    if (activeChat && activeChat.id === id) { activeChat = null; openAnuncios(); }
+    toast('Grupo eliminado', 'info');
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+}
 </script>
 </body>
 </html>
