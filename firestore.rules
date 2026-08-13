@@ -52,10 +52,11 @@ service cloud.firestore {
     function miTienda() {
       return get(/databases/$(database)/documents/Employees/$(colabEmpId())).data.store;
     }
-    // ¿Puede esta sesión estar en el canal de esa tienda?
+    // ¿Puede esta sesión estar en el canal (chat o anuncios) de esa tienda?
     function enCanalTienda(chatId) {
       return isManager()
-        || (isColabAccount() && ('tienda_' + miTienda()) == chatId);
+        || (isColabAccount() && miTienda() ==
+            ((chatId == 'tienda_1' || chatId == 'anuncios_1') ? '1' : '2'));
     }
 
     function haveIndex() {
@@ -270,7 +271,10 @@ service cloud.firestore {
       // vez de "no existe", y no hay forma de empezar una conversación.
       allow read: if signedIn() && (
            resource == null
-        || resource.data.type == 'anuncios'
+        // Anuncios por tienda: cada quien los de la suya (el viejo canal
+        // 'anuncios' queda legible como archivo)
+        || (resource.data.type == 'anuncios'
+            && (chatId == 'anuncios' || enCanalTienda(chatId)))
         // El canal de cada tienda: sólo su gente y la gerencia
         || (resource.data.type == 'tienda' && enCanalTienda(chatId))
         || (haveIndex() && myPid() in resource.data.participants)
@@ -278,7 +282,8 @@ service cloud.firestore {
       // Los grupos los arma sólo la gerencia; las conversaciones privadas
       // las abre cualquiera de sus dos participantes.
       allow create: if signedIn() && (
-           request.resource.data.type == 'anuncios'
+           (request.resource.data.type == 'anuncios'
+            && (chatId == 'anuncios' || enCanalTienda(chatId)))
         || (request.resource.data.type == 'grupo' && isManager())
         // El canal de la tienda lo puede dejar creado cualquiera de su gente
         || (request.resource.data.type == 'tienda' && enCanalTienda(chatId))
@@ -288,7 +293,8 @@ service cloud.firestore {
       // participante sólo toca lo operativo: su marca de visto y el
       // resumen del último mensaje. Así nadie se mete solo a un grupo.
       allow update: if isManager() || (signedIn() && (
-           resource.data.type == 'anuncios'
+           (resource.data.type == 'anuncios'
+            && (chatId == 'anuncios' || enCanalTienda(chatId)))
         // En el canal de tienda un colaborador sólo toca lo operativo
         || (resource.data.type == 'tienda' && enCanalTienda(chatId)
             && request.resource.data.diff(resource.data).affectedKeys()
@@ -307,8 +313,8 @@ service cloud.firestore {
     match /Messages/{id} {
       allow read: if signedIn() && (
            resource.data.chatId == 'anuncios'
-        // Los mensajes del canal de una tienda sólo los ve su gente
-        || (resource.data.chatId in ['tienda_1', 'tienda_2']
+        // Los mensajes del canal o los anuncios de una tienda: sólo su gente
+        || (resource.data.chatId in ['tienda_1', 'tienda_2', 'anuncios_1', 'anuncios_2']
             && enCanalTienda(resource.data.chatId))
         || (haveIndex() && myPid() in chatParticipants(resource.data.chatId))
       );
@@ -319,7 +325,7 @@ service cloud.firestore {
       allow create: if signedIn() && haveIndex()
         && request.resource.data.senderId == myPid()
         && (
-             request.resource.data.chatId == 'anuncios'
+             request.resource.data.chatId in ['anuncios', 'anuncios_1', 'anuncios_2']
                ? isManager()
                : request.resource.data.chatId in ['tienda_1', 'tienda_2']
                ? enCanalTienda(request.resource.data.chatId)
@@ -337,7 +343,7 @@ service cloud.firestore {
              .affectedKeys().hasOnly([myPid()])
         && (
              resource.data.chatId == 'anuncios'
-          || (resource.data.chatId in ['tienda_1', 'tienda_2']
+          || (resource.data.chatId in ['tienda_1', 'tienda_2', 'anuncios_1', 'anuncios_2']
               && enCanalTienda(resource.data.chatId))
           || myPid() in chatParticipants(resource.data.chatId)
         );

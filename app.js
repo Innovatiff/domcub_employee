@@ -1159,11 +1159,15 @@ async function ensureDm(meP, otherP, names) {
   return id;
 }
 
-async function ensureAnuncios() {
-  // Mismo motivo que en ensureDm: se escribe sin consultar antes.
-  await db.collection('Chats').doc(ANUNCIOS_ID)
-    .set({ type:'anuncios', participants:[], names:{} }, { merge:true });
-  return ANUNCIOS_ID;
+// Anuncios por tienda: cada tienda tiene su propio canal de anuncios.
+function anunciosId(store) { return 'anuncios_' + store; }
+
+async function ensureAnuncios(store) {
+  const id = anunciosId(store);
+  await db.collection('Chats').doc(id).set({
+    type:'anuncios', store, title: 'Anuncios de ' + storeShort(store)
+  }, { merge:true });
+  return id;
 }
 
 // El canal de cada tienda: un chat fijo donde habla toda su gente.
@@ -1214,10 +1218,8 @@ function listenMessages(chatId, cb) {
 // las reglas limitan la lectura a las conversaciones propias. Se abren
 // dos escuchas: las mías, y el canal de anuncios (que es público).
 function listenChats(cb) {
-  const state = { mine: [], anuncios: null, tiendas: {} };
-  const emit = () => cb(state.mine
-    .concat(state.anuncios ? [state.anuncios] : [])
-    .concat(Object.values(state.tiendas)));
+  const state = { mine: [], tiendas: {} };
+  const emit = () => cb(state.mine.concat(Object.values(state.tiendas)));
 
   const unsubMine = db.collection('Chats')
     .where('participants','array-contains', SESSION.pid)
@@ -1226,22 +1228,18 @@ function listenChats(cb) {
       emit();
     }, err => console.error('listenChats(mine):', err));
 
-  const unsubAnuncios = db.collection('Chats').doc(ANUNCIOS_ID)
-    .onSnapshot(doc => {
-      state.anuncios = doc.exists ? { id:doc.id, ...doc.data() } : null;
-      emit();
-    }, err => console.error('listenChats(anuncios):', err));
-
-  // Los canales de tienda no llevan lista de participantes, así que se
-  // escuchan aparte: la gerencia los dos, el colaborador sólo el suyo.
+  // Los canales por tienda (chat y anuncios) no llevan lista de
+  // participantes, así que se escuchan aparte: la gerencia los de las dos
+  // tiendas, el colaborador sólo los de la suya.
   const tiendas = isColaborador() ? [SESSION.store] : STORE_IDS;
-  const unsubTiendas = tiendas.map(st =>
-    db.collection('Chats').doc(tiendaChatId(st)).onSnapshot(doc => {
+  const canales = tiendas.flatMap(st => [tiendaChatId(st), anunciosId(st)]);
+  const unsubTiendas = canales.map(id =>
+    db.collection('Chats').doc(id).onSnapshot(doc => {
       if (doc.exists) state.tiendas[doc.id] = { id:doc.id, ...doc.data() };
       emit();
-    }, err => console.error('listenChats(tienda):', err)));
+    }, err => console.error('listenChats(canal):', err)));
 
-  return () => { unsubMine(); unsubAnuncios(); unsubTiendas.forEach(u => u()); };
+  return () => { unsubMine(); unsubTiendas.forEach(u => u()); };
 }
 
 // ══ Avisos de mensajes nuevos ══
@@ -1351,11 +1349,11 @@ function mountNotifications() {
       return;
     }
     body.innerHTML = ultimos.map(c => {
-      const quien = c.id === ANUNCIOS_ID
-        ? 'Anuncios Generales'
-        : ((c.names && c.names[c.lastSender]) || 'Mensaje nuevo');
+      const quien = String(c.id).startsWith('anuncios')
+        ? (c.title || 'Anuncios')
+        : (c.title || (c.names && c.names[c.lastSender]) || 'Mensaje nuevo');
       return `<a class="notif-item" href="grupo.html?chat=${encodeURIComponent(c.id)}">
-        <div class="notif-item-icon">${c.id === ANUNCIOS_ID
+        <div class="notif-item-icon">${String(c.id).startsWith('anuncios')
           ? '<ion-icon name="megaphone-outline"></ion-icon>'
           : '<ion-icon name="chatbubble-outline"></ion-icon>'}</div>
         <div style="min-width:0;flex:1">
@@ -1390,9 +1388,9 @@ function mountNotifications() {
     // y no en la propia página del chat, que ya lo muestra.
     if (ultimos.length > antes && !/grupo\.html$/.test(location.pathname)) {
       const c = ultimos[0];
-      const quien = c.id === ANUNCIOS_ID
-        ? 'Anuncios Generales'
-        : ((c.names && c.names[c.lastSender]) || 'un compañero');
+      const quien = String(c.id).startsWith('anuncios')
+        ? (c.title || 'Anuncios')
+        : (c.title || (c.names && c.names[c.lastSender]) || 'un compañero');
       toast('Nuevo mensaje de ' + quien, 'success');
     }
   });

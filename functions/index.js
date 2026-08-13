@@ -215,8 +215,10 @@ exports.avisarMensaje = onDocumentCreated('Messages/{id}', async event => {
   const chatSnap = await db.collection('Chats').doc(msg.chatId).get();
   const chat = chatSnap.exists ? chatSnap.data() : {};
 
+  // 'anuncios' viejo iba a todo el mundo; los anuncios nuevos llevan
+  // tienda y van sólo a su gente, igual que el chat de la tienda.
   const esAnuncio = msg.chatId === 'anuncios';
-  const esTienda  = chat.type === 'tienda';
+  const esTienda  = (chat.type === 'tienda' || chat.type === 'anuncios') && chat.store;
   let destinos;
   if (esAnuncio) {
     destinos = await todosLosTokens();
