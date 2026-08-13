@@ -173,6 +173,13 @@ let msgsCache   = [];     // para repintar cuando cambian los "vistos"
 let vistoFirma  = '';     // último estado de "vistos" ya pintado
 let listaFirma  = '';     // última lista de conversaciones ya pintada
 
+// Al cambiar la tienda en la barra lateral cambia la página completa:
+// canal, compañeros y grupos de esa tienda, nada mezclado.
+function onStoreChange(st) {
+  paintList();
+  if (isManager()) openTienda(st);
+}
+
 requireAuth(async () => {
   await buildPeople();
   if (isManager()) document.getElementById('nuevoGrupoBtn').style.display = '';
@@ -231,6 +238,7 @@ async function buildPeople() {
 }
 
 function paintList() {
+  const tiendaAct = getSelectedStore();
   const q = (document.getElementById('chatSearch').value || '').toLowerCase();
   const anunciosMeta = chatMeta[ANUNCIOS_ID] || {};
 
@@ -253,7 +261,7 @@ function paintList() {
 
   const filtered = people.filter(p => p.name.toLowerCase().includes(q));
   const mgrs = filtered.filter(p => p.kind === 'manager');
-  const cols = filtered.filter(p => p.kind === 'colaborador');
+  const cols = filtered.filter(p => p.kind === 'colaborador' && p.store === tiendaAct);
 
   const row = p => {
     const id = dmId(SESSION.pid, p.pid);
@@ -270,8 +278,9 @@ function paintList() {
     </div>`;
   };
 
-  // Canales fijos de tienda: la gerencia ve los dos, cada quien el suyo
-  const misTiendas = isColaborador() ? [SESSION.store] : STORE_IDS;
+  // Todo el chat sigue a la tienda activa: canal, compañeros y grupos.
+  // La gerencia cambia de tienda con el conmutador y ve la otra página.
+  const misTiendas = [tiendaAct];
   const filaTienda = st => {
     const id = tiendaChatId(st);
     const meta = chatMeta[id] || {};
@@ -291,6 +300,7 @@ function paintList() {
   // Grupos de los que formo parte (o todos, si soy gerencia)
   const grupos = Object.values(chatMeta)
     .filter(c => c.type === 'grupo')
+    .filter(c => !c.store || c.store === tiendaAct)
     .filter(c => !q || String(c.title||'').toLowerCase().includes(q))
     .sort((a,b) => String(a.title||'').localeCompare(String(b.title||'')));
   const filaGrupo = c => `
@@ -618,7 +628,11 @@ function abrirGrupo(id) {
   document.getElementById('grpNombre').value = c ? (c.title || '') : '';
 
   const dentro = new Set(c ? (c.participants || []) : []);
-  document.getElementById('grpMiembros').innerHTML = people.map(p => `
+  // El grupo pertenece a la tienda activa: sólo se lista su gente (y la
+  // gerencia), para que las tiendas no se mezclen ni por error.
+  const st = (c && c.store) || getSelectedStore();
+  const elegibles = people.filter(p => p.kind === 'manager' || p.store === st);
+  document.getElementById('grpMiembros').innerHTML = elegibles.map(p => `
     <label class="grp-miembro">
       <input type="checkbox" value="${p.pid}" ${dentro.has(p.pid) ? 'checked' : ''}>
       ${avatarHtml(p.name, 26)}
@@ -647,6 +661,9 @@ async function guardarGrupo() {
       || 'grp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     await db.collection('Chats').doc(id).set({
       type:'grupo', title: nombre, participants, names,
+      store: document.getElementById('grpId').value
+        ? ((chatMeta[document.getElementById('grpId').value]||{}).store || getSelectedStore())
+        : getSelectedStore(),
       createdBy: SESSION.pid
     }, { merge:true });
     closeModal('grupoModal');
