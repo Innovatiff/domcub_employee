@@ -191,14 +191,11 @@ requireAuth(async () => {
     if (activeChat) {
       markChatRead(activeChat.id);
       marcarVisto(activeChat.id, millisOf((chatMeta[activeChat.id]||{}).lastAt));
-      // Repintar la conversación SÓLO si los "vistos" realmente cambiaron;
-      // el documento del chat se toca por muchas otras razones y repintar
-      // todo cada vez se sentía como un tirón en la página.
-      const firma = JSON.stringify((chatMeta[activeChat.id]||{}).vistos || {});
-      if (firma !== vistoFirma) {
-        vistoFirma = firma;
-        if (msgsCache.length) paintMsgs(msgsCache);
-      }
+      // El "Visto" se actualiza en su sitio, sin repintar la conversación:
+      // repintarlo todo por un cambio de visto era el tirón que se sentía.
+      // La marca propia se ignora: sólo importan los vistos de los demás.
+      const firma = vistoFirmaDe(chatMeta[activeChat.id]);
+      if (firma !== vistoFirma) { vistoFirma = firma; refrescarEstado(); }
     }
     // La lista sólo se rearma si cambió algo que la lista muestra
     const fl = list.map(c => [c.id, millisOf(c.lastAt), c.lastMessage, c.lastSender, c.title].join('|')).join('§');
@@ -498,6 +495,7 @@ function paintMsgs(msgs) {
     }
   });
   box.innerHTML = html;
+  estadoFirma = '';
   if (alFinal) box.scrollTop = box.scrollHeight;
 }
 
@@ -634,6 +632,26 @@ async function borrarGrupo() {
     if (activeChat && activeChat.id === id) { activeChat = null; openAnuncios(); }
     toast('Grupo eliminado', 'info');
   } catch (err) { toast('Error: ' + err.message, 'error'); }
+}
+// Firma de los vistos AJENOS (la marca propia cambia sola y no se muestra)
+function vistoFirmaDe(meta) {
+  const v = (meta && meta.vistos) || {};
+  return Object.keys(v).filter(p => p !== SESSION.pid).sort()
+    .map(p => p + ':' + millisOf(v[p])).join('|');
+}
+
+// Cambia únicamente la línea de estado bajo mi último mensaje.
+let estadoFirma = '';
+function refrescarEstado() {
+  if (!activeChat || !msgsCache.length) return;
+  const m = msgsCache[msgsCache.length - 1];
+  if (m.senderId !== SESSION.pid) return;
+  const html = estadoDe(m);
+  if (html === estadoFirma) return;
+  const nodo = document.querySelector('#chatMsgs .msg-estado');
+  if (!nodo) { paintMsgs(msgsCache); estadoFirma = html; return; }
+  estadoFirma = html;
+  nodo.outerHTML = html;
 }
 </script>
 </body>
