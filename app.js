@@ -219,9 +219,28 @@ function updateSidebarUser(s) {
   el.innerHTML = `
     <div class="avatar" style="width:31px;height:31px;background:${avatarColor(s.name)}">${initials(s.name)}</div>
     <div style="overflow:hidden;min-width:0">
-      <div class="sidebar-user-name">${s.name || 'Usuario'}</div>
+      <div class="sidebar-user-name">${escapeHtml(s.name || 'Usuario')}</div>
       <div class="sidebar-user-role">${roleLabel(s.role)}</div>
-    </div>`;
+    </div>
+    ${isManager() ? `<button class="btn-icon nombre-editar" title="Cambiar mi nombre"
+      onclick="editarMiNombre()"><ion-icon name="create-outline"></ion-icon></button>` : ''}`;
+}
+
+// La cuenta de gerencia nace con el nombre sacado del correo; aquí se le
+// pone el nombre real, que es el que ve todo el mundo en el chat, los
+// permisos ("decidido por") y las notas.
+async function editarMiNombre() {
+  const nuevo = prompt('Tu nombre, como debe verse en el sistema:', SESSION.name || '');
+  if (nuevo === null) return;
+  const nombre = nuevo.trim();
+  if (!nombre) { toast('El nombre no puede quedar vacío.', 'error'); return; }
+  try {
+    await db.collection('Main').doc(SESSION.uid).update({ name: nombre });
+    await db.collection('UserIndex').doc(SESSION.uid).set({ name: nombre }, { merge:true });
+    SESSION.name = nombre;
+    updateSidebarUser(SESSION);
+    toast('Nombre actualizado: ' + nombre, 'success');
+  } catch (err) { toast('No se pudo cambiar: ' + err.message, 'error'); }
 }
 
 function signOut() {
