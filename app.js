@@ -1166,6 +1166,18 @@ async function ensureAnuncios() {
   return ANUNCIOS_ID;
 }
 
+// El canal de cada tienda: un chat fijo donde habla toda su gente.
+// Las reglas cuidan que sólo entre la gente de esa tienda y la gerencia.
+function tiendaChatId(store) { return 'tienda_' + store; }
+
+async function ensureTienda(store) {
+  const id = tiendaChatId(store);
+  await db.collection('Chats').doc(id).set({
+    type:'tienda', store, title: 'Chat de ' + storeShort(store)
+  }, { merge:true });
+  return id;
+}
+
 async function sendMessage(chatId, text) {
   const clean = String(text || '').trim();
   if (!clean) return;
@@ -1202,8 +1214,10 @@ function listenMessages(chatId, cb) {
 // las reglas limitan la lectura a las conversaciones propias. Se abren
 // dos escuchas: las mías, y el canal de anuncios (que es público).
 function listenChats(cb) {
-  const state = { mine: [], anuncios: null };
-  const emit = () => cb(state.anuncios ? state.mine.concat([state.anuncios]) : state.mine);
+  const state = { mine: [], anuncios: null, tiendas: {} };
+  const emit = () => cb(state.mine
+    .concat(state.anuncios ? [state.anuncios] : [])
+    .concat(Object.values(state.tiendas)));
 
   const unsubMine = db.collection('Chats')
     .where('participants','array-contains', SESSION.pid)
@@ -1218,7 +1232,16 @@ function listenChats(cb) {
       emit();
     }, err => console.error('listenChats(anuncios):', err));
 
-  return () => { unsubMine(); unsubAnuncios(); };
+  // Los canales de tienda no llevan lista de participantes, así que se
+  // escuchan aparte: la gerencia los dos, el colaborador sólo el suyo.
+  const tiendas = isColaborador() ? [SESSION.store] : STORE_IDS;
+  const unsubTiendas = tiendas.map(st =>
+    db.collection('Chats').doc(tiendaChatId(st)).onSnapshot(doc => {
+      if (doc.exists) state.tiendas[doc.id] = { id:doc.id, ...doc.data() };
+      emit();
+    }, err => console.error('listenChats(tienda):', err)));
+
+  return () => { unsubMine(); unsubAnuncios(); unsubTiendas.forEach(u => u()); };
 }
 
 // ══ Avisos de mensajes nuevos ══

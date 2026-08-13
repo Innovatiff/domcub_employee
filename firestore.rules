@@ -48,6 +48,15 @@ service cloud.firestore {
     function isManager() {
       return signedIn() && provider() == 'password' && !isColabAccount();
     }
+    // La tienda del colaborador de la sesión (sólo cuentas del portal)
+    function miTienda() {
+      return get(/databases/$(database)/documents/Employees/$(colabEmpId())).data.store;
+    }
+    // ¿Puede esta sesión estar en el canal de esa tienda?
+    function enCanalTienda(chatId) {
+      return isManager()
+        || (isColabAccount() && ('tienda_' + miTienda()) == chatId);
+    }
 
     function haveIndex() {
       return exists(/databases/$(database)/documents/UserIndex/$(request.auth.uid));
@@ -262,6 +271,8 @@ service cloud.firestore {
       allow read: if signedIn() && (
            resource == null
         || resource.data.type == 'anuncios'
+        // El canal de cada tienda: sólo su gente y la gerencia
+        || (resource.data.type == 'tienda' && enCanalTienda(chatId))
         || (haveIndex() && myPid() in resource.data.participants)
       );
       // Los grupos los arma sólo la gerencia; las conversaciones privadas
@@ -269,6 +280,8 @@ service cloud.firestore {
       allow create: if signedIn() && (
            request.resource.data.type == 'anuncios'
         || (request.resource.data.type == 'grupo' && isManager())
+        // El canal de la tienda lo puede dejar creado cualquiera de su gente
+        || (request.resource.data.type == 'tienda' && enCanalTienda(chatId))
         || (haveIndex() && myPid() in request.resource.data.participants)
       );
       // La gerencia puede cambiar lo que sea (miembros, nombre). Un
@@ -276,6 +289,10 @@ service cloud.firestore {
       // resumen del último mensaje. Así nadie se mete solo a un grupo.
       allow update: if isManager() || (signedIn() && (
            resource.data.type == 'anuncios'
+        // En el canal de tienda un colaborador sólo toca lo operativo
+        || (resource.data.type == 'tienda' && enCanalTienda(chatId)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['vistos','lastMessage','lastSender','lastAt','names','type','store','title']))
         || (haveIndex() && myPid() in resource.data.participants
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['vistos','lastMessage','lastSender','lastAt','names','type','participants'])
@@ -290,16 +307,22 @@ service cloud.firestore {
     match /Messages/{id} {
       allow read: if signedIn() && (
            resource.data.chatId == 'anuncios'
+        // Los mensajes del canal de una tienda sólo los ve su gente
+        || (resource.data.chatId in ['tienda_1', 'tienda_2']
+            && enCanalTienda(resource.data.chatId))
         || (haveIndex() && myPid() in chatParticipants(resource.data.chatId))
       );
 
       // Sólo puedes enviar como tú mismo.
-      // En Anuncios Generales únicamente publica la gerencia.
+      // En Anuncios Generales únicamente publica la gerencia; en el canal
+      // de una tienda, su gente y la gerencia.
       allow create: if signedIn() && haveIndex()
         && request.resource.data.senderId == myPid()
         && (
              request.resource.data.chatId == 'anuncios'
                ? isManager()
+               : request.resource.data.chatId in ['tienda_1', 'tienda_2']
+               ? enCanalTienda(request.resource.data.chatId)
                : myPid() in chatParticipants(request.resource.data.chatId)
            );
 
@@ -314,6 +337,8 @@ service cloud.firestore {
              .affectedKeys().hasOnly([myPid()])
         && (
              resource.data.chatId == 'anuncios'
+          || (resource.data.chatId in ['tienda_1', 'tienda_2']
+              && enCanalTienda(resource.data.chatId))
           || myPid() in chatParticipants(resource.data.chatId)
         );
       allow delete: if isManager();

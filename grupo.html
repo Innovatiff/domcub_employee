@@ -221,6 +221,11 @@ async function buildPeople() {
       sub: storeShort(e.store), kind: 'colaborador', store: e.store, empId: e.id
     });
   });
+  // Un colaborador sólo ve a su gerencia y a los compañeros de SU tienda;
+  // las tiendas no se mezclan. La gerencia ve a todo el mundo.
+  if (isColaborador()) {
+    people = people.filter(p => p.kind === 'manager' || p.store === SESSION.store);
+  }
   // Nunca listarse a uno mismo
   people = people.filter(p => p.pid !== SESSION.pid);
 }
@@ -265,6 +270,24 @@ function paintList() {
     </div>`;
   };
 
+  // Canales fijos de tienda: la gerencia ve los dos, cada quien el suyo
+  const misTiendas = isColaborador() ? [SESSION.store] : STORE_IDS;
+  const filaTienda = st => {
+    const id = tiendaChatId(st);
+    const meta = chatMeta[id] || {};
+    return `<div class="chat-item ${activeChat && activeChat.id===id ? 'active':''}" onclick="openTienda('${st}')">
+      <div class="chat-ava tienda" style="--sc:${STORES[st].color}"><ion-icon name="storefront-outline"></ion-icon></div>
+      <div style="min-width:0;flex:1">
+        <div class="chat-item-top">
+          <span class="chat-item-name">Chat de ${storeShort(st)}${punto(id)}</span>
+          <span class="chat-item-time">${meta.lastAt ? relativeTime(meta.lastAt) : ''}</span>
+        </div>
+        <div class="chat-item-sub">${escapeHtml(meta.lastMessage || 'Toda la tienda, sin mezclar')}</div>
+      </div>
+    </div>`;
+  };
+  const tiendasHtml = `<div class="chat-group-label">Tiendas</div>${misTiendas.map(filaTienda).join('')}`;
+
   // Grupos de los que formo parte (o todos, si soy gerencia)
   const grupos = Object.values(chatMeta)
     .filter(c => c.type === 'grupo')
@@ -284,6 +307,7 @@ function paintList() {
 
   document.getElementById('chatList').innerHTML =
     anuncios +
+    tiendasHtml +
     (grupos.length ? `<div class="chat-group-label">Grupos</div>${grupos.map(filaGrupo).join('')}` : '') +
     (mgrs.length ? `<div class="chat-group-label">Gerencia</div>${mgrs.map(row).join('')}` : '') +
     (cols.length ? `<div class="chat-group-label">Colaboradores</div>${cols.map(row).join('')}` : '') +
@@ -307,6 +331,13 @@ async function openDm(otherPid) {
   mountChat();
 }
 
+async function openTienda(st) {
+  await ensureTienda(st);
+  activeChat = { id: tiendaChatId(st), type:'tienda', title:'Chat de ' + storeShort(st),
+                 sub:'Toda la tienda · ' + storeName(st), canPost:true, store: st };
+  mountChat();
+}
+
 function openGrupo(id) {
   const c = chatMeta[id];
   if (!c) return;
@@ -326,6 +357,10 @@ function mountChat() {
        <div><div class="chat-head-name">${activeChat.title}</div>
        <div class="chat-head-sub">${activeChat.sub}</div></div>
        <span class="badge badge-purple" style="margin-left:auto"><ion-icon name="lock-closed-outline" style="font-size:9px"></ion-icon>Sólo anuncios</span>`
+    : activeChat.type === 'tienda'
+    ? `<div class="chat-ava tienda" style="--sc:${STORES[activeChat.store].color}"><ion-icon name="storefront-outline"></ion-icon></div>
+       <div><div class="chat-head-name">${escapeHtml(activeChat.title)}</div>
+       <div class="chat-head-sub">${escapeHtml(activeChat.sub)}</div></div>`
     : activeChat.type === 'grupo'
     ? `<div class="chat-ava grupo"><ion-icon name="people-outline"></ion-icon></div>
        <div><div class="chat-head-name">${escapeHtml(activeChat.title)}</div>
@@ -410,7 +445,7 @@ function estadoDe(m) {
   const tMs = m.createdAt && m.createdAt.toMillis ? m.createdAt.toMillis() : 0;
   if (!tMs) return `<div class="msg-estado"><ion-icon name="time-outline"></ion-icon> Enviando…</div>`;
 
-  if (activeChat.type === 'anuncios' || activeChat.type === 'grupo') {
+  if (activeChat.type !== 'dm') {
     const quienes = Object.keys(vistos)
       .filter(p => p !== SESSION.pid && millisOf(vistos[p]) >= tMs);
     return quienes.length
@@ -485,7 +520,7 @@ function paintMsgs(msgs) {
             : `<div class="bubble-text">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>`}
           <time>${formatTime(d)}</time>
         </div>`;
-      const quien = !mine && activeChat.type === 'grupo' && !seguido
+      const quien = !mine && (activeChat.type === 'grupo' || activeChat.type === 'tienda') && !seguido
         ? `<div class="bubble-quien">${escapeHtml(m.senderName || '')}</div>` : '';
       const col = `<div class="bubble-col">${quien}${burbuja}${rxPills(m)}${esUltimoMio ? estadoDe(m) : ''}</div>`;
       html += `<div class="bubble-row ${mine?'mine':''} ${seguido?'seguido':''} ${ultimo?'ultimo':''}">
