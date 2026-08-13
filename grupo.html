@@ -188,7 +188,7 @@ requireAuth(async () => {
   // Si se llega desde un aviso (grupo.html?chat=...) se abre esa
   // conversación; si no, Anuncios por defecto.
   const pedido = new URLSearchParams(location.search).get('chat');
-  const otro = pedido && pedido !== ANUNCIOS_ID
+  const otro = pedido && !String(pedido).startsWith('anuncios')
     ? people.find(p => dmId(SESSION.pid, p.pid) === pedido) : null;
   if (otro) openDm(otro.pid); else openAnuncios();
   unsubChats = listenChats(list => {
@@ -240,7 +240,7 @@ async function buildPeople() {
 function paintList() {
   const tiendaAct = getSelectedStore();
   const q = (document.getElementById('chatSearch').value || '').toLowerCase();
-  const anunciosMeta = chatMeta[ANUNCIOS_ID] || {};
+  const anunciosMeta = chatMeta[anunciosId(tiendaAct)] || {};
 
   // Conversaciones con mensajes que aún no he visto
   const sinLeer = {};
@@ -248,11 +248,11 @@ function paintList() {
   const punto = id => sinLeer[id] ? '<span class="chat-unread"></span>' : '';
 
   const anuncios = `
-    <div class="chat-item ${activeChat && activeChat.id===ANUNCIOS_ID ? 'active':''}" onclick="openAnuncios()">
+    <div class="chat-item ${activeChat && activeChat.id===anunciosId(tiendaAct) ? 'active':''}" onclick="openAnuncios()">
       <div class="chat-ava anuncios"><ion-icon name="megaphone-outline"></ion-icon></div>
       <div style="min-width:0;flex:1">
         <div class="chat-item-top">
-          <span class="chat-item-name">Anuncios Generales${punto(ANUNCIOS_ID)}</span>
+          <span class="chat-item-name">Anuncios de ${storeShort(tiendaAct)}${punto(anunciosId(tiendaAct))}</span>
           <span class="chat-item-time">${anunciosMeta.lastAt ? relativeTime(anunciosMeta.lastAt) : ''}</span>
         </div>
         <div class="chat-item-sub">${escapeHtml(anunciosMeta.lastMessage || 'Todo el equipo · sólo anuncios')}</div>
@@ -325,10 +325,11 @@ function paintList() {
 }
 
 async function openAnuncios() {
-  await ensureAnuncios();
+  const st = getSelectedStore();
+  await ensureAnuncios(st);
   const canPost = isManager();
-  activeChat = { id: ANUNCIOS_ID, type:'anuncios', title:'Anuncios Generales',
-                 sub:'Todo el equipo · eventos, cumpleaños y programas', canPost };
+  activeChat = { id: anunciosId(st), type:'anuncios', title:'Anuncios de ' + storeShort(st),
+                 sub:'Toda la tienda · eventos, cumpleaños y programas', canPost, store: st };
   mountChat();
 }
 

@@ -365,12 +365,12 @@ async function felicitar(i, btn) {
   if (!ev) return;
   btn.disabled = true;
   try {
-    await ensureAnuncios();
+    await ensureAnuncios(ev.emp.store);
     const msg = ev.tipo === 'cumple'
       ? `🎂🎉 ¡Feliz cumpleaños, ${ev.emp.name}! Todo el equipo de El Águila te desea un día increíble. 🥳`
       : `🏅🎉 ¡Felicidades, ${ev.emp.name}! Hoy cumples ${ev.anos} ${ev.anos===1?'año':'años'} con nosotros en El Águila. ¡Gracias por tu trabajo!`;
-    await sendMessage(ANUNCIOS_ID, msg);
-    toast('Anuncio publicado para todo el equipo', 'success');
+    await sendMessage(anunciosId(ev.emp.store), msg);
+    toast('Anuncio publicado para ' + storeName(ev.emp.store), 'success');
     btn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Publicado';
   } catch (err) {
     btn.disabled = false;
@@ -546,12 +546,12 @@ async function bjFelicitar(i, btn) {
   if (!ev) return;
   btn.disabled = true;
   try {
-    await ensureAnuncios();
+    await ensureAnuncios(ev.emp.store);
     const msg = ev.tipo === 'cumple'
       ? `🎂🎉 ¡Feliz cumpleaños, ${ev.emp.name}! Todo el equipo de El Águila te desea un día increíble. 🥳`
       : `🏅🎉 ¡Felicidades, ${ev.emp.name}! Hoy cumples ${ev.anos} ${ev.anos===1?'año':'años'} con nosotros en El Águila. ¡Gracias por tu trabajo!`;
-    await sendMessage(ANUNCIOS_ID, msg);
-    toast('Anuncio publicado', 'success');
+    await sendMessage(anunciosId(ev.emp.store), msg);
+    toast('Anuncio publicado para ' + storeName(ev.emp.store), 'success');
     btn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Publicado';
   } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
 }
