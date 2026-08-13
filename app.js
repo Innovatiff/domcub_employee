@@ -1147,15 +1147,16 @@ function dmId(a, b) { return 'dm_' + [a,b].sort().join('__'); }
 
 async function ensureDm(meP, otherP, names) {
   const id = dmId(meP, otherP);
-  // Ojo: NO se puede consultar antes si existe. Las reglas resuelven la
-  // lectura de un chat mirando `resource.data.participants`, y en un
-  // documento que todavía no existe `resource` es nulo, así que la lectura
-  // se deniega y la conversación nunca llegaba a crearse. Se escribe
-  // directamente con merge, que sirve igual para crear que para actualizar.
-  // Sólo se tocan los campos estables, para no borrar el último mensaje.
-  await db.collection('Chats').doc(id).set({
-    type:'dm', participants:[meP, otherP], names:names || {}
-  }, { merge:true });
+  const ref = db.collection('Chats').doc(id);
+  // Primero se mira si ya existe (las reglas permiten leer un documento
+  // inexistente con el caso `resource == null`). Antes se escribía siempre
+  // con merge, y eso tenía dos males: una escritura extra en cada apertura,
+  // y un choque cuando el OTRO lado había creado el chat con los
+  // participantes en otro orden — la regla lo veía como un cambio de
+  // miembros y lo negaba, y la conversación "no abría".
+  const doc = await ref.get();
+  if (doc.exists) return id;
+  await ref.set({ type:'dm', participants:[meP, otherP].sort(), names:names || {} });
   return id;
 }
 
@@ -1164,9 +1165,10 @@ function anunciosId(store) { return 'anuncios_' + store; }
 
 async function ensureAnuncios(store) {
   const id = anunciosId(store);
-  await db.collection('Chats').doc(id).set({
-    type:'anuncios', store, title: 'Anuncios de ' + storeShort(store)
-  }, { merge:true });
+  const ref = db.collection('Chats').doc(id);
+  const doc = await ref.get();          // leer es más barato que escribir
+  if (doc.exists) return id;
+  await ref.set({ type:'anuncios', store, title: 'Anuncios de ' + storeShort(store) });
   return id;
 }
 
@@ -1176,9 +1178,10 @@ function tiendaChatId(store) { return 'tienda_' + store; }
 
 async function ensureTienda(store) {
   const id = tiendaChatId(store);
-  await db.collection('Chats').doc(id).set({
-    type:'tienda', store, title: 'Chat de ' + storeShort(store)
-  }, { merge:true });
+  const ref = db.collection('Chats').doc(id);
+  const doc = await ref.get();          // leer es más barato que escribir
+  if (doc.exists) return id;
+  await ref.set({ type:'tienda', store, title: 'Chat de ' + storeShort(store) });
   return id;
 }
 

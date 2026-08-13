@@ -336,10 +336,16 @@ async function openAnuncios() {
 async function openDm(otherPid) {
   const other = people.find(p => p.pid === otherPid);
   if (!other) return;
-  const names = {}; names[SESSION.pid] = SESSION.name; names[other.pid] = other.name;
-  const id = await ensureDm(SESSION.pid, other.pid, names);
-  activeChat = { id, type:'dm', title:other.name, sub:other.sub, canPost:true, other };
-  mountChat();
+  try {
+    const names = {}; names[SESSION.pid] = SESSION.name; names[other.pid] = other.name;
+    const id = await ensureDm(SESSION.pid, other.pid, names);
+    activeChat = { id, type:'dm', title:other.name, sub:other.sub, canPost:true, other };
+    mountChat();
+  } catch (err) {
+    // Antes el fallo era silencioso y parecía que "no pasaba nada"
+    console.error('openDm', err);
+    toast('No se pudo abrir la conversación: ' + err.message, 'error');
+  }
 }
 
 async function openTienda(st) {
