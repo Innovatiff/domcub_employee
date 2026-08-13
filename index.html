@@ -87,6 +87,8 @@
     <button class="btn btn-primary" onclick="openClockModal()"><ion-icon name="finger-print-outline"></ion-icon> Marcar Entrada / Salida</button>
   </div>
 
+  <div id="bandeja"></div>
+
   <div id="festejosCard" style="display:none"></div>
 
   <div class="stats-grid" id="statsGrid">
@@ -171,6 +173,7 @@ async function render() {
       getOpenClockIns()
     ]);
     pintarFestejos(allEmps);
+    pintarBandeja();
 
     const emps = store === 'all' ? allEmps : allEmps.filter(e => e.store === store);
     const active = emps.filter(e => e.status === 'active');
@@ -373,6 +376,184 @@ async function felicitar(i, btn) {
     btn.disabled = false;
     toast('No se pudo publicar: ' + err.message, 'error');
   }
+}
+// ══ Bandeja del día: todo lo que espera una decisión, en un solo lugar ══
+let bandeja = null;
+
+async function pintarBandeja() {
+  const host = document.getElementById('bandeja');
+  try { bandeja = await bandejaDelDia(); }
+  catch (err) { console.error('bandeja', err); host.innerHTML = ''; return; }
+
+  const b = bandeja;
+  const items = [];
+  const tiendaTag = st => st ? `<span class="bj-tienda">${storeShort(st)}</span>` : '';
+
+  b.olvidados.forEach((c, i) => {
+    const emp = b.emps.find(e => e.id === c.employeeId);
+    items.push(`<div class="bj-item bj-rojo">
+      <ion-icon name="alarm-outline"></ion-icon>
+      <div class="bj-txt"><strong>${escapeHtml(emp ? emp.name : '—')}</strong> tiene un turno sin cerrar
+        del <b>${formatDate(c.date)}</b> ${tiendaTag(c.store)}</div>
+      <div class="bj-acciones">
+        <input type="time" id="bjHora${i}" value="17:00" class="bj-hora">
+        <button class="btn btn-sm btn-primary" onclick="bjCerrarTurno('${c.id}', ${i}, this)">Cerrar turno</button>
+      </div>
+    </div>`);
+  });
+
+  b.permisos.forEach(t => {
+    items.push(`<div class="bj-item">
+      <ion-icon name="calendar-outline"></ion-icon>
+      <div class="bj-txt"><strong>${escapeHtml(t.employeeName || '—')}</strong> pide permiso
+        del <b>${formatDate(t.startDate)}</b> al <b>${formatDate(t.endDate)}</b>
+        ${t.reason ? '· ' + escapeHtml(t.reason) : ''}</div>
+      <div class="bj-acciones">
+        <button class="btn btn-sm btn-success" onclick="bjAprobar('${t.id}', this)">Aprobar</button>
+        <button class="btn btn-sm btn-outline" onclick="bjDenegar('${t.id}', this)">Denegar</button>
+      </div>
+    </div>`);
+  });
+
+  b.reportes.forEach(r => {
+    items.push(`<div class="bj-item bj-ambar">
+      <ion-icon name="warning-outline"></ion-icon>
+      <div class="bj-txt"><strong>${escapeHtml(r.nombre || '—')}</strong> reportó:
+        “${escapeHtml(String(r.texto || '').slice(0, 90))}${String(r.texto||'').length > 90 ? '…' : ''}”
+        ${r.foto ? '📷' : ''} ${tiendaTag(r.store)}</div>
+      <div class="bj-acciones">
+        <a class="btn btn-sm btn-outline" href="reportes.html">Ver</a>
+        <button class="btn btn-sm btn-primary" onclick="bjRevisarReporte('${r.id}', this)">Revisado</button>
+      </div>
+    </div>`);
+  });
+
+  b.pedidosEnv.forEach(p => {
+    items.push(`<div class="bj-item">
+      <ion-icon name="clipboard-outline"></ion-icon>
+      <div class="bj-txt">Pedido <strong>${escapeHtml(p.title || '—')}</strong> enviado
+        ${p.date ? 'el ' + formatDate(p.date) : ''}, sin marcar recibido ${tiendaTag(p.store)}</div>
+      <div class="bj-acciones">
+        <a class="btn btn-sm btn-outline" href="pedidos.html">Ver</a>
+        <button class="btn btn-sm btn-primary" onclick="bjRecibirPedido('${p.id}', this)">Recibido</button>
+      </div>
+    </div>`);
+  });
+
+  b.cumplesHoy.forEach((ev, i) => {
+    items.push(`<div class="bj-item bj-fiesta">
+      <ion-icon name="gift-outline"></ion-icon>
+      <div class="bj-txt">¡Hoy es ${ev.tipo === 'cumple' ? 'el cumpleaños' : 'el aniversario (' + ev.anos + (ev.anos===1?' año)':' años)')} de
+        <strong>${escapeHtml(ev.emp.name)}</strong>!</div>
+      <div class="bj-acciones">
+        <button class="btn btn-sm btn-primary" onclick="bjFelicitar(${i}, this)">
+          <ion-icon name="megaphone-outline"></ion-icon> Publicar anuncio</button>
+      </div>
+    </div>`);
+  });
+
+  if (b.migracion) {
+    items.push(`<div class="bj-item">
+      <ion-icon name="sparkles-outline"></ion-icon>
+      <div class="bj-txt"><strong>${b.migracion}</strong> ${b.migracion===1?'colaborador':'colaboradores'} por poner al día</div>
+      <div class="bj-acciones"><a class="btn btn-sm btn-primary" href="employees.html">Resolver</a></div>
+    </div>`);
+  }
+
+  // Resumen semanal del domingo, si la función ya dejó uno
+  let resumenHtml = '';
+  try {
+    const r = await ultimoResumen();
+    if (r && r.texto) resumenHtml = `
+      <div class="bj-resumen">
+        <div class="bj-resumen-head" onclick="this.parentElement.classList.toggle('abierto')">
+          <ion-icon name="stats-chart-outline"></ion-icon>
+          <strong>Resumen semanal</strong> <span>· ${escapeHtml(r.semana || '')}</span>
+          <ion-icon name="chevron-down-outline" class="bj-caret"></ion-icon>
+        </div>
+        <pre class="bj-resumen-body">${escapeHtml(r.texto)}</pre>
+      </div>`;
+  } catch (e) { /* sin resumen todavía */ }
+
+  host.innerHTML = `
+    <div class="card bandeja-card">
+      <div class="card-header">
+        <span class="card-title"><ion-icon name="file-tray-full-outline" style="color:var(--primary)"></ion-icon> Bandeja del día</span>
+        ${items.length
+          ? `<span class="badge badge-red">${items.length} ${items.length===1?'pendiente':'pendientes'}</span>`
+          : '<span class="badge badge-green">Todo al día</span>'}
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+        ${items.length ? items.join('') : `
+          <div class="bj-vacia"><ion-icon name="checkmark-done-circle-outline"></ion-icon>
+            Nada espera tu decisión. Las dos tiendas al día.</div>`}
+        ${resumenHtml}
+      </div>
+    </div>`;
+}
+
+async function bjCerrarTurno(id, i, btn) {
+  const hora = document.getElementById('bjHora' + i).value;
+  if (!hora) { toast('Escribe la hora de salida.', 'error'); return; }
+  btn.disabled = true;
+  try {
+    const h = await cerrarTurnoOlvidado(id, hora);
+    toast(`Turno cerrado · ${numES(h, 2)} h`, 'success');
+    render();
+  } catch (err) { btn.disabled = false; toast(err.message, 'error'); }
+}
+
+async function bjAprobar(id, btn) {
+  btn.disabled = true;
+  try {
+    const t = bandeja.permisos.find(x => x.id === id);
+    const n = await aprobarPermiso(t);
+    toast('Permiso aprobado' + (n > 0 ? ` · ${n} ${n===1?'turno quitado':'turnos quitados'} del horario` : ''), 'success');
+    if (n === -1) setTimeout(() => toast('Revisa el horario: no se pudieron quitar sus turnos.', 'error'), 700);
+    pintarBandeja();
+  } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
+}
+
+async function bjDenegar(id, btn) {
+  const motivo = prompt('Motivo (el colaborador lo verá):');
+  if (motivo === null) return;
+  btn.disabled = true;
+  try {
+    await denegarPermiso(id, motivo.trim());
+    toast('Permiso denegado', 'info');
+    pintarBandeja();
+  } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
+}
+
+async function bjRevisarReporte(id, btn) {
+  btn.disabled = true;
+  try { await marcarReporteVisto(id); toast('Reporte revisado', 'success'); pintarBandeja(); }
+  catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
+}
+
+async function bjRecibirPedido(id, btn) {
+  btn.disabled = true;
+  try {
+    await db.collection('Pedidos').doc(id).update({
+      status: 'recibido', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    toast('Pedido marcado como recibido', 'success');
+    pintarBandeja();
+  } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
+}
+
+async function bjFelicitar(i, btn) {
+  const ev = bandeja.cumplesHoy[i];
+  if (!ev) return;
+  btn.disabled = true;
+  try {
+    await ensureAnuncios();
+    const msg = ev.tipo === 'cumple'
+      ? `🎂🎉 ¡Feliz cumpleaños, ${ev.emp.name}! Todo el equipo de El Águila te desea un día increíble. 🥳`
+      : `🏅🎉 ¡Felicidades, ${ev.emp.name}! Hoy cumples ${ev.anos} ${ev.anos===1?'año':'años'} con nosotros en El Águila. ¡Gracias por tu trabajo!`;
+    await sendMessage(ANUNCIOS_ID, msg);
+    toast('Anuncio publicado', 'success');
+    btn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Publicado';
+  } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
 }
 </script>
 </body>

@@ -77,9 +77,14 @@
       <h1>Horario</h1>
       <p>Asigna los turnos de la semana. Los permisos aprobados quitan a la persona solos.</p>
     </div>
-    <button class="btn btn-outline" id="copiarBtn" onclick="copiarSemanaAnterior()">
-      <ion-icon name="copy-outline"></ion-icon> Copiar semana anterior
-    </button>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" onclick="abrirPlantillas()">
+        <ion-icon name="albums-outline"></ion-icon> Plantillas
+      </button>
+      <button class="btn btn-outline" id="copiarBtn" onclick="copiarSemanaAnterior()">
+        <ion-icon name="copy-outline"></ion-icon> Copiar semana anterior
+      </button>
+    </div>
   </div>
 
   <!-- Navegación de semana -->
@@ -127,6 +132,28 @@
         <button class="btn btn-outline" onclick="closeModal('turnoModal')">Cancelar</button>
         <button class="btn btn-primary" onclick="guardarTurno()">Guardar</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de plantillas de semana -->
+<div class="modal-overlay" id="plantillasModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Plantillas de semana — <span id="plTienda"></span></h3>
+      <button class="modal-close" onclick="closeModal('plantillasModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 14px">
+        Guarda una "semana tipo" (normal, de fiesta, de inventario…) y aplícala
+        a cualquier semana con un clic. Los días con permiso aprobado se saltan solos.
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="plNombre" placeholder="Nombre: Semana normal, Semana de fiesta..." style="flex:1">
+        <button class="btn btn-primary" id="plGuardarBtn" onclick="guardarPlantilla()">
+          <ion-icon name="save-outline"></ion-icon> Guardar esta semana</button>
+      </div>
+      <div id="plLista"></div>
     </div>
   </div>
 </div>
@@ -378,7 +405,7 @@ async function copiarSemanaAnterior() {
     for (const empId of Object.keys(origen)) {
       if (!activos.has(empId)) continue;         // ya no está en la tienda
       for (let i = 0; i < 7; i++) {
-        const t = origen[diasPrev[i]];
+        const t = (origen[empId] || {})[diasPrev[i]];
         if (!t) continue;
         if (conPermiso(empId, diasNuevo[i])) { saltadosPermiso++; continue; }
         (shifts[empId] = shifts[empId] || {})[diasNuevo[i]] = { ...t };
@@ -395,6 +422,121 @@ async function copiarSemanaAnterior() {
   } finally {
     btn.disabled = false;
   }
+}
+// ══ Plantillas de semana ══
+//
+// Viven en la misma colección Horarios con id "tpl_..." y turnos por día
+// de la semana (0 = lunes), no por fecha: así valen para cualquier semana.
+
+async function getPlantillas() {
+  const snap = await db.collection('Horarios')
+    .where('plantilla','==',true).where('store','==',tiendaActiva()).get();
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }))
+    .sort((a,b) => String(a.name||'').localeCompare(String(b.name||'')));
+}
+
+function abrirPlantillas() {
+  document.getElementById('plTienda').textContent = storeName(tiendaActiva());
+  document.getElementById('plNombre').value = '';
+  openModal('plantillasModal');
+  pintarPlantillasH();
+}
+
+async function pintarPlantillasH() {
+  const host = document.getElementById('plLista');
+  host.innerHTML = '<div class="empty-state"><ion-icon name="sync-outline" class="gira"></ion-icon></div>';
+  try {
+    const pls = await getPlantillas();
+    host.innerHTML = pls.length ? pls.map(p => {
+      const personas = Object.keys(p.turnos || {}).length;
+      const turnos = Object.values(p.turnos || {}).reduce((s,m) => s + Object.keys(m).length, 0);
+      return `<div class="tpl-row" style="cursor:default">
+        <ion-icon name="albums-outline"></ion-icon>
+        <div style="flex:1;min-width:0">
+          <strong>${escapeHtml(p.name)}</strong>
+          <div class="tpl-sub">${personas} ${personas===1?'persona':'personas'} · ${turnos} turnos</div>
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="aplicarPlantilla('${p.id}', this)">Aplicar a esta semana</button>
+        <button class="btn-icon" title="Borrar" onclick="borrarPlantilla('${p.id}')"><ion-icon name="trash-outline"></ion-icon></button>
+      </div>`;
+    }).join('')
+    : '<div class="empty-state"><ion-icon name="albums-outline"></ion-icon><p>Sin plantillas todavía. Arma una semana y guárdala.</p></div>';
+  } catch (err) {
+    host.innerHTML = `<div class="empty-state" style="color:var(--danger)">Error: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function guardarPlantilla() {
+  const name = document.getElementById('plNombre').value.trim();
+  if (!name) { toast('Ponle nombre a la plantilla.', 'error'); return; }
+
+  // La semana visible se convierte a días de la semana (0 = lunes)
+  const dias = diasDeSemana(lunes);
+  const turnos = {};
+  let n = 0;
+  Object.keys(horario.shifts || {}).forEach(empId => {
+    dias.forEach((f, i) => {
+      const t = horario.shifts[empId][f];
+      if (t) { (turnos[empId] = turnos[empId] || {})[i] = { ...t }; n++; }
+    });
+  });
+  if (!n) { toast('Esta semana está vacía; no hay nada que guardar.', 'error'); return; }
+
+  const btn = document.getElementById('plGuardarBtn');
+  btn.disabled = true;
+  try {
+    const id = 'tpl_' + tiendaActiva() + '_' + Date.now().toString(36);
+    await db.collection('Horarios').doc(id).set({
+      plantilla: true, name, store: tiendaActiva(), turnos,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('plNombre').value = '';
+    toast(`Plantilla "${name}" guardada · ${n} turnos`, 'success');
+    pintarPlantillasH();
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function aplicarPlantilla(id, btn) {
+  const tiene = Object.values(horario.shifts || {}).some(m => Object.keys(m).length);
+  if (tiene && !confirm('Esta semana ya tiene turnos. ¿Reemplazarlos con la plantilla?')) return;
+  btn.disabled = true;
+  try {
+    const doc = await db.collection('Horarios').doc(id).get();
+    if (!doc.exists) { toast('Esa plantilla ya no existe.', 'error'); return; }
+    const p = doc.data();
+
+    const dias = diasDeSemana(lunes);
+    const activos = new Set(emps.map(e => e.id));
+    const shifts = {};
+    let saltadosPermiso = 0, saltadosBaja = 0;
+
+    Object.keys(p.turnos || {}).forEach(empId => {
+      if (!activos.has(empId)) { saltadosBaja++; return; }
+      Object.keys(p.turnos[empId]).forEach(i => {
+        const f = dias[Number(i)];
+        if (!f) return;
+        if (conPermiso(empId, f)) { saltadosPermiso++; return; }
+        (shifts[empId] = shifts[empId] || {})[f] = { ...p.turnos[empId][i] };
+      });
+    });
+
+    horario.shifts = shifts;
+    await saveHorario(lunes, tiendaActiva(), shifts);
+    closeModal('plantillasModal');
+    pintar();
+    const notas = [];
+    if (saltadosPermiso) notas.push(`${saltadosPermiso} ${saltadosPermiso===1?'día saltado por permiso':'días saltados por permiso'}`);
+    if (saltadosBaja)    notas.push(`${saltadosBaja} ${saltadosBaja===1?'persona ya no está':'personas ya no están'} en la tienda`);
+    toast('Plantilla aplicada' + (notas.length ? ' · ' + notas.join(' · ') : ''), 'success');
+  } catch (err) { toast('No se pudo aplicar: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function borrarPlantilla(id) {
+  if (!confirm('¿Borrar esta plantilla?')) return;
+  try { await db.collection('Horarios').doc(id).delete(); pintarPlantillasH(); }
+  catch (err) { toast('Error: ' + err.message, 'error'); }
 }
 </script>
 </body>

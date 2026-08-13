@@ -77,7 +77,10 @@
       <h1>Reportes</h1>
       <p>Incidentes y novedades reportadas por el equipo, con foto.</p>
     </div>
-    <button class="btn btn-primary" onclick="abrirNuevoRep()"><ion-icon name="add-outline"></ion-icon> Nuevo reporte</button>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" onclick="revisarTodos(this)"><ion-icon name="checkmark-done-outline"></ion-icon> Marcar todos revisados</button>
+      <button class="btn btn-primary" onclick="abrirNuevoRep()"><ion-icon name="add-outline"></ion-icon> Nuevo reporte</button>
+    </div>
   </div>
 
   <div class="tabs">
@@ -241,6 +244,21 @@ function verFoto(url) {
   }
   v.querySelector('img').src = url;
   v.classList.add('on');
+}
+// Lote: todos los reportes nuevos de la tienda visible, revisados de una vez
+async function revisarTodos(btn) {
+  const store = getSelectedStore();
+  const nuevos = reportes.filter(r => r.store === store && (r.status || 'nuevo') === 'nuevo');
+  if (!nuevos.length) { toast('No hay reportes nuevos en esta tienda.', 'info'); return; }
+  if (!confirm(`¿Marcar revisados los ${nuevos.length} reportes nuevos de ${storeName(store)}?`)) return;
+  btn.disabled = true;
+  try {
+    await Promise.all(nuevos.map(r => marcarReporteVisto(r.id)));
+    nuevos.forEach(r => { r.status = 'revisado'; r.revisadoPor = SESSION.name; });
+    pintar();
+    toast(`${nuevos.length} reportes revisados`, 'success');
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
 }
 </script>
 </body>

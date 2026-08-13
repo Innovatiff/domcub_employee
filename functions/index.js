@@ -236,3 +236,90 @@ exports.avisarMensaje = onDocumentCreated('Messages/{id}', async event => {
 
   await enviar(tokens, titulo, cuerpo, { chatId: msg.chatId }, 'chat ' + msg.chatId);
 });
+
+// ══════════════════════════════════════════════════════════
+//  Resumen semanal — cada domingo a las 7 pm (hora de Puerto Rico)
+//
+//  Junta la semana que termina (lunes a domingo): horas y costo por
+//  tienda contra la semana anterior, viajes, tareas y reportes. Lo deja
+//  en Resumenes/{lunes} —que sólo lee la gerencia— y avisa con una push.
+//  El costo de nómina es dato sensible: por eso NO va al chat de anuncios.
+// ══════════════════════════════════════════════════════════
+
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+
+const aFecha = d => {
+  const x = new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+};
+
+exports.resumenSemanal = onSchedule(
+  { schedule: '0 19 * * 0', timeZone: 'America/Puerto_Rico' },
+  async () => {
+    // El domingo la semana en curso es lunes..hoy
+    const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Puerto_Rico' }));
+    const dow = (hoy.getDay() + 6) % 7;            // 0 = lunes
+    const lunes = new Date(hoy); lunes.setDate(hoy.getDate() - dow);
+    const lunesPrev = new Date(lunes); lunesPrev.setDate(lunes.getDate() - 7);
+
+    const desde = aFecha(lunes), hasta = aFecha(hoy);
+    const desdePrev = aFecha(lunesPrev), hastaPrev = aFecha(new Date(lunes.getTime() - 86400000));
+
+    const [cis, emps, regs, hechas, reps] = await Promise.all([
+      db.collection('ClockIns').where('date', '>=', desdePrev).where('date', '<=', hasta).get(),
+      db.collection('Employees').get(),
+      db.collection('Registros').where('date', '>=', desde).where('date', '<=', hasta).get(),
+      db.collection('TareasHechas').where('date', '>=', desde).where('date', '<=', hasta).get(),
+      db.collection('Reportes').where('date', '>=', desde).where('date', '<=', hasta).get(),
+    ]);
+
+    const tarifa = {};
+    emps.docs.forEach(d => tarifa[d.id] = Number(d.data().hourlyRate) || 0);
+
+    // Horas y costo por tienda, esta semana y la anterior
+    const suma = { act: { '1':{h:0,c:0}, '2':{h:0,c:0} }, prev: { '1':{h:0,c:0}, '2':{h:0,c:0} } };
+    cis.docs.forEach(d => {
+      const c = d.data();
+      if (!c.clockOut || !c.hours) return;
+      const grupo = c.date >= desde ? 'act' : 'prev';
+      const st = suma[grupo][c.store];
+      if (!st) return;
+      st.h += c.hours;
+      st.c += c.hours * (tarifa[c.employeeId] || 0);
+    });
+
+    const viajes = regs.docs.map(d => d.data()).filter(r => r.status === 'completado');
+    const kms = viajes.reduce((s, r) => s + (Number(r.km) || 0), 0);
+    const renglones = hechas.docs.reduce((s, d) => s + Object.keys(d.data().hechos || {}).length, 0);
+    const nReps = reps.size;
+
+    const linea = (nombre, st) => {
+      const a = suma.act[st], p = suma.prev[st];
+      const dif = p.h ? Math.round((a.h - p.h) / p.h * 100) : null;
+      return `${nombre}: ${a.h.toFixed(1)} h · ${money(a.c)}`
+        + (dif === null ? '' : ` (${dif >= 0 ? '+' : ''}${dif}% vs semana pasada)`);
+    };
+
+    const etiqueta = `${lunes.getDate()} ${MCORTO[lunes.getMonth()]} – ${hoy.getDate()} ${MCORTO[hoy.getMonth()]}`;
+    const texto = [
+      `Semana del ${etiqueta}`,
+      '',
+      '🏪 ' + linea('Despensas', '1'),
+      '🍳 ' + linea('Cocina', '2'),
+      `💰 Nómina total de la semana: ${money(suma.act['1'].c + suma.act['2'].c)}`,
+      '',
+      `🚗 Viajes a farmacias: ${viajes.length} (${kms.toFixed(0)} km)`,
+      `✅ Renglones de tareas completados: ${renglones}`,
+      `⚠️ Reportes de incidentes: ${nReps}`,
+    ].join('\n');
+
+    await db.collection('Resumenes').doc(desde).set({
+      semana: etiqueta, desde, hasta, texto,
+      createdAt: new Date()
+    });
+
+    const tokens = await tokensGerencia();
+    await enviar(tokens, '📊 Resumen semanal listo',
+      `Nómina ${money(suma.act['1'].c + suma.act['2'].c)} · abre el Panel para verlo`,
+      { tipo: 'resumen' }, 'resumen-' + desde);
+  });

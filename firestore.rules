@@ -206,6 +206,15 @@ service cloud.firestore {
       allow delete: if isManager();
     }
 
+    // ── Resumen semanal ──
+    // Lo escribe la función programada del domingo (el servidor no pasa
+    // por estas reglas); la gerencia sólo lo lee. Lleva costos de nómina,
+    // así que los colaboradores no lo ven.
+    match /Resumenes/{id} {
+      allow read:  if isManager();
+      allow write: if false;
+    }
+
     // ── Notas de desempeño ──
     // Privadas: sólo la gerencia. Los colaboradores no las ven.
     match /NotasPersonal/{id} {

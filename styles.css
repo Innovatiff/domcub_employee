@@ -2124,3 +2124,79 @@ ion-icon {
   width:180px; max-width:38vw; border-radius:10px; cursor:zoom-in;
   object-fit:cover; border:1px solid var(--border);
 }
+
+/* ══ Bandeja del día ══ */
+.bandeja-card { margin-bottom:18px; border-top:3px solid var(--primary); }
+.bj-item {
+  display:flex; align-items:center; gap:12px; padding:11px 13px;
+  border:1px solid var(--border); border-radius:10px; background:var(--surface-alt);
+  animation:vistoIn .25s ease both; flex-wrap:wrap;
+}
+.bj-item > ion-icon { font-size:18px; color:var(--primary); flex-shrink:0; }
+.bj-item.bj-rojo   { border-left:3px solid var(--danger);  }
+.bj-item.bj-rojo > ion-icon { color:var(--danger); }
+.bj-item.bj-ambar  { border-left:3px solid var(--warning); }
+.bj-item.bj-ambar > ion-icon { color:var(--warning); }
+.bj-item.bj-fiesta { border-left:3px solid #d946ef; background:#fdf4ff; }
+.bj-item.bj-fiesta > ion-icon { color:#d946ef; }
+.bj-txt { flex:1; min-width:220px; font-size:13.5px; line-height:1.5; }
+.bj-tienda {
+  display:inline-block; font-size:10.5px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.04em; color:var(--text-muted); background:#fff;
+  border:1px solid var(--border); border-radius:999px; padding:1px 8px; margin-left:4px;
+}
+.bj-acciones { display:flex; align-items:center; gap:7px; flex-shrink:0; }
+.bj-hora { padding:6px 8px; border:1px solid var(--border-strong); border-radius:8px; font-size:13px; }
+.bj-vacia {
+  display:flex; align-items:center; gap:9px; padding:10px 4px;
+  color:var(--success); font-size:13.5px; font-weight:550;
+}
+.bj-vacia ion-icon { font-size:20px; }
+
+.bj-resumen { border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.bj-resumen-head {
+  display:flex; align-items:center; gap:9px; padding:11px 13px;
+  cursor:pointer; font-size:13.5px; background:var(--surface-alt);
+}
+.bj-resumen-head span { color:var(--text-muted); }
+.bj-resumen-head > ion-icon:first-child { color:var(--info); font-size:17px; }
+.bj-caret { margin-left:auto; transition:transform .2s ease; }
+.bj-resumen.abierto .bj-caret { transform:rotate(180deg); }
+.bj-resumen-body {
+  display:none; margin:0; padding:13px 16px; font-family:inherit;
+  font-size:13px; line-height:1.7; white-space:pre-wrap; border-top:1px solid var(--border);
+}
+.bj-resumen.abierto .bj-resumen-body { display:block; }
+
+/* ══ Asistente Cerrar quincena ══ */
+.qz-pasos { display:flex; align-items:center; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+.qz-paso {
+  display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600;
+  color:var(--text-light); white-space:nowrap;
+}
+.qz-num {
+  width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
+  background:var(--border); color:var(--text-muted); font-size:11px; font-weight:700;
+  transition:background .2s ease, color .2s ease;
+}
+.qz-paso.activo { color:var(--primary); }
+.qz-paso.activo .qz-num { background:var(--primary); color:#fff; }
+.qz-paso.hecho { color:var(--success); }
+.qz-paso.hecho .qz-num { background:var(--success); color:#fff; }
+.qz-linea { flex:1; min-width:14px; height:2px; background:var(--border); border-radius:2px; }
+.qz-lead { font-size:13.5px; color:var(--text-muted); margin:0 0 14px; line-height:1.6; }
+.qz-bien {
+  display:flex; align-items:center; gap:9px; padding:14px 4px;
+  color:var(--success); font-size:13.5px; font-weight:550;
+}
+.qz-bien ion-icon { font-size:20px; }
+#qzBody .bj-item { margin-bottom:8px; }
+
+/* Barra de acciones en lote */
+.lote-bar {
+  display:flex; align-items:center; gap:8px; padding:11px 16px; margin-bottom:14px;
+  background:var(--primary-soft); border:1px solid var(--primary);
+  border-radius:12px; font-size:13.5px; animation:vistoIn .2s ease both;
+}
+.lote-bar ion-icon { color:var(--primary); font-size:17px; }
+.to-check { width:16px; height:16px; accent-color:var(--primary); cursor:pointer; }

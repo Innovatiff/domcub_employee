@@ -86,7 +86,8 @@
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-outline" onclick="openReportModal()"><ion-icon name="print-outline"></ion-icon> Imprimir Reporte</button>
-      <button class="btn btn-primary" onclick="openGenerateModal()"><ion-icon name="calculator-outline"></ion-icon> Generar Nómina</button>
+      <button class="btn btn-outline" onclick="openGenerateModal()"><ion-icon name="calculator-outline"></ion-icon> Generar Nómina</button>
+      <button class="btn btn-primary" onclick="abrirQuincena()"><ion-icon name="rocket-outline"></ion-icon> Cerrar quincena</button>
     </div>
   </div>
 
@@ -131,6 +132,22 @@
     </div>
   </div>
 </main>
+
+<!-- Asistente Cerrar quincena -->
+<div class="modal-overlay" id="quincenaModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3><ion-icon name="rocket-outline" style="vertical-align:-2px;color:var(--primary)"></ion-icon>
+        Cerrar quincena · <span id="qzPeriodo"></span></h3>
+      <button class="modal-close" onclick="closeModal('quincenaModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="qz-pasos" id="qzPasos"></div>
+      <div id="qzBody"></div>
+    </div>
+    <div class="modal-footer" id="qzPie"></div>
+  </div>
+</div>
 
 <!-- Modal Generar -->
 <div class="modal-overlay" id="generateModal">
@@ -559,6 +576,195 @@ async function buildReport() {
   } catch (err) {
     toast('Error al generar el reporte: ' + err.message, 'error');
   } finally { btn.disabled = false; }
+}
+// ══════════════════════════════════════════════════════════
+//  Asistente "Cerrar quincena": los cuatro pasos del ritual
+//  de nómina en un solo flujo, con validaciones automáticas.
+// ══════════════════════════════════════════════════════════
+let qz = null;   // { periodo, paso, abiertos, raros, resultado }
+
+const QZ_PASOS = ['Turnos', 'Revisión', 'Generar', 'Pagar'];
+
+async function abrirQuincena() {
+  const periodStart = document.getElementById('periodSelect').value;
+  const p = getPeriodByStart(periodStart);
+  qz = { periodo: p, paso: 0 };
+  document.getElementById('qzPeriodo').textContent = formatPeriodLabel(p);
+  openModal('quincenaModal');
+  await qzPaso(0);
+}
+
+function qzCabecera() {
+  document.getElementById('qzPasos').innerHTML = QZ_PASOS.map((n, i) => `
+    <div class="qz-paso ${i === qz.paso ? 'activo' : ''} ${i < qz.paso ? 'hecho' : ''}">
+      <span class="qz-num">${i < qz.paso ? '<ion-icon name="checkmark-outline"></ion-icon>' : i+1}</span>${n}
+    </div>`).join('<div class="qz-linea"></div>');
+}
+
+function qzPie(botones) { document.getElementById('qzPie').innerHTML = botones; }
+
+async function qzPaso(n) {
+  qz.paso = n;
+  qzCabecera();
+  const body = document.getElementById('qzBody');
+  body.innerHTML = '<div class="empty-state"><ion-icon name="sync-outline" class="gira"></ion-icon></div>';
+
+  // ── Paso 1: turnos sin cerrar que ensuciarían la nómina ──
+  if (n === 0) {
+    const [abiertos, emps] = await Promise.all([getOpenClockIns(), getEmployees()]);
+    // Cualquier turno abierto con fecha hasta el fin del período cuenta:
+    // uno de hace tres semanas también falta en alguna nómina.
+    qz.abiertos = abiertos.filter(c => c.date && c.date <= qz.periodo.end);
+    qz.emps = emps;
+
+    body.innerHTML = qz.abiertos.length ? `
+      <p class="qz-lead">Estos turnos siguen abiertos y <b>no cuentan para la nómina</b>.
+        Ciérralos con su hora real de salida antes de generar.</p>
+      ${qz.abiertos.map((c, i) => {
+        const emp = emps.find(e => e.id === c.employeeId);
+        return `<div class="bj-item bj-rojo" id="qzT${i}">
+          <ion-icon name="alarm-outline"></ion-icon>
+          <div class="bj-txt"><strong>${escapeHtml(emp ? emp.name : '—')}</strong>
+            · entró el <b>${formatDate(c.date)}</b> a las ${formatTime(c.clockIn)}
+            <span class="bj-tienda">${storeShort(c.store)}</span></div>
+          <div class="bj-acciones">
+            <input type="time" id="qzHora${i}" value="17:00" class="bj-hora">
+            <button class="btn btn-sm btn-primary" onclick="qzCerrar('${c.id}', ${i}, this)">Cerrar</button>
+          </div>
+        </div>`;
+      }).join('')}`
+    : `<div class="qz-bien"><ion-icon name="checkmark-done-circle-outline"></ion-icon>
+        Ningún turno quedó abierto. Todo listo para revisar.</div>`;
+
+    qzPie(`
+      <button class="btn btn-outline" onclick="closeModal('quincenaModal')">Salir</button>
+      <button class="btn btn-primary" onclick="qzPaso(1)">
+        ${qz.abiertos.length ? 'Continuar de todos modos' : 'Continuar'}
+        <ion-icon name="arrow-forward-outline"></ion-icon></button>`);
+    return;
+  }
+
+  // ── Paso 2: anomalías del período (revisión, no bloqueo) ──
+  if (n === 1) {
+    const cis = await getClockInsRange(qz.periodo.start, qz.periodo.end);
+    const cerrados = cis.filter(c => c.clockOut);
+    qz.raros = cerrados.filter(c => (c.hours || 0) > 12 || (c.hours || 0) < 0.15);
+
+    body.innerHTML = `
+      <p class="qz-lead">${cerrados.length} turnos cerrados en el período.
+        ${qz.raros.length ? 'Revisa estos antes de generar; se pagan tal cual estén:' : ''}</p>
+      ${qz.raros.length ? qz.raros.map(c => {
+        const emp = qz.emps.find(e => e.id === c.employeeId);
+        return `<div class="bj-item bj-ambar">
+          <ion-icon name="help-circle-outline"></ion-icon>
+          <div class="bj-txt"><strong>${escapeHtml(emp ? emp.name : '—')}</strong>
+            · ${formatDate(c.date)} · <b>${numES(c.hours || 0, 2)} h</b>
+            (${(c.hours||0) > 12 ? 'jornada inusualmente larga' : 'turno de minutos'})</div>
+          <div class="bj-acciones"><a class="btn btn-sm btn-outline" href="hours.html" target="_blank">Corregir en Horas</a></div>
+        </div>`;
+      }).join('')
+      : `<div class="qz-bien"><ion-icon name="checkmark-done-circle-outline"></ion-icon>
+          Sin jornadas raras: nada mayor de 12 h ni turnos de minutos.</div>`}`;
+
+    qzPie(`
+      <button class="btn btn-outline" onclick="qzPaso(0)"><ion-icon name="arrow-back-outline"></ion-icon> Atrás</button>
+      <button class="btn btn-primary" onclick="qzPaso(2)">Continuar <ion-icon name="arrow-forward-outline"></ion-icon></button>`);
+    return;
+  }
+
+  // ── Paso 3: generar los recibos ──
+  if (n === 2) {
+    body.innerHTML = `
+      <p class="qz-lead">Se crean los recibos del período con las horas registradas.
+        Los recibos <b>ya pagados no se tocan</b>.</p>
+      <div id="qzGenResultado"></div>`;
+    qzPie(`
+      <button class="btn btn-outline" onclick="qzPaso(1)"><ion-icon name="arrow-back-outline"></ion-icon> Atrás</button>
+      <button class="btn btn-primary" id="qzGenBtn" onclick="qzGenerar()">
+        <ion-icon name="calculator-outline"></ion-icon> Generar nómina</button>`);
+    return;
+  }
+
+  // ── Paso 4: pagar por tienda ──
+  const [stmts, emps] = await Promise.all([getPayStatements(qz.periodo.start), getEmployees()]);
+  qz.emps = emps;
+  const porTienda = st => stmts.filter(x => tiendaDe(x, emps.find(e => e.id === x.employeeId)) === st);
+  const filaTienda = st => {
+    const lista = porTienda(st);
+    const pend  = lista.filter(x => x.status !== 'paid');
+    return `<div class="bj-item">
+      <ion-icon name="storefront-outline"></ion-icon>
+      <div class="bj-txt"><strong>${storeName(st)}</strong>
+        · ${lista.length} ${lista.length===1?'recibo':'recibos'}
+        · pendiente <b>${money(sumar(pend, 'gross'))}</b></div>
+      <div class="bj-acciones">
+        ${pend.length
+          ? `<button class="btn btn-sm btn-primary" onclick="qzPagar('${st}', this)">Marcar ${pend.length} ${pend.length===1?'pagado':'pagados'}</button>`
+          : '<span class="badge badge-green">Todo pagado</span>'}
+      </div>
+    </div>`;
+  };
+  body.innerHTML = `
+    <p class="qz-lead">Cuando hagas la transferencia o entregues el efectivo de cada tienda,
+      márcala pagada aquí. A cada colaborador le llega el aviso de su pago.</p>
+    ${filaTienda('1')}${filaTienda('2')}`;
+  qzPie(`
+    <button class="btn btn-outline" onclick="qzPaso(2)"><ion-icon name="arrow-back-outline"></ion-icon> Atrás</button>
+    <button class="btn btn-success" onclick="closeModal('quincenaModal'); render()">
+      <ion-icon name="checkmark-outline"></ion-icon> Terminar</button>`);
+}
+
+async function qzCerrar(id, i, btn) {
+  const hora = document.getElementById('qzHora' + i).value;
+  if (!hora) { toast('Escribe la hora de salida.', 'error'); return; }
+  btn.disabled = true;
+  try {
+    const h = await cerrarTurnoOlvidado(id, hora);
+    toast(`Turno cerrado · ${numES(h, 2)} h`, 'success');
+    const fila = document.getElementById('qzT' + i);
+    if (fila) fila.remove();
+    qz.abiertos = qz.abiertos.filter(c => c.id !== id);
+    if (!qz.abiertos.length) qzPaso(0);   // repinta el "todo listo"
+  } catch (err) { btn.disabled = false; toast(err.message, 'error'); }
+}
+
+async function qzGenerar() {
+  const btn = document.getElementById('qzGenBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<ion-icon name="sync-outline" class="gira"></ion-icon> Generando...';
+  try {
+    const r = await generarNomina(qz.periodo.start);
+    document.getElementById('qzGenResultado').innerHTML = `
+      <div class="qz-bien" style="flex-direction:column;align-items:flex-start;gap:6px">
+        <div><ion-icon name="checkmark-done-circle-outline"></ion-icon>
+          ${r.creados} ${r.creados===1?'recibo creado':'recibos creados'}
+          ${r.actualizados ? ' · ' + r.actualizados + ' actualizados' : ''}</div>
+        ${r.conservados ? `<div style="font-size:12.5px;color:var(--text-muted)">${r.conservados} ya ${r.conservados===1?'estaba pagado y no se tocó':'estaban pagados y no se tocaron'}</div>` : ''}
+        ${r.sinHoras ? `<div style="font-size:12.5px;color:var(--text-muted)">${r.sinHoras} sin horas en el período (no llevan recibo)</div>` : ''}
+      </div>`;
+    qzPie(`
+      <button class="btn btn-outline" onclick="qzPaso(1)"><ion-icon name="arrow-back-outline"></ion-icon> Atrás</button>
+      <button class="btn btn-primary" onclick="qzPaso(3)">Ir a pagar <ion-icon name="arrow-forward-outline"></ion-icon></button>`);
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = '<ion-icon name="calculator-outline"></ion-icon> Generar nómina';
+    toast('No se pudo generar: ' + err.message, 'error');
+  }
+}
+
+async function qzPagar(st, btn) {
+  btn.disabled = true;
+  try {
+    const stmts = await getPayStatements(qz.periodo.start);
+    const pend = stmts.filter(x => x.status !== 'paid'
+      && tiendaDe(x, qz.emps.find(e => e.id === x.employeeId)) === st);
+    if (!confirm(`¿Marcar pagados ${pend.length} recibo(s) de ${storeName(st)} por ${money(sumar(pend,'gross'))}?`)) {
+      btn.disabled = false; return;
+    }
+    await Promise.all(pend.map(x => updatePayStatement(x.id, { status:'paid', paidDate: todayStr() })));
+    toast(`${storeName(st)}: ${pend.length} recibos pagados`, 'success');
+    qzPaso(3);
+  } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
 }
 </script>
 </body>
