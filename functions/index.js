@@ -228,7 +228,9 @@ exports.avisarMensaje = onDocumentCreated('Messages/{id}', async event => {
 
   const titulo = esAnuncio
     ? 'Anuncios Generales'
-    : (msg.senderName || 'Nuevo mensaje');
+    : chat.type === 'grupo'
+      ? `${chat.title || 'Grupo'} · ${msg.senderName || ''}`
+      : (msg.senderName || 'Nuevo mensaje');
   // Una foto no trae texto: sin esto el aviso llegaría con el cuerpo vacío.
   const cuerpo = msg.type === 'image'
     ? '📷 Foto'
