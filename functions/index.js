@@ -216,9 +216,23 @@ exports.avisarMensaje = onDocumentCreated('Messages/{id}', async event => {
   const chat = chatSnap.exists ? chatSnap.data() : {};
 
   const esAnuncio = msg.chatId === 'anuncios';
-  const destinos = esAnuncio
-    ? await todosLosTokens()
-    : await tokensDe((chat.participants || []).filter(p => p !== msg.senderId));
+  const esTienda  = chat.type === 'tienda';
+  let destinos;
+  if (esAnuncio) {
+    destinos = await todosLosTokens();
+  } else if (esTienda) {
+    // El canal de una tienda: toda su gente más la gerencia
+    const [emps, mgrs] = await Promise.all([
+      db.collection('Employees').where('store', '==', chat.store).get(),
+      db.collection('Main').get()
+    ]);
+    const pids = emps.docs.filter(d => d.data().status === 'active').map(d => 'emp:' + d.id)
+      .concat(mgrs.docs.map(d => 'mgr:' + d.id))
+      .filter(p => p !== msg.senderId);
+    destinos = await tokensDe(pids);
+  } else {
+    destinos = await tokensDe((chat.participants || []).filter(p => p !== msg.senderId));
+  }
 
   // Aunque en un privado el remitente no es destinatario, en Anuncios sí
   // entraría; y en cualquier caso puede tener varios dispositivos.
@@ -228,7 +242,7 @@ exports.avisarMensaje = onDocumentCreated('Messages/{id}', async event => {
 
   const titulo = esAnuncio
     ? 'Anuncios Generales'
-    : chat.type === 'grupo'
+    : (chat.type === 'grupo' || esTienda)
       ? `${chat.title || 'Grupo'} · ${msg.senderName || ''}`
       : (msg.senderName || 'Nuevo mensaje');
   // Una foto no trae texto: sin esto el aviso llegaría con el cuerpo vacío.
