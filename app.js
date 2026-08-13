@@ -877,7 +877,7 @@ async function permisosDeSemana(lunes) {
   return porEmp;
 }
 
-// ══ Registros de viaje (kilometraje a las farmacias) ══
+// ══ Registros de viaje (kilometraje de las salidas) ══
 //
 // Un documento por viaje:
 //   Registros/{id} = { employeeId, employeeName, store, vehiculo, date,
