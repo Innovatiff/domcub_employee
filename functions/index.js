@@ -11,7 +11,7 @@
  *     anuncios todo el equipo, en ambos casos menos quien escribió;
  *   · recibos de pago — al colaborador cuando el suyo queda disponible y
  *     cuando se marca como pagado;
- *   · viajes — a la gerencia cuando alguien sale a la farmacia y cuando
+ *   · viajes — a la gerencia cuando alguien sale de viaje y cuando
  *     vuelve;
  *   · pedidos — a la gerencia cuando se crea uno.
  *
@@ -94,7 +94,7 @@ async function tokensGerencia() {
   return tokensDe(mgrs.docs.map(d => 'mgr:' + d.id));
 }
 
-// ── Viajes a las farmacias ──
+// ── Viajes ──
 //
 // Dos momentos: al salir la gerencia sabe quién anda fuera y con qué
 // carro, y al volver le llegan los kilómetros sin abrir nada.
@@ -106,7 +106,7 @@ exports.avisarViaje = onDocumentWritten('Registros/{id}', async event => {
   const tienda = ahora.store === '1' ? 'Despensas' : ahora.store === '2' ? 'Cocina' : '';
   let titulo, cuerpo;
   if (!antes && ahora.status === 'en-ruta') {
-    titulo = 'Salió a la farmacia';
+    titulo = 'Salió de viaje';
     cuerpo = `${ahora.employeeName || 'Alguien'} · ${ahora.vehiculo || 'sin carro'} · ${tienda}`;
   } else if (antes && antes.status === 'en-ruta' && ahora.status === 'completado') {
     titulo = 'Viaje completado';
@@ -326,7 +326,7 @@ exports.resumenSemanal = onSchedule(
       '🍳 ' + linea('Cocina', '2'),
       `💰 Nómina total de la semana: ${money(suma.act['1'].c + suma.act['2'].c)}`,
       '',
-      `🚗 Viajes a farmacias: ${viajes.length} (${kms.toFixed(0)} km)`,
+      `🚗 Viajes: ${viajes.length} (${kms.toFixed(0)} km)`,
       `✅ Renglones de tareas completados: ${renglones}`,
       `⚠️ Reportes de incidentes: ${nReps}`,
     ].join('\n');
