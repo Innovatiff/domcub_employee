@@ -316,7 +316,12 @@ service cloud.firestore {
         // Los mensajes del canal o los anuncios de una tienda: sólo su gente
         || (resource.data.chatId in ['tienda_1', 'tienda_2', 'anuncios_1', 'anuncios_2']
             && enCanalTienda(resource.data.chatId))
-        || (haveIndex() && myPid() in chatParticipants(resource.data.chatId))
+        // exists() primero: consultar los mensajes de una conversación
+        // cuyo documento aún no existe daba "insufficient permissions" en
+        // vez de simplemente no mostrar nada.
+        || (haveIndex()
+            && exists(/databases/$(database)/documents/Chats/$(resource.data.chatId))
+            && myPid() in chatParticipants(resource.data.chatId))
       );
 
       // Sólo puedes enviar como tú mismo.
@@ -345,7 +350,8 @@ service cloud.firestore {
              resource.data.chatId == 'anuncios'
           || (resource.data.chatId in ['tienda_1', 'tienda_2', 'anuncios_1', 'anuncios_2']
               && enCanalTienda(resource.data.chatId))
-          || myPid() in chatParticipants(resource.data.chatId)
+          || (exists(/databases/$(database)/documents/Chats/$(resource.data.chatId))
+              && myPid() in chatParticipants(resource.data.chatId))
         );
       allow delete: if isManager();
     }

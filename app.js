@@ -10,7 +10,7 @@
 // Los valores '1' y '2' se conservan en la base de datos; sólo
 // cambia el nombre que se muestra.
 const STORES = {
-  '1': { id:'1', name:'Tienda Despensas', short:'Despensas', color:'#b45309', soft:'#fef3c7', icon:'basket-outline' },
+  '1': { id:'1', name:'Tienda', short:'Tienda', color:'#b45309', soft:'#fef3c7', icon:'basket-outline' },
   '2': { id:'2', name:'Tienda Cocina',    short:'Cocina',    color:'#0e7490', soft:'#cffafe', icon:'restaurant-outline' }
 };
 const STORE_IDS = ['1','2'];

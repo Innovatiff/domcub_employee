@@ -48,7 +48,7 @@
       <div class="nav-group-body"><div class="nav-group-inner">
 
     <a href="pedidos.html" class="nav-link"><ion-icon name="clipboard-outline"></ion-icon><span>Pedidos</span></a>
-    <a href="registros.html" data-manager-only class="nav-link"><ion-icon name="car-outline"></ion-icon><span>Registros</span></a>
+    <a href="registros.html" data-manager-only class="nav-link"><ion-icon name="car-outline"></ion-icon><span>Autos</span></a>
     <a href="tareas.html" data-manager-only class="nav-link"><ion-icon name="checkbox-outline"></ion-icon><span>Tareas</span></a>
     <a href="reportes.html" data-manager-only class="nav-link"><ion-icon name="warning-outline"></ion-icon><span>Reportes</span></a>
     <a href="grupo.html" class="nav-link"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
@@ -190,7 +190,7 @@ async function render() {
         <div class="stat-icon purple"><ion-icon name="people-outline"></ion-icon></div>
         <div class="stat-label">Total de Colaboradores</div>
         <div class="stat-value">${active.length}</div>
-        <div class="stat-sub">${allEmps.filter(e=>e.store==='1'&&e.status==='active').length} Despensas · ${allEmps.filter(e=>e.store==='2'&&e.status==='active').length} Cocina</div>
+        <div class="stat-sub">${allEmps.filter(e=>e.store==='1'&&e.status==='active').length} Tienda · ${allEmps.filter(e=>e.store==='2'&&e.status==='active').length} Cocina</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon green"><ion-icon name="exit-outline"></ion-icon></div>
