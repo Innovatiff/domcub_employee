@@ -103,7 +103,7 @@ exports.avisarViaje = onDocumentWritten('Registros/{id}', async event => {
   const ahora = event.data.after.exists  ? event.data.after.data()  : null;
   if (!ahora) return;                                // borrado
 
-  const tienda = ahora.store === '1' ? 'Despensas' : ahora.store === '2' ? 'Cocina' : '';
+  const tienda = ahora.store === '1' ? 'Tienda' : ahora.store === '2' ? 'Cocina' : '';
   let titulo, cuerpo;
   if (!antes && ahora.status === 'en-ruta') {
     titulo = 'Salió de viaje';
@@ -123,7 +123,7 @@ exports.avisarViaje = onDocumentWritten('Registros/{id}', async event => {
 exports.avisarPedido = onDocumentCreated('Pedidos/{id}', async event => {
   const p = event.data && event.data.data();
   if (!p) return;
-  const tienda = p.store === '1' ? 'Despensas' : p.store === '2' ? 'Cocina' : '';
+  const tienda = p.store === '1' ? 'Tienda' : p.store === '2' ? 'Cocina' : '';
   const n = Array.isArray(p.items) ? p.items.length : 0;
   const tokens = await tokensGerencia();
   await enviar(tokens,
@@ -140,7 +140,7 @@ exports.avisarPedido = onDocumentCreated('Pedidos/{id}', async event => {
 exports.avisarReporte = onDocumentCreated('Reportes/{id}', async event => {
   const r = event.data && event.data.data();
   if (!r) return;
-  const tienda = r.store === '1' ? 'Despensas' : r.store === '2' ? 'Cocina' : '';
+  const tienda = r.store === '1' ? 'Tienda' : r.store === '2' ? 'Cocina' : '';
   const texto = String(r.texto || '').slice(0, 90) || 'Sin descripción';
   const tokens = await tokensGerencia();
   await enviar(tokens,
@@ -322,7 +322,7 @@ exports.resumenSemanal = onSchedule(
     const texto = [
       `Semana del ${etiqueta}`,
       '',
-      '🏪 ' + linea('Despensas', '1'),
+      '🏪 ' + linea('Tienda', '1'),
       '🍳 ' + linea('Cocina', '2'),
       `💰 Nómina total de la semana: ${money(suma.act['1'].c + suma.act['2'].c)}`,
       '',
