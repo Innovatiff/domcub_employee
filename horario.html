@@ -245,24 +245,27 @@ function pintar() {
     return;
   }
 
-  const filas = emps.map(e => {
+  const filaDe = e => {
     const mios = (horario.shifts || {})[e.id] || {};
     const totalSemana = dias.reduce((s, f) => s + horasDe(mios[f]), 0);
 
     const celdas = dias.map(f => {
       const t = mios[f];
       if (conPermiso(e.id, f)) {
-        return `<td class="hcell permiso" title="Permiso aprobado">
+        return `<td class="hcell permiso" data-emp="${e.id}" data-fecha="${f}" title="Permiso aprobado">
           <div class="hcell-permiso"><ion-icon name="airplane-outline"></ion-icon> Permiso</div></td>`;
       }
       if (t) {
-        return `<td class="hcell con-turno" onclick="abrirTurno('${e.id}','${f}')">
+        return `<td class="hcell con-turno" data-emp="${e.id}" data-fecha="${f}" onclick="abrirTurno('${e.id}','${f}')">
           <div class="hcell-turno">
             <span class="hcell-horas">${t.in} – ${t.out}</span>
             <span class="hcell-dur">${numES(horasDe(t), 1)} h</span>
-          </div></td>`;
+          </div>
+          <span class="hgrip" title="Arrastra para copiar este turno a otros días"
+                onmousedown="iniciarArrastre(event,'${e.id}','${f}')"
+                onclick="event.stopPropagation()">⠿</span></td>`;
       }
-      return `<td class="hcell libre" onclick="abrirTurno('${e.id}','${f}')">
+      return `<td class="hcell libre" data-emp="${e.id}" data-fecha="${f}" onclick="abrirTurno('${e.id}','${f}')">
         <span class="hcell-mas">+</span></td>`;
     }).join('');
 
@@ -275,6 +278,21 @@ function pintar() {
       </th>
       ${celdas}
     </tr>`;
+  };
+
+  // En la tienda '1' el equipo se divide por área: Tienda y Envíos.
+  // Cocina no tiene áreas y se muestra corrida como siempre.
+  const grupos = tiendaActiva() === '1'
+    ? [['Tienda', emps.filter(e => (e.area || 'tienda') !== 'envios')],
+       ['Envíos', emps.filter(e => e.area === 'envios')]]
+    : [[null, emps]];
+
+  const filas = grupos.map(([titulo, lista]) => {
+    if (!lista.length) return '';
+    const cab = titulo
+      ? `<tr class="harea"><th colspan="8"><ion-icon name="${titulo==='Envíos'?'bicycle-outline':'storefront-outline'}"></ion-icon> ${titulo}</th></tr>`
+      : '';
+    return cab + lista.map(filaDe).join('');
   }).join('');
 
   document.getElementById('horarioWrap').innerHTML = `
@@ -294,8 +312,9 @@ function pintar() {
       </div>
     </div>
     <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
-      Toca una casilla para asignar o cambiar un turno. Cuando apruebas un permiso,
-      la persona sale sola de esos días.
+      Toca una casilla para asignar o cambiar un turno, o arrastra el símbolo ⠿
+      de un turno por la fila para copiarlo a más días. Cuando apruebas un
+      permiso, la persona sale sola de esos días.
     </p>`;
 }
 
@@ -538,6 +557,55 @@ async function borrarPlantilla(id) {
   try { await db.collection('Horarios').doc(id).delete(); pintarPlantillasH(); }
   catch (err) { toast('Error: ' + err.message, 'error'); }
 }
+// ══ Arrastrar un turno por la semana ══
+//
+// Se toma el símbolo ⠿ de un turno y se pasa el ratón por los demás días
+// de esa persona; al soltar, todos los días marcados reciben el mismo
+// horario con UN solo guardado. Los días con permiso se saltan solos.
+let arrastre = null;   // { empId, turno, dias:Set }
+
+function iniciarArrastre(ev, empId, fecha) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  const t = ((horario.shifts || {})[empId] || {})[fecha];
+  if (!t) return;
+  arrastre = { empId, turno: { ...t }, dias: new Set([fecha]) };
+  document.body.classList.add('arrastrando');
+}
+
+document.addEventListener('mouseover', e => {
+  if (!arrastre) return;
+  const td = e.target.closest && e.target.closest('.hcell');
+  if (!td || td.dataset.emp !== arrastre.empId) return;   // sólo su propia fila
+  if (td.classList.contains('permiso')) return;           // permisos intocables
+  arrastre.dias.add(td.dataset.fecha);
+  td.classList.add('h-preview');
+});
+
+document.addEventListener('mouseup', async () => {
+  if (!arrastre) return;
+  const d = arrastre;
+  arrastre = null;
+  document.body.classList.remove('arrastrando');
+  if (d.dias.size <= 1) {                    // fue un toque, no un arrastre
+    document.querySelectorAll('.h-preview').forEach(x => x.classList.remove('h-preview'));
+    return;
+  }
+  const shifts = horario.shifts = horario.shifts || {};
+  const mios = shifts[d.empId] = shifts[d.empId] || {};
+  let n = 0;
+  d.dias.forEach(f => {
+    if (!conPermiso(d.empId, f)) { mios[f] = { ...d.turno }; n++; }
+  });
+  pintar();                                  // se ve al instante
+  try {
+    await saveHorario(lunes, tiendaActiva(), shifts);
+    toast(`Turno ${d.turno.in} – ${d.turno.out} puesto en ${n} días`, 'success');
+  } catch (err) {
+    toast('No se pudo guardar: ' + err.message, 'error');
+    render();                                // recarga lo real si falló
+  }
+});
 </script>
 </body>
 </html>
