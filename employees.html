@@ -136,7 +136,7 @@
         </div>
         <div class="form-group">
           <label>Tienda *</label>
-          <select id="empStore">
+          <select id="empStore" onchange="ajustarArea()">
             <option value="1">Tienda</option>
             <option value="2">Tienda Cocina</option>
           </select>
@@ -160,6 +160,15 @@
         <div class="form-group">
           <label>Fecha de Nacimiento <span style="font-weight:400;color:var(--text-muted)">— para los cumpleaños</span></label>
           <input type="date" id="empBirth">
+        </div>
+      </div>
+      <div class="form-row" id="areaRow">
+        <div class="form-group">
+          <label>Área <span style="font-weight:400;color:var(--text-muted)">— sólo aplica en Tienda</span></label>
+          <select id="empArea">
+            <option value="tienda">Tienda</option>
+            <option value="envios">Envíos</option>
+          </select>
         </div>
       </div>
       <div class="assign-box">
@@ -276,6 +285,13 @@ let jobsCache     = [];
 let isHiring      = true;
 
 requireAuth(() => { render(); checkMigration(); });
+
+// El área sólo existe en la tienda '1' (Tienda tiene dos áreas: Tienda y
+// Envíos); Cocina no la usa y el campo se esconde.
+function ajustarArea() {
+  document.getElementById('areaRow').style.display =
+    document.getElementById('empStore').value === '1' ? '' : 'none';
+}
 
 // Aviso de lo que quedó a medias de los colaboradores anteriores.
 // Sin migrar el PIN no pueden marcar entrada, y sin cuenta no pueden
@@ -407,7 +423,8 @@ async function render() {
           </div>
         </td>
         <td>${job ? `<span class="badge" style="background:${job.color}22;color:${job.color}">${job.title}</span>` : '—'}</td>
-        <td>${storeBadge(e.store)}</td>
+        <td>${storeBadge(e.store)}${e.store==='1'
+          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">${e.area==='envios'?'Envíos':'Tienda'}</div>` : ''}</td>
         <td>${formatDate(e.hireDate)}</td>
         <td>$${Number(e.hourlyRate || 0).toFixed(2)}</td>
         <td><span class="pin-cell" id="pin-${e.id}">···</span></td>
@@ -471,6 +488,8 @@ function openHireModal() {
   document.getElementById('empRate').value  = '';
   document.getElementById('empHire').value  = todayStr();
   document.getElementById('empBirth').value = '';
+  document.getElementById('empArea').value = 'tienda';
+  ajustarArea();
   document.getElementById('empPedidos').checked = false;
   document.getElementById('empRegistros').checked = false;
 
@@ -502,6 +521,8 @@ async function openEditModal(id) {
   document.getElementById('empRate').value   = emp.hourlyRate || '';
   document.getElementById('empHire').value   = emp.hireDate || '';
   document.getElementById('empBirth').value  = emp.birthday || '';
+  document.getElementById('empArea').value   = emp.area || 'tienda';
+  ajustarArea();
   document.getElementById('empPedidos').checked = !!emp.canPedidos;
   document.getElementById('empRegistros').checked = !!emp.canRegistros;
   const box = document.getElementById('pinPreview');
@@ -531,6 +552,7 @@ async function doSaveEmployee() {
     hourlyRate: parseFloat(document.getElementById('empRate').value) || 0,
     hireDate:   document.getElementById('empHire').value,
     birthday:   document.getElementById('empBirth').value,
+    area:       document.getElementById('empArea').value,
     canPedidos:   document.getElementById('empPedidos').checked,
     canRegistros: document.getElementById('empRegistros').checked,
   };
@@ -597,6 +619,7 @@ async function openView(id) {
       ${infoBlock('Fecha de Ingreso', formatDate(emp.hireDate))}
       ${infoBlock('Correo', emp.email || '—')}
       ${infoBlock('Fecha de Nacimiento', emp.birthday ? formatDate(emp.birthday) : '—')}
+      ${emp.store==='1' ? infoBlock('Área', emp.area==='envios' ? 'Envíos' : 'Tienda') : ''}
       ${infoBlock('Teléfono', emp.phone || '—')}
       ${infoBlock('Horas del Período Actual', hrs.toFixed(2) + ' h')}
       ${infoBlock('Encargado de pedidos', emp.canPedidos ? 'Sí' : 'No')}

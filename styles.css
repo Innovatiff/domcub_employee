@@ -2244,3 +2244,25 @@ ion-icon {
   opacity:.6; transition:opacity .15s ease;
 }
 .sidebar-user:hover .nombre-editar { opacity:1; }
+
+/* ══ Horario: áreas y arrastre de turnos ══ */
+.harea th {
+  background:var(--surface-alt); font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted);
+  padding:8px 14px; text-align:left; border-top:1px solid var(--border);
+}
+.harea ion-icon { vertical-align:-2px; margin-right:5px; color:var(--primary); }
+
+.hcell.con-turno { position:relative; }
+.hgrip {
+  position:absolute; top:4px; right:5px; font-size:11px; line-height:1;
+  color:var(--text-light); cursor:grab; padding:2px 3px; border-radius:5px;
+  opacity:0; transition:opacity .15s ease, background .15s ease;
+  user-select:none;
+}
+.hcell.con-turno:hover .hgrip { opacity:.8; }
+.hgrip:hover { background:var(--primary-soft); color:var(--primary); opacity:1; }
+body.arrastrando { cursor:grabbing; user-select:none; }
+body.arrastrando .hgrip { cursor:grabbing; }
+.hcell.h-preview { outline:2px solid var(--primary); outline-offset:-2px;
+  background:var(--primary-soft) !important; }
