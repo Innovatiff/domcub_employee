@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='11' fill='%234f46e5'/%3E%3Cg transform='translate(2.8 8.03) scale(0.726)'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M8.6 27C7.6 15.4 15.4 5.4 26.6 5.4C33.4 5.4 37.6 9.2 39 14.3L46.3 16.9C49.5 18.1 49.9 21.3 46.7 25.5C44.9 27.9 42.7 29.6 40.5 30.4C41.9 27.6 41.7 25 40.5 23.6C38.7 21.7 36.1 21.2 33.7 22C32.1 23.8 30.7 26 29.3 28.2C27.7 30.7 26.3 33.8 25 38.6L10.6 33.2C9.2 31.2 8.7 29 8.6 27ZM28.9 13.3C31.1 12.3 33.7 13.1 34.3 15.1C33.1 16.5 30.5 16.5 28.9 15.3Z'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grupo — El Águila</title>
+<title>Chat — El Águila</title>
 <link rel="stylesheet" href="styles.css">
 <script type="module" src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.esm.js"></script>
 <script nomodule src="https://unpkg.com/ionicons@8.0.13/dist/ionicons/ionicons.js"></script>
@@ -51,7 +51,7 @@
     <a href="registros.html" data-manager-only class="nav-link"><ion-icon name="car-outline"></ion-icon><span>Autos</span></a>
     <a href="tareas.html" data-manager-only class="nav-link"><ion-icon name="checkbox-outline"></ion-icon><span>Tareas</span></a>
     <a href="reportes.html" data-manager-only class="nav-link"><ion-icon name="warning-outline"></ion-icon><span>Reportes</span></a>
-    <a href="grupo.html" class="nav-link active"><ion-icon name="chatbubbles-outline"></ion-icon><span>Grupo</span></a>
+    <a href="grupo.html" class="nav-link active"><ion-icon name="chatbubbles-outline"></ion-icon><span>Chat</span></a>
       </div></div>
     </div>
     <div class="nav-group" data-group="tiempo">
@@ -80,8 +80,8 @@
 
 <main class="main main-chat">
   <div class="page-header" style="margin-bottom:18px">
-    <h1>Grupo</h1>
-    <p>Anuncios para todo el equipo y mensajes privados.</p>
+    <h1>Chat</h1>
+    <p>Anuncios, canales de tienda, grupos y mensajes privados.</p>
   </div>
 
   <div class="chat-shell">
@@ -170,6 +170,7 @@ let unsubMsgs   = null;
 let chatMeta    = {};     // id -> {lastMessage, lastAt, vistos}
 let unsubChats  = null;
 let msgsCache   = [];     // para repintar cuando cambian los "vistos"
+let grupoPendiente = null; // grupo pedido por un aviso, se abre al cargar
 let vistoFirma  = '';     // último estado de "vistos" ya pintado
 let listaFirma  = '';     // última lista de conversaciones ya pintada
 
@@ -185,15 +186,32 @@ requireAuth(async () => {
   if (isManager()) document.getElementById('nuevoGrupoBtn').style.display = '';
   paintList();
 
-  // Si se llega desde un aviso (grupo.html?chat=...) se abre esa
-  // conversación; si no, Anuncios por defecto.
-  const pedido = new URLSearchParams(location.search).get('chat');
-  const otro = pedido && !String(pedido).startsWith('anuncios')
-    ? people.find(p => dmId(SESSION.pid, p.pid) === pedido) : null;
-  if (otro) openDm(otro.pid); else openAnuncios();
+  // Si se llega desde un aviso (grupo.html?chat=...) se abre ESA
+  // conversación: privada, canal de tienda, anuncios o grupo. Antes los
+  // canales y los grupos caían a Anuncios y el aviso no llevaba a nada.
+  const pedido = new URLSearchParams(location.search).get('chat') || '';
+  if (pedido.startsWith('tienda_')) {
+    const st = pedido.slice('tienda_'.length);
+    // Un colaborador sólo puede entrar al canal de SU tienda
+    if (!isColaborador() || st === SESSION.store) openTienda(st);
+    else openAnuncios();
+  } else if (pedido.startsWith('grp_')) {
+    // El grupo llega con la lista de chats; se abre en cuanto aparezca
+    grupoPendiente = pedido;
+    openAnuncios();
+  } else {
+    const otro = pedido && !pedido.startsWith('anuncios')
+      ? people.find(p => dmId(SESSION.pid, p.pid) === pedido) : null;
+    if (otro) openDm(otro.pid); else openAnuncios();
+  }
   unsubChats = listenChats(list => {
     chatMeta = {};
     list.forEach(c => chatMeta[c.id] = c);
+    // Un aviso pidió abrir un grupo: ya llegó su información
+    if (grupoPendiente && chatMeta[grupoPendiente]) {
+      const id = grupoPendiente; grupoPendiente = null;
+      openGrupo(id);
+    }
     // Lo que llega al chat que tengo abierto ya lo estoy viendo
     if (activeChat) {
       markChatRead(activeChat.id);
