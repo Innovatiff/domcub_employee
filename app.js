@@ -1184,10 +1184,16 @@ function anunciosId(store) { return 'anuncios_' + store; }
 
 async function ensureAnuncios(store) {
   const id = anunciosId(store);
+  const titulo = 'Anuncios de ' + storeShort(store);
   const ref = db.collection('Chats').doc(id);
   const doc = await ref.get();          // leer es más barato que escribir
-  if (doc.exists) return id;
-  await ref.set({ type:'anuncios', store, title: 'Anuncios de ' + storeShort(store) });
+  if (doc.exists) {
+    // Si la tienda cambió de nombre, la gerencia refresca el título al pasar
+    if (isManager() && doc.data().title !== titulo)
+      ref.update({ title: titulo }).catch(() => {});
+    return id;
+  }
+  await ref.set({ type:'anuncios', store, title: titulo });
   return id;
 }
 
@@ -1197,10 +1203,15 @@ function tiendaChatId(store) { return 'tienda_' + store; }
 
 async function ensureTienda(store) {
   const id = tiendaChatId(store);
+  const titulo = 'Chat de ' + storeShort(store);
   const ref = db.collection('Chats').doc(id);
   const doc = await ref.get();          // leer es más barato que escribir
-  if (doc.exists) return id;
-  await ref.set({ type:'tienda', store, title: 'Chat de ' + storeShort(store) });
+  if (doc.exists) {
+    if (isManager() && doc.data().title !== titulo)
+      ref.update({ title: titulo }).catch(() => {});
+    return id;
+  }
+  await ref.set({ type:'tienda', store, title: titulo });
   return id;
 }
 
@@ -1307,9 +1318,14 @@ const vistoEscrito = {};   // anti-bucle: escribir dispara el snapshot, que
                            // algo más nuevo que la última escritura.
 function marcarVisto(chatId, lastAtMs) {
   if (!SESSION) return;
-  const t = lastAtMs || Date.now();
-  if (vistoEscrito[chatId] && vistoEscrito[chatId] >= t) return;
-  vistoEscrito[chatId] = t;
+  // Un chat sin mensajes no tiene "hora del último mensaje". Antes se
+  // usaba la hora actual como respaldo, que cambia siempre, y el freno
+  // anti-bucle nunca frenaba: dos sesiones mirando un chat vacío se
+  // reescribían el "visto" una a la otra sin parar. Sin último mensaje
+  // no hay nada que ver, así que no se escribe nada.
+  if (!lastAtMs) return;
+  if (vistoEscrito[chatId] && vistoEscrito[chatId] >= lastAtMs) return;
+  vistoEscrito[chatId] = lastAtMs;
   const campo = {}; campo['vistos.' + SESSION.pid] = firebase.firestore.FieldValue.serverTimestamp();
   db.collection('Chats').doc(chatId).update(campo)
     .catch(e => console.warn('marcarVisto:', e));
