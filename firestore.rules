@@ -216,6 +216,13 @@ service cloud.firestore {
       allow delete: if isManager();
     }
 
+    // ── Configuración compartida (mensaje del día) ──
+    // Todo el equipo lo lee; sólo la gerencia lo escribe.
+    match /Config/{id} {
+      allow read:  if signedIn();
+      allow write: if isManager();
+    }
+
     // ── Resumen semanal ──
     // Lo escribe la función programada del domingo (el servidor no pasa
     // por estas reglas); la gerencia sólo lo lee. Lleva costos de nómina,

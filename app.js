@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════
-//  El Águila — capa compartida
+//  Águila — capa compartida
 //  NOTA: los nombres de las colecciones y de los campos se
 //  mantienen en inglés (Employees, Jobs, Main, ClockIns,
 //  TimeOff, PayStatements, Pedidos, Chats, Messages) para no
@@ -1845,6 +1845,20 @@ async function denegarPermiso(id, motivo) {
   await updateTimeOff(id, {
     status: 'denied', denyReason: motivo || '',
     decidedBy: SESSION.name, decidedAt: new Date().toISOString()
+  });
+}
+
+// ── Mensaje del día ──
+// Una frase bonita que la gerencia deja para el equipo; sale arriba del
+// portal del colaborador al abrirlo. Se cambia desde el Panel o el teléfono.
+async function getMensajeDia() {
+  const doc = await db.collection('Config').doc('mensaje').get();
+  return doc.exists ? doc.data() : { texto: '' };
+}
+async function setMensajeDia(texto) {
+  await db.collection('Config').doc('mensaje').set({
+    texto: String(texto || '').trim(), por: SESSION.name,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
 }
 

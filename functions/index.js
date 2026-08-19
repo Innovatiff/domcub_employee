@@ -1,5 +1,5 @@
 /**
- * El Águila — envío de notificaciones push
+ * Águila — envío de notificaciones push
  *
  * Un navegador no puede mandar una push a otro: hace falta una credencial
  * de servidor, y esa credencial no puede vivir en el código de la página

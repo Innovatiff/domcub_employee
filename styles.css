@@ -2266,3 +2266,20 @@ body.arrastrando { cursor:grabbing; user-select:none; }
 body.arrastrando .hgrip { cursor:grabbing; }
 .hcell.h-preview { outline:2px solid var(--primary); outline-offset:-2px;
   background:var(--primary-soft) !important; }
+
+/* ══ Mensaje del día ══ */
+.mdia {
+  display:flex; align-items:flex-start; gap:14px; cursor:pointer;
+  background:linear-gradient(120deg,#4f46e5,#7c3aed 55%,#d946ef);
+  color:#fff; border-radius:16px; padding:18px 20px 16px; margin-bottom:18px;
+  box-shadow:0 10px 26px rgba(79,70,229,.25);
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.mdia:hover { transform:translateY(-1px); box-shadow:0 14px 30px rgba(79,70,229,.32); }
+.mdia.vacio { background:linear-gradient(120deg,#64748b,#475569); box-shadow:none; }
+.mdia-ico { font-size:22px; margin-top:2px; flex-shrink:0; }
+.mdia-cuerpo { flex:1; min-width:0; }
+.mdia-texto { font-size:16px; font-weight:650; line-height:1.5; letter-spacing:-.01em; }
+.mdia-firma { font-size:12.5px; opacity:.85; margin-top:6px; }
+.mdia-lapiz { font-size:17px; opacity:0; flex-shrink:0; margin-top:2px; transition:opacity .15s ease; }
+.mdia:hover .mdia-lapiz { opacity:.9; }
