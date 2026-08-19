@@ -1,4 +1,4 @@
-/* El Águila — trabajador de servicio para las notificaciones push.
+/* Águila — trabajador de servicio para las notificaciones push.
    Este archivo tiene que estar en la raíz del sitio y llamarse exactamente
    así: el SDK de Firebase lo busca por ese nombre. Corre aparte de la
    página, así que sigue vivo con la pestaña cerrada; por eso repite la

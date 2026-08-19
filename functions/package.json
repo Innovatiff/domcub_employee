@@ -1,6 +1,6 @@
 {
   "name": "elaguila-functions",
-  "description": "Notificaciones push de El Águila",
+  "description": "Notificaciones push de Águila",
   "main": "index.js",
   "engines": { "node": "22" },
   "dependencies": {

@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════
-//  El Águila — capa compartida
+//  Águila — capa compartida
 //  NOTA: los nombres de las colecciones y de los campos se
 //  mantienen en inglés (Employees, Jobs, Main, ClockIns,
 //  TimeOff, PayStatements, Pedidos, Chats, Messages) para no
