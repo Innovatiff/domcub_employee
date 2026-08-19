@@ -87,6 +87,8 @@
     <button class="btn btn-primary" onclick="openClockModal()"><ion-icon name="finger-print-outline"></ion-icon> Marcar Entrada / Salida</button>
   </div>
 
+  <div id="mensajeDia"></div>
+
   <div id="bandeja"></div>
 
   <div id="festejosCard" style="display:none"></div>
@@ -122,6 +124,27 @@
     </div>
   </div>
 </main>
+
+<!-- Modal del mensaje del día -->
+<div class="modal-overlay" id="mdiaModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3><ion-icon name="sparkles-outline" style="vertical-align:-2px;color:#d946ef"></ion-icon> Mensaje del día</h3>
+      <button class="modal-close" onclick="closeModal('mdiaModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 12px">
+        Sale arriba del portal de cada colaborador al abrirlo. Una frase
+        bonita, un ánimo para el día, un recordatorio con cariño.
+      </p>
+      <textarea id="mdiaTxt" rows="3" placeholder="¡Feliz día, equipo! Hoy va a ser un gran día 🦅"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('mdiaTxt').value='';guardarMensajeDia()">Quitar</button>
+      <button class="btn btn-primary" id="mdiaBtn" onclick="guardarMensajeDia()">Publicar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal de Entrada/Salida -->
 <div class="modal-overlay" id="clockModal">
@@ -174,6 +197,7 @@ async function render() {
     ]);
     pintarFestejos(allEmps);
     pintarBandeja();
+    pintarMensajeDia();
 
     const emps = store === 'all' ? allEmps : allEmps.filter(e => e.store === store);
     const active = emps.filter(e => e.status === 'active');
@@ -554,6 +578,44 @@ async function bjFelicitar(i, btn) {
     toast('Anuncio publicado para ' + storeName(ev.emp.store), 'success');
     btn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Publicado';
   } catch (err) { btn.disabled = false; toast('Error: ' + err.message, 'error'); }
+}
+// ══ Mensaje del día: la frase que ve el equipo al abrir su portal ══
+let mensajeDia = { texto: '' };
+
+async function pintarMensajeDia() {
+  try { mensajeDia = await getMensajeDia(); } catch (e) { return; }
+  const host = document.getElementById('mensajeDia');
+  const hay = mensajeDia && mensajeDia.texto;
+  host.innerHTML = `
+    <div class="mdia ${hay ? '' : 'vacio'}" onclick="abrirMensajeDia()" title="Cambiar el mensaje">
+      <ion-icon name="sparkles-outline" class="mdia-ico"></ion-icon>
+      <div class="mdia-cuerpo">
+        ${hay
+          ? `<div class="mdia-texto">"${escapeHtml(mensajeDia.texto)}"</div>
+             <div class="mdia-firma">— ${escapeHtml(mensajeDia.por || 'Gerencia')} · lo ve todo el equipo en su portal</div>`
+          : `<div class="mdia-texto">Deja un mensaje bonito para el equipo…</div>
+             <div class="mdia-firma">Saldrá arriba del portal de cada colaborador</div>`}
+      </div>
+      <ion-icon name="create-outline" class="mdia-lapiz"></ion-icon>
+    </div>`;
+}
+
+function abrirMensajeDia() {
+  document.getElementById('mdiaTxt').value = mensajeDia.texto || '';
+  openModal('mdiaModal');
+}
+
+async function guardarMensajeDia() {
+  const btn = document.getElementById('mdiaBtn');
+  btn.disabled = true;
+  try {
+    const texto = document.getElementById('mdiaTxt').value.trim();
+    await setMensajeDia(texto);
+    closeModal('mdiaModal');
+    toast(texto ? 'Mensaje publicado para el equipo' : 'Mensaje quitado', 'success');
+    pintarMensajeDia();
+  } catch (err) { toast('No se pudo guardar: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
 }
 </script>
 </body>
