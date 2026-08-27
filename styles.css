@@ -1941,6 +1941,18 @@ ion-icon {
   font-size: 10.5px; font-weight: 650; color: #92400e;
 }
 
+/* Día libre puesto a mano por la gerencia: el horario nunca queda en blanco */
+.hcell.dialibre { cursor: pointer; position: relative; }
+.hcell-libre {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  height: 100%; border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  font-size: 10.5px; font-weight: 650; color: var(--text-muted);
+}
+.hcell.dialibre:hover .hcell-libre { filter: brightness(0.97); }
+.hcell.dialibre:hover .hgrip { opacity: .8; }
+
 /* Atajos de horario en el modal */
 .turno-presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .turno-preset {

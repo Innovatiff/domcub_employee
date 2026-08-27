@@ -59,6 +59,38 @@ const ok = (c, q) => { console.log((c?'  ok   ':'  FALLA')+'  '+q); if(!c) fallo
   const n2 = await api.quitarDelHorario('caro', '2026-08-12', '2026-08-13');
   ok(n2 === 0, 'un permiso sin turnos asignados no quita nada');
 
+  // Un día marcado libre se borra igual que un turno al aprobar un permiso
+  DOCS = {
+    'Horarios/2026-08-10_1': { weekStart:'2026-08-10', store:'1', shifts: {
+      ana: { '2026-08-12': { libre:true }, '2026-08-14': {in:'09:00',out:'17:00'} }
+    }}
+  };
+  const n3 = await api.quitarDelHorario('ana', '2026-08-12', '2026-08-12');
+  ok(n3 === 1, 'un día libre también se quita cuando cae dentro de un permiso');
+  ok(!DOCS['Horarios/2026-08-10_1'].shifts.ana['2026-08-12'], 'el día libre desaparece');
+  ok(!!DOCS['Horarios/2026-08-10_1'].shifts.ana['2026-08-14'], 'el turno fuera del permiso sigue ahí');
+
+  // ── Días libres: helpers de horario.html ──
+  const html = fs.readFileSync(require('path').join(__dirname,'..','horario.html'), 'utf8');
+  const hz = html.slice(html.indexOf('function esLibre'), html.indexOf('function pintar'));
+  const H = new Function(hz + '\nreturn { esLibre, horasDe };')();
+
+  ok(H.esLibre({ libre:true }) === true,  'esLibre reconoce un día libre');
+  ok(H.esLibre({ in:'09:00', out:'17:00' }) === false, 'un turno normal no es libre');
+  ok(H.esLibre(undefined) === false, 'una casilla vacía no es libre');
+
+  ok(H.horasDe({ libre:true }) === 0, 'un día libre no suma horas');
+  ok(H.horasDe(undefined) === 0, 'una casilla vacía no suma horas');
+  ok(H.horasDe({ in:'09:00', out:'17:00' }) === 8, 'un turno de 9 a 17 son 8 horas');
+  ok(H.horasDe({ in:'09:30', out:'13:00' }) === 3.5, 'medias horas se cuentan bien');
+
+  // El total de la semana no se infla con los días libres
+  const semana = { '2026-08-10': {in:'09:00',out:'17:00'},
+                   '2026-08-11': { libre:true },
+                   '2026-08-12': {in:'10:00',out:'14:00'} };
+  const total = Object.values(semana).reduce((s,t) => s + H.horasDe(t), 0);
+  ok(total === 12, 'la semana suma 12 h: los libres cuentan como cero');
+
   console.log(fallos ? `\n${fallos} FALLOS` : '\nHorario: todo correcto');
   process.exit(fallos ? 1 : 0);
 })();
