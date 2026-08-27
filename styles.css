@@ -1943,12 +1943,14 @@ ion-icon {
 
 /* Día libre puesto a mano por la gerencia: el horario nunca queda en blanco */
 .hcell.dialibre { cursor: pointer; position: relative; }
+/* En rojo a propósito: la gerencia necesita ver de un vistazo quién
+   descansa y quién no, sin tener que leer casilla por casilla. */
 .hcell-libre {
   display: flex; align-items: center; justify-content: center; gap: 4px;
   height: 100%; border-radius: 8px;
-  background: #f1f5f9;
-  border: 1px solid var(--border);
-  font-size: 10.5px; font-weight: 650; color: var(--text-muted);
+  background: var(--danger-soft);
+  border: 1px solid #fecdd3;
+  font-size: 10.5px; font-weight: 650; color: #9f1239;
 }
 .hcell.dialibre:hover .hcell-libre { filter: brightness(0.97); }
 .hcell.dialibre:hover .hgrip { opacity: .8; }
