@@ -42,7 +42,7 @@ function isManager()     { return SESSION && (SESSION.kind === 'manager'); }
 function isColaborador() { return SESSION && (SESSION.kind === 'colaborador'); }
 
 function roleLabel(role) {
-  return { owner:'Propietario', manager:'Gerente', colaborador:'Colaborador' }[role] || 'Gerente';
+  return { owner:'Propietario', manager:'SFM', colaborador:'Colaborador' }[role] || 'SFM';
 }
 
 /**
