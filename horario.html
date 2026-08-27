@@ -134,7 +134,9 @@
         <ion-icon name="trash-outline"></ion-icon> Quitar
       </button>
       <div style="display:flex;gap:9px">
-        <button class="btn btn-outline" onclick="closeModal('turnoModal')">Cancelar</button>
+        <button class="btn btn-outline" id="turnoLibre" onclick="marcarLibre()">
+          <ion-icon name="cafe-outline"></ion-icon> Libre
+        </button>
         <button class="btn btn-primary" onclick="guardarTurno()">Guardar</button>
       </div>
     </div>
@@ -232,8 +234,11 @@ function conPermiso(empId, fecha) {
   return (permisos[empId] || []).some(t => fecha >= t.startDate && fecha <= t.endDate);
 }
 
+// Un día marcado como libre se guarda { libre:true }, sin horas.
+function esLibre(t) { return !!(t && t.libre); }
+
 function horasDe(turno) {
-  if (!turno) return 0;
+  if (!turno || turno.libre) return 0;
   const [h1, m1] = turno.in.split(':').map(Number);
   const [h2, m2] = turno.out.split(':').map(Number);
   return Math.max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60);
@@ -259,6 +264,14 @@ function pintar() {
       if (conPermiso(e.id, f)) {
         return `<td class="hcell permiso" data-emp="${e.id}" data-fecha="${f}" title="Permiso aprobado">
           <div class="hcell-permiso"><ion-icon name="airplane-outline"></ion-icon> Permiso</div></td>`;
+      }
+      if (esLibre(t)) {
+        return `<td class="hcell dialibre" data-emp="${e.id}" data-fecha="${f}"
+                    title="Día libre" onclick="abrirTurno('${e.id}','${f}')">
+          <div class="hcell-libre"><ion-icon name="cafe-outline"></ion-icon> Libre</div>
+          <span class="hgrip" title="Arrastra para marcar libre otros días"
+                onmousedown="iniciarArrastre(event,'${e.id}','${f}')"
+                onclick="event.stopPropagation()">⠿</span></td>`;
       }
       if (t) {
         return `<td class="hcell con-turno" data-emp="${e.id}" data-fecha="${f}" onclick="abrirTurno('${e.id}','${f}')">
@@ -318,8 +331,10 @@ function pintar() {
     </div>
     <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
       Toca una casilla para asignar o cambiar un turno, o arrastra el símbolo ⠿
-      de un turno por la fila para copiarlo a más días. Cuando apruebas un
-      permiso, la persona sale sola de esos días.
+      por la fila para copiarlo a más días. Para un día de descanso usa el botón
+      <strong>Libre</strong>: así el horario queda completo y cada quien ve que
+      ese día no trabaja. Cuando apruebas un permiso, la persona sale sola de
+      esos días.
     </p>`;
 }
 
@@ -347,9 +362,16 @@ function abrirTurno(empId, fecha) {
   document.getElementById('turnoTitulo').textContent = e ? e.name : 'Turno';
   document.getElementById('turnoSub').textContent =
     `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
-  document.getElementById('turnoIn').value  = t ? t.in  : presets()[0].in;
-  document.getElementById('turnoOut').value = t ? t.out : presets()[0].out;
+  const libre = esLibre(t);
+  document.getElementById('turnoIn').value  = (t && !libre) ? t.in  : presets()[0].in;
+  document.getElementById('turnoOut').value = (t && !libre) ? t.out : presets()[0].out;
   document.getElementById('turnoQuitar').style.display = t ? '' : 'none';
+
+  // Si ya está libre, el botón sirve para devolverlo a día normal.
+  const btnLibre = document.getElementById('turnoLibre');
+  btnLibre.innerHTML = libre
+    ? '<ion-icon name="close-outline"></ion-icon> Quitar libre'
+    : '<ion-icon name="cafe-outline"></ion-icon> Libre';
 
   document.getElementById('turnoPresets').innerHTML = presets().map(p =>
     `<button type="button" class="turno-preset" onclick="usarPreset('${p.in}','${p.out}')">${p.in} – ${p.out}</button>`
@@ -381,6 +403,29 @@ async function guardarTurno() {
   } catch (err) {
     toast('No se pudo guardar: ' + err.message, 'error');
     render();                                   // recarga lo que sí quedó
+  }
+}
+
+// Marca el día como libre, o lo devuelve a vacío si ya lo estaba.
+async function marcarLibre() {
+  const shifts = horario.shifts || {};
+  const actual = (shifts[celda.empId] || {})[celda.fecha];
+
+  if (esLibre(actual)) {
+    delete shifts[celda.empId][celda.fecha];
+    if (!Object.keys(shifts[celda.empId]).length) delete shifts[celda.empId];
+  } else {
+    (shifts[celda.empId] = shifts[celda.empId] || {})[celda.fecha] = { libre: true };
+  }
+  horario.shifts = shifts;
+
+  closeModal('turnoModal');
+  pintar();                                     // se ve al instante
+  try {
+    await saveHorario(lunes, tiendaActiva(), shifts);
+  } catch (err) {
+    toast('No se pudo guardar: ' + err.message, 'error');
+    render();
   }
 }
 
@@ -605,7 +650,9 @@ document.addEventListener('mouseup', async () => {
   pintar();                                  // se ve al instante
   try {
     await saveHorario(lunes, tiendaActiva(), shifts);
-    toast(`Turno ${d.turno.in} – ${d.turno.out} puesto en ${n} días`, 'success');
+    toast(esLibre(d.turno)
+      ? `Libre puesto en ${n} días`
+      : `Turno ${d.turno.in} – ${d.turno.out} puesto en ${n} días`, 'success');
   } catch (err) {
     toast('No se pudo guardar: ' + err.message, 'error');
     render();                                // recarga lo real si falló
