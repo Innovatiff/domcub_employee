@@ -118,7 +118,7 @@
       <footer class="chat-compose" id="chatCompose" style="display:none">
         <div id="composeLocked" class="compose-locked" style="display:none">
           <ion-icon name="megaphone-outline"></ion-icon>
-          Solo la gerencia puede publicar anuncios. Aquí puedes leerlos.
+          Solo el SFM puede publicar anuncios. Aquí puedes leerlos.
         </div>
         <form id="composeForm" onsubmit="doSend(event)">
           <input type="file" id="fotoInput" accept="image/*" hidden onchange="doFoto(this)">
@@ -241,7 +241,7 @@ async function buildPeople() {
   mgrSnap.docs.forEach(d => {
     const m = d.data();
     people.push({
-      pid: 'mgr:' + d.id, name: m.name || m.email || 'Gerencia',
+      pid: 'mgr:' + d.id, name: m.name || m.email || 'SFM',
       sub: roleLabel(m.role), kind: 'manager', store: null
     });
   });
@@ -342,7 +342,7 @@ function paintList() {
     anuncios +
     tiendasHtml +
     (grupos.length ? `<div class="chat-group-label">Grupos</div>${grupos.map(filaGrupo).join('')}` : '') +
-    (mgrs.length ? `<div class="chat-group-label">Gerencia</div>${mgrs.map(row).join('')}` : '') +
+    (mgrs.length ? `<div class="chat-group-label">SFM</div>${mgrs.map(row).join('')}` : '') +
     (cols.length ? `<div class="chat-group-label">Colaboradores</div>${cols.map(row).join('')}` : '') +
     (!filtered.length && !grupos.length && q ? `<div class="chat-empty-search">Sin resultados para "${escapeHtml(q)}"</div>` : '');
 }
