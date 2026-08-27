@@ -433,7 +433,7 @@
           <input type="text" id="pinInput" inputmode="numeric" autocomplete="off"
                  maxlength="6" placeholder="••••••" oninput="onPinInput(this)">
         </div>
-        <div class="pw-hint" style="text-align:center">Tu gerente te entregó este PIN al contratarte.</div>
+        <div class="pw-hint" style="text-align:center">Tu SFM te entregó este PIN al contratarte.</div>
       </div>
       <button type="submit" class="btn-auth" id="pinBtn">
         <ion-icon name="log-in-outline"></ion-icon>
@@ -503,21 +503,21 @@ async function doPinLogin(e) {
     if (!pinDoc.exists) {
       await auth.signOut();
       setLoading('pinBtn', false, 'Entrar', 'log-in-outline');
-      showAlert('PIN no reconocido. Verifícalo con tu gerente.', 'error');
+      showAlert('PIN no reconocido. Verifícalo con tu SFM.', 'error');
       return;
     }
     const empDoc = await db.collection('Employees').doc(pinDoc.data().employeeId).get();
     if (!empDoc.exists) {
       await auth.signOut();
       setLoading('pinBtn', false, 'Entrar', 'log-in-outline');
-      showAlert('PIN no reconocido. Verifícalo con tu gerente.', 'error');
+      showAlert('PIN no reconocido. Verifícalo con tu SFM.', 'error');
       return;
     }
     const emp = { id: empDoc.id, ...empDoc.data() };
     if (emp.status !== 'active') {
       await auth.signOut();
       setLoading('pinBtn', false, 'Entrar', 'log-in-outline');
-      showAlert('Esta cuenta está inactiva. Comunícate con tu gerente.', 'error');
+      showAlert('Esta cuenta está inactiva. Comunícate con tu SFM.', 'error');
       return;
     }
     localStorage.setItem('elaguila_emp', emp.id);
