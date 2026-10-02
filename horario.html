@@ -83,6 +83,9 @@
       <p>Asigna los turnos de la semana. Los permisos aprobados quitan a la persona solos.</p>
     </div>
     <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" onclick="abrirFijar()">
+        <ion-icon name="pin-outline"></ion-icon> Fijar
+      </button>
       <button class="btn btn-outline" onclick="abrirPlantillas()">
         <ion-icon name="albums-outline"></ion-icon> Plantillas
       </button>
@@ -143,6 +146,41 @@
   </div>
 </div>
 
+<!-- Modal de horario fijo por persona -->
+<div class="modal-overlay" id="fijarModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><ion-icon name="pin-outline" style="vertical-align:-2px;color:var(--primary)"></ion-icon>
+        Horario fijo — <span id="fjTienda"></span></h3>
+      <button class="modal-close" onclick="closeModal('fijarModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 14px">
+        Para quien trabaja siempre igual: guardas su semana una vez y cada
+        semana nueva se llena sola. Lo que edites después en la cuadrícula
+        manda en esa semana; cambiar esto sólo afecta las semanas que aún
+        no se han llenado.
+      </p>
+      <div class="form-group">
+        <label>Colaborador</label>
+        <select id="fjEmp" onchange="cargarFijo()"></select>
+      </div>
+      <div id="fjDias"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <input type="time" id="fjIn" value="09:00">
+        <input type="time" id="fjOut" value="17:00">
+        <button type="button" class="btn btn-outline btn-sm" onclick="fjAplicarLV()">Aplicar L–V</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="fjAplicarLS()">Aplicar L–S</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="fjQuitar" style="margin-right:auto;display:none" onclick="quitarFijo()">Quitar el fijo</button>
+      <button class="btn btn-outline" onclick="closeModal('fijarModal')">Cancelar</button>
+      <button class="btn btn-primary" id="fjGuardar" onclick="guardarFijo()">Guardar horario fijo</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de plantillas de semana -->
 <div class="modal-overlay" id="plantillasModal">
   <div class="modal">
@@ -179,6 +217,7 @@ let emps    = [];        // colaboradores activos de la tienda visible
 let horario = null;      // { weekStart, store, shifts }
 let permisos = {};       // empId -> [permisos aprobados de la semana]
 let celda   = null;      // { empId, fecha } que se está editando
+let fijos   = {};        // empId -> turnos fijos por día de la semana
 
 const DIA_CORTO = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
@@ -215,19 +254,47 @@ async function render() {
     '<div class="card"><div class="loading-state"><ion-icon name="sync-outline" class="gira"></ion-icon></div></div>';
 
   try {
-    const [todos, h, perm] = await Promise.all([
-      getEmployees(), getHorario(lunes, store), permisosDeSemana(lunes)
+    const [todos, h, perm, fj] = await Promise.all([
+      getEmployees(), getHorario(lunes, store), permisosDeSemana(lunes), getFijos(store)
     ]);
     emps = todos.filter(e => e.status === 'active' && e.store === store)
                 .sort((x, y) => x.name.localeCompare(y.name));
     horario = h;
     permisos = perm;
+    fijos = fj;
+    await aplicarFijos();
     pintar();
   } catch (err) {
     console.error(err);
     document.getElementById('horarioWrap').innerHTML =
       `<div class="card"><div class="empty-state"><ion-icon name="alert-circle-outline"></ion-icon><p>${escapeHtml(err.message)}</p></div></div>`;
   }
+}
+
+// Aplica el horario fijo a la semana visible UNA sola vez por persona.
+// La marca `fijados` recuerda a quién ya se le aplicó: así los cambios
+// manuales (incluido borrar un día) nunca son pisados por el fijo.
+// Las semanas pasadas no se tocan.
+async function aplicarFijos() {
+  if (lunes < lunesDe(new Date())) return;
+  const dias = diasDeSemana(lunes);
+  const hechos = horario.fijados || [];
+  const shifts = horario.shifts = horario.shifts || {};
+  const nuevos = [];
+  emps.forEach(e => {
+    const t = fijos[e.id];
+    if (!t || hechos.includes(e.id)) return;
+    const mios = shifts[e.id] = shifts[e.id] || {};
+    for (let i = 0; i < 7; i++) {
+      if (t[i] && !mios[dias[i]] && !conPermiso(e.id, dias[i])) mios[dias[i]] = { ...t[i] };
+    }
+    if (!Object.keys(mios).length) delete shifts[e.id];
+    nuevos.push(e.id);
+  });
+  if (!nuevos.length) return;
+  horario.fijados = hechos.concat(nuevos);
+  try { await saveHorario(lunes, tiendaActiva(), shifts, horario.fijados); }
+  catch (err) { console.error('aplicarFijos', err); }
 }
 
 function conPermiso(empId, fecha) {
@@ -290,7 +357,7 @@ function pintar() {
     return `<tr>
       <th class="hemp">
         <div class="employee-info">${avatarHtml(e.name, 30)}
-          <div><div class="employee-name">${escapeHtml(e.name)}</div>
+          <div><div class="employee-name">${escapeHtml(e.name)}${fijos[e.id] ? ' <ion-icon name="pin" style="font-size:10px;color:var(--primary)" title="Tiene horario fijo"></ion-icon>' : ''}</div>
           <div class="hemp-total">${numES(totalSemana, 1)} h esta semana</div></div>
         </div>
       </th>
@@ -399,7 +466,7 @@ async function guardarTurno() {
   closeModal('turnoModal');
   pintar();                                     // se ve al instante
   try {
-    await saveHorario(lunes, tiendaActiva(), shifts);
+    await saveHorario(lunes, tiendaActiva(), shifts, horario.fijados);
   } catch (err) {
     toast('No se pudo guardar: ' + err.message, 'error');
     render();                                   // recarga lo que sí quedó
@@ -422,7 +489,7 @@ async function marcarLibre() {
   closeModal('turnoModal');
   pintar();                                     // se ve al instante
   try {
-    await saveHorario(lunes, tiendaActiva(), shifts);
+    await saveHorario(lunes, tiendaActiva(), shifts, horario.fijados);
   } catch (err) {
     toast('No se pudo guardar: ' + err.message, 'error');
     render();
@@ -438,7 +505,7 @@ async function quitarTurno() {
   closeModal('turnoModal');
   pintar();
   try {
-    await saveHorario(lunes, tiendaActiva(), shifts);
+    await saveHorario(lunes, tiendaActiva(), shifts, horario.fijados);
   } catch (err) {
     toast('No se pudo guardar: ' + err.message, 'error');
     render();
@@ -483,7 +550,7 @@ async function copiarSemanaAnterior() {
 
     horario.shifts = shifts;
     pintar();
-    await saveHorario(lunes, tiendaActiva(), shifts);
+    await saveHorario(lunes, tiendaActiva(), shifts, horario.fijados);
     toast('Horario copiado' + (saltadosPermiso
       ? ` · ${saltadosPermiso} ${saltadosPermiso === 1 ? 'día saltado por permiso' : 'días saltados por permiso'}` : ''), 'success');
   } catch (err) {
@@ -591,7 +658,7 @@ async function aplicarPlantilla(id, btn) {
     });
 
     horario.shifts = shifts;
-    await saveHorario(lunes, tiendaActiva(), shifts);
+    await saveHorario(lunes, tiendaActiva(), shifts, horario.fijados);
     closeModal('plantillasModal');
     pintar();
     const notas = [];
@@ -649,7 +716,7 @@ document.addEventListener('mouseup', async () => {
   });
   pintar();                                  // se ve al instante
   try {
-    await saveHorario(lunes, tiendaActiva(), shifts);
+    await saveHorario(lunes, tiendaActiva(), shifts, horario.fijados);
     toast(esLibre(d.turno)
       ? `Libre puesto en ${n} días`
       : `Turno ${d.turno.in} – ${d.turno.out} puesto en ${n} días`, 'success');
@@ -658,6 +725,89 @@ document.addEventListener('mouseup', async () => {
     render();                                // recarga lo real si falló
   }
 });
+// ══ Horario fijo por persona ══
+function abrirFijar() {
+  document.getElementById('fjTienda').textContent = storeName(tiendaActiva());
+  document.getElementById('fjEmp').innerHTML = emps.map(e =>
+    `<option value="${e.id}">${escapeHtml(e.name)}${fijos[e.id] ? ' 📌' : ''}</option>`).join('');
+  openModal('fijarModal');
+  cargarFijo();
+}
+
+function fjPintar(turnos) {
+  const t = turnos || {};
+  document.getElementById('fjDias').innerHTML = [0,1,2,3,4,5,6].map(i => `
+    <div class="fj-dia">
+      <label class="fj-chk">
+        <input type="checkbox" id="fjOn${i}" ${t[i] ? 'checked' : ''}
+               onchange="document.getElementById('fjRow${i}').style.opacity = this.checked ? 1 : .35">
+        ${DIA_CORTO[i]}
+      </label>
+      <div class="fj-horas" id="fjRow${i}" style="opacity:${t[i] ? 1 : .35}">
+        <input type="time" id="fjIn${i}"  value="${t[i] ? t[i].in  : '09:00'}">
+        <span>–</span>
+        <input type="time" id="fjOut${i}" value="${t[i] ? t[i].out : '17:00'}">
+      </div>
+    </div>`).join('');
+}
+
+async function cargarFijo() {
+  const empId = document.getElementById('fjEmp').value;
+  const t = fijos[empId] || null;
+  fjPintar(t);
+  document.getElementById('fjQuitar').style.display = t ? '' : 'none';
+}
+
+function fjAplicar(hasta) {
+  const vIn = document.getElementById('fjIn').value, vOut = document.getElementById('fjOut').value;
+  if (!vIn || !vOut) return;
+  for (let i = 0; i <= hasta; i++) {
+    document.getElementById('fjOn' + i).checked = true;
+    document.getElementById('fjIn' + i).value = vIn;
+    document.getElementById('fjOut' + i).value = vOut;
+    document.getElementById('fjRow' + i).style.opacity = 1;
+  }
+}
+function fjAplicarLV() { fjAplicar(4); }
+function fjAplicarLS() { fjAplicar(5); }
+
+async function guardarFijo() {
+  const empId = document.getElementById('fjEmp').value;
+  if (!empId) return;
+  const turnos = {};
+  for (let i = 0; i < 7; i++) {
+    if (!document.getElementById('fjOn' + i).checked) continue;
+    const tIn = document.getElementById('fjIn' + i).value;
+    const tOut = document.getElementById('fjOut' + i).value;
+    if (!tIn || !tOut) continue;
+    if (tOut <= tIn) { toast(`${DIA_CORTO[i]}: la salida debe ser después de la entrada.`, 'error'); return; }
+    turnos[i] = { in: tIn, out: tOut };
+  }
+  if (!Object.keys(turnos).length) { toast('Marca al menos un día.', 'error'); return; }
+  const btn = document.getElementById('fjGuardar');
+  btn.disabled = true;
+  try {
+    await saveFijo(empId, tiendaActiva(), turnos);
+    fijos[empId] = turnos;
+    closeModal('fijarModal');
+    const emp = emps.find(e => e.id === empId);
+    toast(`Horario fijo guardado para ${emp ? emp.name : ''} · se aplica a las semanas que vienen`, 'success');
+    render();
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+  finally { btn.disabled = false; }
+}
+
+async function quitarFijo() {
+  const empId = document.getElementById('fjEmp').value;
+  if (!empId || !confirm('¿Quitar el horario fijo? Las semanas ya llenadas no cambian.')) return;
+  try {
+    await deleteFijo(empId);
+    delete fijos[empId];
+    closeModal('fijarModal');
+    toast('Horario fijo quitado', 'info');
+    render();
+  } catch (err) { toast('Error: ' + err.message, 'error'); }
+}
 </script>
 </body>
 </html>
