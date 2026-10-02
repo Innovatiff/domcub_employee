@@ -838,11 +838,47 @@ async function getHorario(lunes, store) {
   return doc.exists ? doc.data() : { weekStart: lunes, store, shifts: {} };
 }
 
-async function saveHorario(lunes, store, shifts) {
+async function saveHorario(lunes, store, shifts, fijados) {
   await db.collection('Horarios').doc(`${lunes}_${store}`).set({
     weekStart: lunes, store, shifts,
+    // Quiénes ya recibieron su horario fijo en esta semana: así el fijo se
+    // aplica UNA sola vez y los cambios manuales nunca son pisados.
+    fijados: fijados || [],
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+}
+
+// ══ Horario fijo por persona ("Fijar") ══
+//
+// Una plantilla semanal por colaborador, guardada una vez. Cada semana
+// nueva se llena sola con ella la primera vez que la gerencia la abre;
+// después, lo que se edite en la cuadrícula manda esa semana. Editar el
+// fijo sólo cambia las semanas que aún no se han llenado.
+// Vive en la misma colección con id "fijo_{empId}" y turnos por día de la
+// semana (0 = lunes), como las plantillas.
+
+async function getFijos(store) {
+  const snap = await db.collection('Horarios')
+    .where('fijo','==',true).where('store','==',store).get();
+  const por = {};
+  snap.docs.forEach(d => { por[d.data().employeeId] = d.data().turnos || {}; });
+  return por;
+}
+
+async function getFijo(empId) {
+  const doc = await db.collection('Horarios').doc('fijo_' + empId).get();
+  return doc.exists ? (doc.data().turnos || {}) : null;
+}
+
+async function saveFijo(empId, store, turnos) {
+  await db.collection('Horarios').doc('fijo_' + empId).set({
+    fijo: true, employeeId: empId, store, turnos,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function deleteFijo(empId) {
+  await db.collection('Horarios').doc('fijo_' + empId).delete();
 }
 
 /**
