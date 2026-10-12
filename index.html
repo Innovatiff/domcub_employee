@@ -432,9 +432,10 @@ async function pintarBandeja() {
   });
 
   b.permisos.forEach(t => {
+    const emp = b.emps.find(e => e.id === t.employeeId);
     items.push(`<div class="bj-item">
       <ion-icon name="calendar-outline"></ion-icon>
-      <div class="bj-txt"><strong>${escapeHtml(t.employeeName || '—')}</strong> pide permiso
+      <div class="bj-txt"><strong>${escapeHtml(t.employeeName || (emp && emp.name) || '—')}</strong> pide permiso
         del <b>${formatDate(t.startDate)}</b> al <b>${formatDate(t.endDate)}</b>
         ${t.reason ? '· ' + escapeHtml(t.reason) : ''}</div>
       <div class="bj-acciones">
