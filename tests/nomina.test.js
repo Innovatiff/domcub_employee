@@ -11,7 +11,7 @@ const src = fs.readFileSync(require('path').join(__dirname, '..', 'app.js'), 'ut
 
 // Se extrae sólo la función a probar, con sus ayudantes de período.
 const trozo = (desde, hasta) => src.slice(src.indexOf(desde), src.indexOf(hasta));
-const periodos = trozo('const PERIOD_ORIGIN', '// ── Avatares ──');
+const periodos = trozo('// ── Períodos de pago', '// ── Avatares ──');
 const nomina   = trozo('async function generarNomina', '// ── Pedidos ──');
 
 let EMPS = [], MARCAS = [], STMTS = [], SEQ = 0;

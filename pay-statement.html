@@ -227,18 +227,32 @@
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
 <script>
-requireAuth(() => { buildPeriodOptions(); render(); });
+requireAuth(async () => { await buildPeriodOptions(); render(); });
 
 
-function buildPeriodOptions() {
+async function buildPeriodOptions() {
   const cur = getCurrentPeriod();
   const options = [];
+  const nuevos = new Set();
   for (let i = cur.index; i >= cur.index - 13; i--) {
     const p = getPeriodByIndex(i);
+    nuevos.add(p.start);
     options.push(`<option value="${p.start}">${formatPeriodLabel(p)}${i===cur.index?' (Actual)':''}</option>`);
   }
-  document.getElementById('periodSelect').innerHTML     = options.join('');
-  document.getElementById('genPeriodSelect').innerHTML  = options.join('');
+  document.getElementById('genPeriodSelect').innerHTML = options.join('');
+
+  // Recibos del calendario anterior de 14 días: se listan para consultarlos.
+  try {
+    const todos = await getPayStatements();
+    todos.forEach(s => {
+      if (s.periodStart && s.periodEnd && !nuevos.has(s.periodStart)) PERIODOS_ANTERIORES[s.periodStart] = s.periodEnd;
+    });
+  } catch (e) { console.error('periodos anteriores', e); }
+  Object.keys(PERIODOS_ANTERIORES).sort().reverse().forEach(st => {
+    const p = getPeriodByStart(st);
+    options.push(`<option value="${st}">${formatPeriodLabel(p)} (calendario anterior)</option>`);
+  });
+  document.getElementById('periodSelect').innerHTML = options.join('');
 }
 
 const sumar = (lista, campo) => lista.reduce((s, x) => s + (Number(x[campo]) || 0), 0);
