@@ -390,16 +390,41 @@ function calculateHours(clockIn, clockOut) {
   return Math.round(((o - i) / 3600000) * 100) / 100;
 }
 
-// ── Períodos de pago: del 1 al 15 y del 16 al último día del mes ──
-// Se paga el 15 y el 30. El índice cuenta quincenas: dos por mes.
+// ── Períodos de pago ──
+// Desde el 16 de octubre de 2026 se paga el 15 y el 30: del 1 al 15 y del
+// 16 al último día del mes. Antes se pagaba cada 14 días (anclado al 1 de
+// enero de 2024); esos períodos se mantienen igual para no mover nada ya
+// pagado, y del 5 al 15 de octubre queda un período puente sin huecos ni
+// días repetidos.
+const PERIOD_ORIGIN = new Date('2024-01-01T00:00:00');
+const QUINCENA_DESDE = new Date('2026-10-16T00:00:00');
+const PUENTE_DESDE   = new Date('2026-10-05T00:00:00');
+
+function idxQuincena(d) { return d.getFullYear() * 24 + d.getMonth() * 2 + (d.getDate() > 15 ? 1 : 0); }
+function idx14(d) { return Math.floor(Math.round((d - PERIOD_ORIGIN) / 86400000) / 14); }
+const IDX_CORTE = idxQuincena(QUINCENA_DESDE);
+const IDX14_PUENTE = idx14(PUENTE_DESDE);
+
 function getPeriodIndex(date) {
-  const d = new Date(date);
-  return d.getFullYear() * 24 + d.getMonth() * 2 + (d.getDate() > 15 ? 1 : 0);
+  const d = new Date(date); d.setHours(0,0,0,0);
+  if (d >= QUINCENA_DESDE) return idxQuincena(d);
+  if (d >= PUENTE_DESDE) return IDX_CORTE - 1;
+  return IDX_CORTE - 1 - (IDX14_PUENTE - idx14(d));
 }
 function getPeriodByIndex(idx) {
-  const y = Math.floor(idx / 24), m = Math.floor((idx % 24) / 2), segunda = idx % 2 === 1;
-  const start = new Date(y, m, segunda ? 16 : 1);
-  const end   = segunda ? new Date(y, m + 1, 0) : new Date(y, m, 15);
+  if (idx >= IDX_CORTE) {
+    const y = Math.floor(idx / 24), m = Math.floor((idx % 24) / 2), segunda = idx % 2 === 1;
+    const start = new Date(y, m, segunda ? 16 : 1);
+    const end   = segunda ? new Date(y, m + 1, 0) : new Date(y, m, 15);
+    return { index: idx, start: toDateStr(start), end: toDateStr(end) };
+  }
+  if (idx === IDX_CORTE - 1) {
+    const end = new Date(QUINCENA_DESDE); end.setDate(end.getDate() - 1);
+    return { index: idx, start: toDateStr(PUENTE_DESDE), end: toDateStr(end) };
+  }
+  const start = new Date(PERIOD_ORIGIN);
+  start.setDate(start.getDate() + (IDX14_PUENTE - (IDX_CORTE - 1 - idx)) * 14);
+  const end = new Date(start); end.setDate(end.getDate() + 13);
   return { index: idx, start: toDateStr(start), end: toDateStr(end) };
 }
 function getCurrentPeriod() { return getPeriodByIndex(getPeriodIndex(new Date())); }
