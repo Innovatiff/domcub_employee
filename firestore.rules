@@ -250,11 +250,26 @@ service cloud.firestore {
     }
 
     // ── Pedidos ──
+    // Pedidos de la tienda (sin 'tipo') y pedidos entre compañeros
+    // (tipo 'persona'). Uno entre compañeros, una vez enviado, nadie lo
+    // edita ni lo borra: sólo el que lo recibe puede marcarlo 'aceptado'.
     match /Pedidos/{id} {
       allow read:   if signedIn();
-      allow create: if signedIn();
-      allow update, delete: if isManager()
-        || (haveIndex() && ('emp:' + resource.data.createdBy) == myPid());
+      allow create: if signedIn()
+        && (request.resource.data.get('tipo', '') != 'persona'
+            || (haveIndex()
+                && ('emp:' + request.resource.data.createdBy) == myPid()
+                && request.resource.data.status == 'enviado'));
+      allow update: if
+        (resource.data.get('tipo', '') != 'persona'
+          && (isManager() || (haveIndex() && ('emp:' + resource.data.createdBy) == myPid())))
+        || (resource.data.get('tipo', '') == 'persona'
+          && haveIndex() && ('emp:' + resource.data.para) == myPid()
+          && resource.data.status == 'enviado'
+          && request.resource.data.status == 'aceptado'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'aceptadoAt']));
+      allow delete: if resource.data.get('tipo', '') != 'persona'
+        && (isManager() || (haveIndex() && ('emp:' + resource.data.createdBy) == myPid()));
     }
 
     // ── Dispositivos para notificaciones push ──

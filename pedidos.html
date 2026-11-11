@@ -111,6 +111,7 @@
     <button class="tab-btn" onclick="filterEstado('borrador',this)">Borradores</button>
     <button class="tab-btn" onclick="filterEstado('enviado',this)">Enviados</button>
     <button class="tab-btn" onclick="filterEstado('recibido',this)">Recibidos</button>
+    <button class="tab-btn" onclick="filterEstado('persona',this)">Entre colaboradores</button>
   </div>
 
   <div id="pedList"></div>
@@ -202,6 +203,7 @@
 <script>
 let estadoFilter = 'all';
 let pedidosCache = [];
+let personaCache = [];
 let currentPed   = null;
 
 requireAuth(() => {
@@ -228,7 +230,11 @@ async function render() {
   document.getElementById('pedList').innerHTML =
     '<div class="skeleton-card" style="height:78px;margin-bottom:11px"></div>'.repeat(3);
   try {
-    pedidosCache = await getPedidos(getSelectedStore());
+    const todos = await getPedidos(getSelectedStore());
+    // Entre compañeros: la gerencia los ve todos; un colaborador, sólo los suyos.
+    personaCache = todos.filter(p => p.tipo === 'persona'
+      && (isManager() || p.createdBy === SESSION.employeeId || p.para === SESSION.employeeId));
+    pedidosCache = todos.filter(p => p.tipo !== 'persona');
     paint();
   } catch (err) {
     toast('No se pudieron cargar los pedidos: ' + err.message, 'error');
@@ -238,6 +244,7 @@ async function render() {
 }
 
 function paint() {
+  if (estadoFilter === 'persona') return paintPersona();
   const all = pedidosCache;
   const list = estadoFilter === 'all' ? all : all.filter(p => (p.status||'borrador') === estadoFilter);
 
@@ -375,18 +382,59 @@ async function doSavePedido() {
   } finally { btn.disabled = false; }
 }
 
+function paintPersona() {
+  const list = personaCache;
+  const pend = list.filter(p => p.status !== 'aceptado').length;
+  document.getElementById('pedStats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon purple"><ion-icon name="people-outline"></ion-icon></div>
+      <div class="stat-label">Entre colaboradores</div><div class="stat-value">${list.length}</div>
+      <div class="stat-sub">${scopeLabel()}</div></div>
+    <div class="stat-card"><div class="stat-icon yellow"><ion-icon name="time-outline"></ion-icon></div>
+      <div class="stat-label">Por aceptar</div><div class="stat-value">${pend}</div></div>
+    <div class="stat-card"><div class="stat-icon green"><ion-icon name="checkmark-circle-outline"></ion-icon></div>
+      <div class="stat-label">Aceptados</div><div class="stat-value">${list.length - pend}</div></div>`;
+  animateValues('pedStats');
+  const host = document.getElementById('pedList');
+  if (!list.length) {
+    host.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state">
+      <ion-icon name="people-outline"></ion-icon><p>Aún no hay pedidos entre colaboradores.</p></div></div></div>`;
+    return;
+  }
+  host.innerHTML = list.map((p,i) => {
+    const ok = p.status === 'aceptado';
+    const n = (p.items || []).length;
+    return `<div class="pedido-card" style="animation-delay:${(i*0.04).toFixed(2)}s">
+      <div class="pedido-main" onclick="openView('${p.id}')">
+        <div class="pedido-icon"><ion-icon name="swap-horizontal-outline"></ion-icon></div>
+        <div style="min-width:0;flex:1">
+          <div class="pedido-title">${escapeHtml(p.title || 'Pedido sin título')}</div>
+          <div class="pedido-meta">
+            ${storeBadge(p.store)}
+            <span><ion-icon name="person-outline"></ion-icon> ${escapeHtml(p.createdByName || '—')} → ${escapeHtml(p.paraName || '—')}</span>
+            <span><ion-icon name="calendar-outline"></ion-icon> ${formatDate(p.date)}</span>
+            <span><ion-icon name="cube-outline"></ion-icon> ${n} ${n===1?'artículo':'artículos'}</span>
+          </div>
+        </div>
+        <span class="badge ${ok?'badge-green':'badge-yellow'}">${ok?'Aceptado':'Por aceptar'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function openView(id) {
-  const p = pedidosCache.find(x => x.id === id);
+  const p = pedidosCache.concat(personaCache).find(x => x.id === id);
   if (!p) return;
   currentPed = p;
-  const est = PEDIDO_ESTADOS[p.status||'borrador'] || PEDIDO_ESTADOS.borrador;
+  const est = p.tipo === 'persona'
+    ? (p.status === 'aceptado' ? { label:'Aceptado', badge:'badge-green' } : { label:'Por aceptar', badge:'badge-yellow' })
+    : (PEDIDO_ESTADOS[p.status||'borrador'] || PEDIDO_ESTADOS.borrador);
   const items = p.items || [];
   document.getElementById('viewPedBody').innerHTML = `
     <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;flex-wrap:wrap">
       <div>
         <div style="font-size:17px;font-weight:700">${escapeHtml(p.title||'')}</div>
         <div style="color:var(--text-muted);font-size:13px;margin-top:3px">
-          ${storeName(p.store)} · ${formatDate(p.date)} · ${escapeHtml(p.createdByName||'—')}
+          ${storeName(p.store)} · ${formatDate(p.date)} · ${escapeHtml(p.createdByName||'—')}${p.tipo === 'persona' ? ' → ' + escapeHtml(p.paraName||'—') : ''}
         </div>
       </div>
       <span class="badge ${est.badge}" style="margin-left:auto">${est.label}</span>
@@ -407,7 +455,7 @@ function openView(id) {
       <div class="info-block-label">Nota general</div>
       <div class="info-block-value">${escapeHtml(p.note)}</div></div>` : ''}`;
 
-  const canEdit = isManager() || p.createdBy === SESSION.employeeId;
+  const canEdit = p.tipo !== 'persona' && (isManager() || p.createdBy === SESSION.employeeId);
   const eb = document.getElementById('viewPedEdit');
   eb.style.display = canEdit ? '' : 'none';
   eb.onclick = () => { closeModal('viewPedModal'); openPedido(p.id); };

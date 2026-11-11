@@ -1890,7 +1890,7 @@ async function bandejaDelDia() {
     permisos:   tos.filter(t => t.status === 'pending'),
     reportes:   reps.filter(r => (r.status || 'nuevo') === 'nuevo'),
     olvidados:  abiertos.filter(c => c.date && c.date < hoy),
-    pedidosEnv: pedidos.filter(p => p.status === 'enviado'),
+    pedidosEnv: pedidos.filter(p => p.status === 'enviado' && p.tipo !== 'persona'),
     cumplesHoy: proximosEventos(emps, 0),
     migracion:  new Set([...mig.pin, ...mig.portal].map(e => e.id)).size,
     emps
