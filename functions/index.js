@@ -20,7 +20,7 @@
  * teléfono, la tablet de la tienda, el navegador del mostrador).
  */
 
-const { onDocumentCreated, onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentWritten, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore }  = require('firebase-admin/firestore');
 const { getMessaging }  = require('firebase-admin/messaging');
@@ -125,11 +125,30 @@ exports.avisarPedido = onDocumentCreated('Pedidos/{id}', async event => {
   if (!p) return;
   const tienda = p.store === '1' ? 'Tienda' : p.store === '2' ? 'Cocina' : '';
   const n = Array.isArray(p.items) ? p.items.length : 0;
+  // Entre compañeros: el aviso es para quien lo recibe, no para la gerencia.
+  if (p.tipo === 'persona') {
+    if (!p.para) return;
+    await enviar(await tokensDe(['emp:' + p.para]),
+      'Pedido de ' + (p.createdByName || 'un compañero'),
+      `${p.title || 'Pedido'} · ${n} ${n === 1 ? 'artículo' : 'artículos'} · toca para aceptarlo`,
+      { tipo: 'pedido' }, 'pedido-' + event.params.id);
+    return;
+  }
   const tokens = await tokensGerencia();
   await enviar(tokens,
     'Pedido nuevo' + (tienda ? ' · ' + tienda : ''),
     `${p.title || 'Pedido'} · ${p.createdByName || '—'} · ${n} ${n === 1 ? 'artículo' : 'artículos'}`,
     { tipo: 'pedido' }, 'pedido-' + event.params.id);
+});
+
+// Cuando el compañero acepta, le avisa a quien hizo el pedido.
+exports.avisarPedidoAceptado = onDocumentUpdated('Pedidos/{id}', async event => {
+  const antes = event.data.before.data(), ahora = event.data.after.data();
+  if (!antes || !ahora || ahora.tipo !== 'persona') return;
+  if (antes.status === 'aceptado' || ahora.status !== 'aceptado' || !ahora.createdBy) return;
+  await enviar(await tokensDe(['emp:' + ahora.createdBy]),
+    '✅ ' + (ahora.paraName || 'Tu compañero') + ' aceptó tu pedido',
+    ahora.title || 'Pedido', { tipo: 'pedido' }, 'pedido-ok-' + event.params.id);
 });
 
 // ── Reportes de incidentes ──
