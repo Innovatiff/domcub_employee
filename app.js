@@ -1013,6 +1013,24 @@ async function ultimoKmDe(vehiculo, store) {
   return del.length ? del[0].kmLlegada : null;
 }
 
+// ── Carros de las tiendas ──
+// Una sola lista en Config/carros: [{ id, store, nombre, color, placa }].
+// El viaje guarda el carro como texto ("Toyota · Blanco · ABC-123") para que
+// el historial no cambie si luego se edita la lista.
+function etiquetaCarro(c) {
+  return [c.nombre, c.color, c.placa].map(x => String(x || '').trim()).filter(Boolean).join(' · ');
+}
+async function getCarros() {
+  const doc = await db.collection('Config').doc('carros').get();
+  return doc.exists ? (doc.data().lista || []) : [];
+}
+async function saveCarros(lista) {
+  await db.collection('Config').doc('carros').set({
+    lista, por: SESSION.name,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
 /** Vehículos ya usados en la tienda, para no teclearlos dos veces. */
 async function vehiculosDe(store) {
   const regs = await getRegistros({ store });

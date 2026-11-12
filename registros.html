@@ -82,9 +82,14 @@
       <h1 id="regTitulo">Autos</h1>
       <p>Viajes y entregas: kilometraje y horas de cada carro.</p>
     </div>
-    <button class="btn btn-primary" onclick="abrirNuevo()">
-      <ion-icon name="add-outline"></ion-icon> Nuevo registro
-    </button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="abrirCarros()">
+        <ion-icon name="car-sport-outline"></ion-icon> Carros
+      </button>
+      <button class="btn btn-primary" onclick="abrirNuevo()">
+        <ion-icon name="add-outline"></ion-icon> Nuevo registro
+      </button>
+    </div>
   </div>
 
   <!-- Rango -->
@@ -133,6 +138,30 @@
 </main>
 
 <!-- Modal: registro manual de la gerencia -->
+<!-- Modal Carros de la tienda -->
+<div class="modal-overlay" id="carrosModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="carrosTitulo">Carros</h3>
+      <button class="modal-close" onclick="closeModal('carrosModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+        Los colaboradores eligen su carro de esta lista al iniciar un viaje.
+      </p>
+      <div class="carro-head"><span>Carro</span><span>Color</span><span>Placa</span><span></span></div>
+      <div id="carrosLista"></div>
+      <button type="button" class="btn btn-sm btn-outline" style="margin-top:10px" onclick="filaCarro()">
+        <ion-icon name="add-outline"></ion-icon> Agregar carro
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('carrosModal')">Cancelar</button>
+      <button class="btn btn-primary" id="carrosBtn" onclick="guardarCarros()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="nuevoModal">
   <div class="modal">
     <div class="modal-header">
@@ -199,6 +228,54 @@ let desde = todayStr(), hasta = todayStr();
 
 requireAuth(() => { ponerFechas(); render(); });
 function onStoreChange() { render(); }
+
+// ══ Carros de la tienda (Config/carros) ══
+let carrosTodos = [];
+
+function filaCarro(c) {
+  const v = c || { id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nombre:'', color:'', placa:'' };
+  document.getElementById('carrosLista').insertAdjacentHTML('beforeend', `
+    <div class="carro-row" data-id="${escapeHtml(v.id)}">
+      <input type="text" class="c-n" value="${escapeHtml(v.nombre || '')}" placeholder="Ej: Toyota Corolla">
+      <input type="text" class="c-c" value="${escapeHtml(v.color || '')}" placeholder="Blanco">
+      <input type="text" class="c-p" value="${escapeHtml(v.placa || '')}" placeholder="ABC-123">
+      <button type="button" class="btn-icon" title="Quitar" onclick="this.parentNode.remove()"><ion-icon name="close-outline"></ion-icon></button>
+    </div>`);
+}
+
+async function abrirCarros() {
+  const store = getSelectedStore();
+  try { carrosTodos = await getCarros(); }
+  catch (err) { toast('No se pudieron cargar los carros: ' + err.message, 'error'); return; }
+  document.getElementById('carrosTitulo').textContent = 'Carros de ' + storeShort(store);
+  document.getElementById('carrosLista').innerHTML = '';
+  const mios = carrosTodos.filter(c => c.store === store);
+  mios.forEach(filaCarro);
+  if (!mios.length) filaCarro();
+  openModal('carrosModal');
+}
+
+async function guardarCarros() {
+  const store = getSelectedStore();
+  const filas = [...document.querySelectorAll('#carrosLista .carro-row')].map(r => ({
+    id: r.dataset.id, store,
+    nombre: r.querySelector('.c-n').value.trim(),
+    color:  r.querySelector('.c-c').value.trim(),
+    placa:  r.querySelector('.c-p').value.trim().toUpperCase()
+  })).filter(c => c.nombre || c.placa);
+  if (filas.some(c => !c.nombre)) { toast('Cada carro necesita un nombre.', 'error'); return; }
+  const btn = document.getElementById('carrosBtn');
+  btn.disabled = true;
+  try {
+    // Sólo se reemplazan los carros de ESTA tienda; los de la otra se quedan igual.
+    const actuales = await getCarros();
+    await saveCarros(actuales.filter(c => c.store !== store).concat(filas));
+    closeModal('carrosModal');
+    toast(`${filas.length} ${filas.length === 1 ? 'carro guardado' : 'carros guardados'}`, 'success');
+  } catch (err) {
+    toast('No se pudo guardar: ' + err.message, 'error');
+  } finally { btn.disabled = false; }
+}
 
 function ponerFechas() {
   document.getElementById('regDesde').value = desde;
@@ -320,7 +397,8 @@ let nvCarrosKm = {};   // carro -> último kilometraje de llegada
 
 async function abrirNuevo() {
   const store = getSelectedStore();
-  const [emps, vehiculos] = await Promise.all([getEmployees(), vehiculosDe(store)]);
+  const [emps, usados, oficiales] = await Promise.all([getEmployees(), vehiculosDe(store), getCarros().catch(() => [])]);
+  const vehiculos = [...new Set(oficiales.filter(c => c.store === store).map(etiquetaCarro).concat(usados))];
   const activos = emps.filter(e => e.status === 'active' && e.store === store)
                       .sort((a, b) => a.name.localeCompare(b.name));
   if (!activos.length) { toast('No hay colaboradores activos en esta tienda.', 'error'); return; }
@@ -361,7 +439,8 @@ async function editarRegistro(id) {
   const r = doc.data();
 
   const store = getSelectedStore();
-  const [emps, vehiculos] = await Promise.all([getEmployees(), vehiculosDe(store)]);
+  const [emps, usados, oficiales] = await Promise.all([getEmployees(), vehiculosDe(store), getCarros().catch(() => [])]);
+  const vehiculos = [...new Set(oficiales.filter(c => c.store === store).map(etiquetaCarro).concat(usados))];
 
   document.getElementById('nvEmp').innerHTML =
     `<option value="${r.employeeId}">${escapeHtml(r.employeeName || '—')}</option>`;
