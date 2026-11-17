@@ -262,6 +262,7 @@ service cloud.firestore {
                 && request.resource.data.status == 'enviado'));
       allow update: if
         (resource.data.get('tipo', '') != 'persona'
+          && request.resource.data.get('tipo', '') != 'persona'
           && (isManager() || (haveIndex() && ('emp:' + resource.data.createdBy) == myPid())))
         || (resource.data.get('tipo', '') == 'persona'
           && haveIndex() && ('emp:' + resource.data.para) == myPid()

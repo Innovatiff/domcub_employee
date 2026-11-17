@@ -261,13 +261,15 @@ async function render() {
         // lleva veinte horas trabajando: conviene que salte a la vista.
         const olvido = c.date && c.date < hoy;
         return `<tr${olvido ? ' style="background:var(--warning-soft)"' : ''}>
-          <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}${
+          <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${escapeHtml(emp.name)}${
             olvido ? ` <span class="badge badge-yellow" style="margin-left:6px">Sin cerrar desde el ${formatDate(c.date)}</span>` : ''}</div></div></td>
-          <td>${job ? `<span class="badge" style="background:${job.color}22;color:${job.color}">${job.title}</span>` : '—'}</td>
+          <td>${job ? `<span class="badge" style="background:${job.color}22;color:${job.color}">${escapeHtml(job.title)}</span>` : '—'}</td>
           <td>${storeBadge(emp.store)}</td>
           <td>${formatTime(c.clockIn)}</td>
           <td><strong>${hrs}h</strong></td>
-          <td><button class="btn btn-sm btn-outline" onclick="quickClockOut('${c.id}')"><ion-icon name="stop-circle-outline"></ion-icon> Marcar Salida</button></td>
+          <td>${olvido
+            ? '<span style="font-size:12.5px;color:var(--text-muted)">Ciérralo en la Bandeja con su hora real</span>'
+            : `<button class="btn btn-sm btn-outline" onclick="quickClockOut('${c.id}')"><ion-icon name="stop-circle-outline"></ion-icon> Marcar Salida</button>`}</td>
         </tr>`;
       }).join('');
     }
@@ -282,8 +284,8 @@ async function render() {
         if (!emp) return '';
         const job = jobs.find(j => j.id === emp.jobId);
         return `<tr>
-          <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${emp.name}</div></div></td>
-          <td>${job ? job.title : '—'}</td>
+          <td><div class="employee-info">${avatarHtml(emp.name)}<div class="employee-name">${escapeHtml(emp.name)}</div></div></td>
+          <td>${job ? escapeHtml(job.title) : '—'}</td>
           <td>${storeBadge(emp.store)}</td>
           <td>${formatTime(c.clockIn)}</td>
           <td>${formatTime(c.clockOut)}</td>
@@ -298,9 +300,11 @@ async function render() {
 }
 
 async function quickClockOut(ciId) {
-  const hrs = await clockOut(ciId);
-  toast(`Salida marcada · ${(hrs || 0).toFixed(2)} h registradas`, 'success');
-  render();
+  try {
+    const hrs = await clockOut(ciId);
+    toast(`Salida marcada · ${(hrs || 0).toFixed(2)} h registradas`, 'success');
+    render();
+  } catch (err) { toast('No se pudo marcar la salida: ' + err.message, 'error'); }
 }
 
 let allEmpsCache = [];
@@ -437,7 +441,7 @@ async function pintarBandeja() {
       <ion-icon name="calendar-outline"></ion-icon>
       <div class="bj-txt"><strong>${escapeHtml(t.employeeName || (emp && emp.name) || '—')}</strong> pide permiso
         del <b>${formatDate(t.startDate)}</b> al <b>${formatDate(t.endDate)}</b>
-        ${t.reason ? '· ' + escapeHtml(t.reason) : ''}</div>
+        ${(t.note || t.reason) ? '· ' + escapeHtml(t.note || t.reason) : ''}</div>
       <div class="bj-acciones">
         <button class="btn btn-sm btn-success" onclick="bjAprobar('${t.id}', this)">Aprobar</button>
         <button class="btn btn-sm btn-outline" onclick="bjDenegar('${t.id}', this)">Denegar</button>

@@ -192,7 +192,7 @@ async function render() {
         <div class="job-count"><ion-icon name="person-outline" style="color:var(--text-light)"></ion-icon>${count} ${count === 1 ? 'colaborador' : 'colaboradores'} en este puesto</div>
         <div class="job-actions">
           <button class="btn btn-sm btn-outline" onclick="openJobModal('${j.id}')"><ion-icon name="create-outline"></ion-icon> Editar</button>
-          <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="openDelete('${j.id}','${j.title.replace(/'/g,"\\'")}')"><ion-icon name="trash-outline"></ion-icon> Eliminar</button>
+          <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="openDelete('${j.id}','${escapeHtml(j.title.replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')"><ion-icon name="trash-outline"></ion-icon> Eliminar</button>
         </div>
       </div>`;
     }).join('');

@@ -441,9 +441,9 @@ async function render() {
           <div class="td-actions">
             <button class="btn-icon" title="Ver" onclick="openView('${e.id}')"><ion-icon name="eye-outline"></ion-icon></button>
             <button class="btn-icon" title="Editar" onclick="openEditModal('${e.id}')"><ion-icon name="create-outline"></ion-icon></button>
-            <button class="btn-icon" title="Notas de desempeño" onclick="openNotas('${e.id}','${e.name.replace(/'/g,"\\'")}')"><ion-icon name="reader-outline"></ion-icon></button>
+            <button class="btn-icon" title="Notas de desempeño" onclick="openNotas('${e.id}','${escapeHtml(e.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')"><ion-icon name="reader-outline"></ion-icon></button>
             ${e.status==='active'
-              ? `<button class="btn-icon" title="Dar de baja" style="color:var(--danger)" onclick="openFire('${e.id}','${e.name.replace(/'/g,"\\'")}')"><ion-icon name="person-remove-outline"></ion-icon></button>`
+              ? `<button class="btn-icon" title="Dar de baja" style="color:var(--danger)" onclick="openFire('${e.id}','${escapeHtml(e.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}')"><ion-icon name="person-remove-outline"></ion-icon></button>`
               : `<button class="btn-icon" title="Reactivar" style="color:var(--success)" onclick="doRehire('${e.id}')"><ion-icon name="checkmark-circle-outline"></ion-icon></button>`
             }
           </div>
