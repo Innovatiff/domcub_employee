@@ -212,6 +212,25 @@ function restaurarNav() {
   });
 }
 
+// La versión que se ve abajo a la izquierda. Sube el número con cada entrega:
+// así se sabe de un vistazo si el navegador ya cargó lo último.
+const APP_VERSION = '3.0';
+function pintarVersion() {
+  const pie = document.querySelector('.sidebar-footer');
+  if (!pie || document.getElementById('appVersion')) return;
+  const v = document.createElement('div');
+  v.id = 'appVersion';
+  v.className = 'sidebar-version';
+  v.innerHTML = '<span class="sv-dot"></span>Águila · v' + APP_VERSION;
+  pie.appendChild(v);
+}
+document.addEventListener('DOMContentLoaded', pintarVersion);
+// Si la página activa queda fuera de vista en el menú, se trae a la vista
+document.addEventListener('DOMContentLoaded', () => {
+  const act = document.querySelector('.sidebar-nav .nav-item.active');
+  if (act && act.scrollIntoView) setTimeout(() => act.scrollIntoView({ block: 'nearest' }), 250);
+});
+
 function updateSidebarUser(s) {
   const el = document.getElementById('sidebarUser');
   if (!el || !s) return;

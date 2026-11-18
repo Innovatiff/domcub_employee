@@ -2318,3 +2318,111 @@ body.arrastrando .hgrip { cursor:grabbing; }
 .htabla td.hcell.es-hoy { box-shadow: inset 2px 0 0 rgba(79,70,229,.28), inset -2px 0 0 rgba(79,70,229,.28); background-image: linear-gradient(rgba(79,70,229,.035), rgba(79,70,229,.035)); }
 /* Horas: lo que marcó el reloj antes de la corrección, a la vista */
 .antes-txt { font-size: 11.5px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   Refinado v3 — sólo apariencia
+   ══════════════════════════════════════════════════════════ */
+
+/* Fondo con un poco de vida en vez de gris plano */
+body {
+  background:
+    radial-gradient(900px 480px at 100% -8%, rgba(99,102,241,.075), transparent 60%),
+    radial-gradient(700px 420px at 30% 110%, rgba(8,145,178,.05), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* Versión, abajo a la izquierda */
+.sidebar-version {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 11px; padding-left: 3px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+  color: rgba(255,255,255,.32);
+  user-select: none;
+}
+.sidebar-version .sv-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.16);
+}
+
+/* El lápiz del nombre era un cuadro gris */
+.sidebar-user .btn-icon.nombre-editar {
+  background: transparent; border: 0; box-shadow: none;
+  width: 28px; height: 28px; color: rgba(255,255,255,.55);
+}
+.sidebar-user .btn-icon.nombre-editar:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+/* Barra lateral: profundidad y elemento activo con más presencia */
+.sidebar { background: linear-gradient(180deg, #171d36 0%, #121629 100%); }
+.sidebar .nav-item { transition: background .18s var(--ease), color .18s var(--ease), transform .18s var(--ease); }
+.sidebar .nav-item:hover { transform: translateX(2px); }
+.sidebar .nav-item.active {
+  background: linear-gradient(90deg, rgba(99,102,241,.30), rgba(99,102,241,.10));
+  box-shadow: inset 0 0 0 1px rgba(129,140,248,.20), 0 6px 18px -8px rgba(79,70,229,.55);
+}
+
+/* Títulos de página */
+.page-header h1 { font-size: 26px; letter-spacing: -0.035em; }
+.page-header p  { font-size: 14px; }
+
+/* Tarjetas: sombra más suave y bordes más finos */
+.card, .stat-card {
+  border-color: rgba(226,230,240,.9);
+  box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 10px 28px -18px rgba(16,24,40,.18);
+}
+.card:hover { box-shadow: 0 1px 2px rgba(16,24,40,.05), 0 16px 34px -18px rgba(16,24,40,.24); }
+.card-header { background: linear-gradient(180deg, #fff, var(--surface-alt)); border-radius: var(--r-lg) var(--r-lg) 0 0; }
+
+/* Indicadores */
+.stat-value { font-size: 31px; font-variant-numeric: tabular-nums; letter-spacing: -0.035em; }
+.stat-icon { box-shadow: inset 0 0 0 1px rgba(255,255,255,.6), 0 6px 14px -8px currentColor; }
+.stat-icon.purple { background: linear-gradient(135deg, #eef2ff, #e0e7ff); }
+.stat-icon.green  { background: linear-gradient(135deg, #ecfdf5, #d1fae5); }
+.stat-icon.yellow { background: linear-gradient(135deg, #fffbeb, #fef3c7); }
+.stat-icon.cyan   { background: linear-gradient(135deg, #ecfeff, #cffafe); }
+
+/* Botones */
+.btn-primary {
+  background: linear-gradient(180deg, #5b54ee, #4338ca);
+  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 8px 18px -8px rgba(79,70,229,.65);
+}
+.btn-primary:hover { filter: brightness(1.06); box-shadow: 0 1px 0 rgba(255,255,255,.2) inset, 0 12px 22px -8px rgba(79,70,229,.7); }
+.btn-success { background: linear-gradient(180deg, #10b981, #059669); box-shadow: 0 8px 18px -10px rgba(5,150,105,.7); }
+.btn-outline { background: #fff; }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.btn:focus-visible, .btn-icon:focus-visible, .tab-btn:focus-visible { outline: 2px solid rgba(79,70,229,.5); outline-offset: 2px; }
+
+/* Campos */
+input:not([type=checkbox]):not([type=radio]):focus, select:focus, textarea:focus {
+  border-color: var(--primary); box-shadow: 0 0 0 3.5px rgba(79,70,229,.13); outline: none;
+}
+
+/* Tablas: encabezado claro y filas que responden */
+thead th { font-size: 11px; letter-spacing: .07em; color: #7b8499; background: var(--surface-alt); }
+tbody tr { transition: background .14s var(--ease); }
+tbody tr:hover td { background: #f6f7fd; }
+tbody td { font-variant-numeric: tabular-nums; }
+
+/* Etiquetas */
+.badge { font-weight: 650; letter-spacing: .01em; }
+
+/* Ventanas: fondo desenfocado */
+.modal-overlay { backdrop-filter: blur(5px) saturate(120%); -webkit-backdrop-filter: blur(5px) saturate(120%); background: rgba(15,18,35,.42); }
+.modal { box-shadow: 0 30px 80px -20px rgba(15,18,35,.5), 0 0 0 1px rgba(255,255,255,.06); }
+
+/* Avisos */
+.toast { border-radius: 14px; box-shadow: 0 18px 40px -16px rgba(16,24,40,.35), 0 0 0 1px rgba(16,24,40,.05); backdrop-filter: blur(8px); }
+
+/* Barras de desplazamiento discretas */
+* { scrollbar-width: thin; scrollbar-color: rgba(120,130,160,.35) transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: rgba(120,130,160,.32); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(120,130,160,.55); background-clip: padding-box; border: 2px solid transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); background-clip: padding-box; border: 2px solid transparent; }
+
+::selection { background: rgba(99,102,241,.22); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+@media print { body { background: #fff; } }
