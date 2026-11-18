@@ -109,7 +109,7 @@ function requireAuth(callback, opts) {
 }
 
 function goLogin() {
-  if (!/login\.html$/.test(location.pathname)) window.location.href = 'login.html';
+  if (!/login(\.html)?\/?$/.test(location.pathname)) window.location.href = 'login.html';
 }
 
 /**
@@ -214,7 +214,7 @@ function restaurarNav() {
 
 // La versión que se ve abajo a la izquierda. Sube el número con cada entrega:
 // así se sabe de un vistazo si el navegador ya cargó lo último.
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 function pintarVersion() {
   const pie = document.querySelector('.sidebar-footer');
   if (!pie || document.getElementById('appVersion')) return;
@@ -1456,7 +1456,7 @@ function mountNotifications() {
   const main = document.querySelector('main.main');
   if (!main || document.getElementById('notifBar')) return;
   // En la página del chat sobra: ahí se ven los avisos en la propia lista.
-  if (/grupo\.html$/.test(location.pathname)) return;
+  if (/grupo(\.html)?\/?$/.test(location.pathname)) return;
 
   const bar = document.createElement('div');
   bar.className = 'notif-bar';
@@ -1531,7 +1531,7 @@ function mountNotifications() {
     pintarBadge();
     // Aviso emergente sólo cuando llega algo mientras la página está abierta,
     // y no en la propia página del chat, que ya lo muestra.
-    if (ultimos.length > antes && !/grupo\.html$/.test(location.pathname)) {
+    if (ultimos.length > antes && !/grupo(\.html)?\/?$/.test(location.pathname)) {
       const c = ultimos[0];
       const quien = String(c.id).startsWith('anuncios')
         ? (c.title || 'Anuncios')
