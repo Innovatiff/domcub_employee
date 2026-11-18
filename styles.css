@@ -2426,3 +2426,20 @@ tbody td { font-variant-numeric: tabular-nums; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 @media print { body { background: #fff; } }
+
+/* ══════════ v3.1 — páginas a todo lo ancho, con menos margen ══════════ */
+@media (min-width: 901px) {
+  .main { padding: 18px 22px 28px; }
+  .notif-bar { margin: -4px -2px 0 0; padding-top: 4px; }
+  .notif-bar + .page-header { margin-top: -30px; }
+  .notif-bar + .page-header-row { margin-top: -12px; }
+  .page-header-row { margin-bottom: 18px; align-items: flex-end; }
+  .page-header h1 { font-size: 24px; }
+
+  /* Chat: ocupa toda la pantalla, de arriba a abajo y de lado a lado */
+  .main.main-chat { height: 100vh; padding: 12px 14px 14px; }
+  .main-chat .page-header { display: flex; align-items: baseline; gap: 12px; margin: 0 4px 10px !important; }
+  .main-chat .page-header h1 { font-size: 20px; }
+  .main-chat .page-header p { margin: 0; font-size: 13px; }
+  .main-chat .chat-shell { grid-template-columns: 330px 1fr; gap: 12px; }
+}
