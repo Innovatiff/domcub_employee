@@ -241,7 +241,9 @@ requireAuth(() => render());
 
 function shiftPeriod(dir) { periodIndex += dir; render(); }
 
+let renderSeq = 0;
 async function render() {
+  const mio = ++renderSeq;   // si se cambia de período rápido, sólo vale la última carga
   const period = getPeriodByIndex(periodIndex);
   const cur    = getCurrentPeriod();
 
@@ -256,6 +258,7 @@ async function render() {
     getJobs(),
     getClockInsRange(period.start, period.end)
   ]);
+  if (mio !== renderSeq) return;
 
   let emps = allEmps.filter(e => e.status === 'active');
   if (store !== 'all') emps = emps.filter(e => e.store === store);
@@ -323,7 +326,7 @@ async function render() {
         <td>${ci.clockOut ? formatTime(ci.clockOut)
               : (ci.date < todayStr() ? '<span class="badge badge-yellow">Sin cerrar</span>'
                                       : '<span class="badge badge-green">En curso</span>')}</td>
-        <td><strong>${ci.clockOut ? numES(ci.hours, 2)+' h' : '—'}</strong>${ci.original ? ' <span class="badge badge-gray" title="Corregido por ' + escapeHtml(ci.editadoPor || 'la gerencia') + '">editado</span>' : ''}</td>
+        <td><strong>${ci.clockOut ? numES(ci.hours, 2)+' h' : '—'}</strong>${ci.original ? ' <span class="badge badge-gray" title="Corregido por ' + escapeHtml(ci.editadoPor || 'la gerencia') + '">editado</span><div class="antes-txt">antes ' + formatTime(ci.original.clockIn) + ' – ' + (ci.original.clockOut ? formatTime(ci.original.clockOut) : '—') + '</div>' : ''}</td>
         <td>${ci.clockOut ? '<span class="badge badge-green">Completo</span>'
               : (ci.date < todayStr() ? '<span class="badge badge-yellow">Olvidó marcar salida</span>'
                                       : '<span class="badge badge-yellow">En curso</span>')}</td>
@@ -341,8 +344,8 @@ async function render() {
         <div class="hours-emp-left">
           ${avatarHtml(emp.name)}
           <div>
-            <div class="employee-name">${emp.name}</div>
-            <div class="employee-sub">${job ? job.title : '—'} · ${storeShort(emp.store)}</div>
+            <div class="employee-name">${escapeHtml(emp.name)}</div>
+            <div class="employee-sub">${job ? escapeHtml(job.title) : '—'} · ${storeShort(emp.store)}</div>
           </div>
         </div>
         <div class="hours-emp-right">
@@ -446,8 +449,9 @@ async function doCerrarTurno() {
     const salida = new Date(`${ci.date}T${hora}:00`);
     const entrada = ci.clockIn.toDate();
     if (salida <= entrada) {
-      toast('La salida tiene que ser posterior a la entrada (' + formatTime(ci.clockIn) + ').', 'error');
-      return;
+      // Turno de noche que se olvidó cerrar: la salida cae al día siguiente
+      if (!confirm('Esa hora es anterior a la entrada (' + formatTime(ci.clockIn) + '). ¿El turno terminó al día siguiente?')) return;
+      salida.setDate(salida.getDate() + 1);
     }
     const horas = Math.round(((salida - entrada) / 3600000) * 100) / 100;
 
@@ -501,7 +505,9 @@ async function doEditarRegistro() {
   const hIn  = document.getElementById('editarIn').value;
   const hOut = document.getElementById('editarOut').value;
   if (!hIn || !hOut) { toast('Escribe la entrada y la salida.', 'error'); return; }
-  if (hOut <= hIn)   { toast('La salida tiene que ser posterior a la entrada.', 'error'); return; }
+  // Salida "antes" que la entrada sólo tiene sentido si el turno pasó la medianoche
+  const cruza = hOut <= hIn;
+  if (cruza && !confirm('La salida es más temprano que la entrada. ¿El turno terminó al día siguiente?')) return;
 
   const btn = document.getElementById('editarBtn');
   btn.disabled = true;
@@ -513,6 +519,7 @@ async function doEditarRegistro() {
 
     const entrada = new Date(`${ci.date}T${hIn}:00`);
     const salida  = new Date(`${ci.date}T${hOut}:00`);
+    if (cruza) salida.setDate(salida.getDate() + 1);
     const horas = Math.round(((salida - entrada) / 3600000) * 100) / 100;
 
     const cambios = {
@@ -538,9 +545,11 @@ async function doEditarRegistro() {
 
 async function doDeleteEntry(id) {
   if (!confirm('¿Eliminar este registro?')) return;
-  await deleteClockIn(id);
-  toast('Registro eliminado', 'info');
-  render();
+  try {
+    await deleteClockIn(id);
+    toast('Registro eliminado', 'info');
+    render();
+  } catch (err) { toast('No se pudo eliminar: ' + err.message, 'error'); }
 }
 
 function openSavePeriod() {

@@ -238,8 +238,17 @@ function moverSemana(n) {
 }
 function irAHoy() { lunes = lunesDe(new Date()); render(); }
 
+// Al volver a esta pestaña se recarga la semana: si entretanto se aprobó un
+// permiso u otra gerente cambió el horario, no se guarda encima una copia vieja.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !SESSION) return;
+  if (document.querySelector('.modal-overlay.open, .modal-overlay.active, .modal-overlay.show')) return;
+  render();
+});
+
 async function render() {
   const store = tiendaActiva();
+  const miLunes = lunes;
   const dias  = diasDeSemana(lunes);
 
   // Cabecera de la semana
@@ -257,6 +266,9 @@ async function render() {
     const [todos, h, perm, fj] = await Promise.all([
       getEmployees(), getHorario(lunes, store), permisosDeSemana(lunes), getFijos(store)
     ]);
+    // Si mientras cargaba se cambió de semana o de tienda, esta respuesta ya
+    // no vale: usarla guardaría los turnos de una semana encima de otra.
+    if (miLunes !== lunes || store !== tiendaActiva()) return;
     emps = todos.filter(e => e.status === 'active' && e.store === store)
                 .sort((x, y) => x.name.localeCompare(y.name));
     horario = h;
@@ -329,11 +341,11 @@ function pintar() {
     const celdas = dias.map(f => {
       const t = mios[f];
       if (conPermiso(e.id, f)) {
-        return `<td class="hcell permiso" data-emp="${e.id}" data-fecha="${f}" title="Permiso aprobado">
+        return `<td class="hcell permiso${f === hoy ? " es-hoy" : ""}" data-emp="${e.id}" data-fecha="${f}" title="Permiso aprobado">
           <div class="hcell-permiso"><ion-icon name="airplane-outline"></ion-icon> Permiso</div></td>`;
       }
       if (esLibre(t)) {
-        return `<td class="hcell dialibre" data-emp="${e.id}" data-fecha="${f}"
+        return `<td class="hcell dialibre${f === hoy ? " es-hoy" : ""}" data-emp="${e.id}" data-fecha="${f}"
                     title="Día libre" onclick="abrirTurno('${e.id}','${f}')">
           <div class="hcell-libre"><ion-icon name="cafe-outline"></ion-icon> Libre</div>
           <span class="hgrip" title="Arrastra para marcar libre otros días"
@@ -341,7 +353,7 @@ function pintar() {
                 onclick="event.stopPropagation()">⠿</span></td>`;
       }
       if (t) {
-        return `<td class="hcell con-turno" data-emp="${e.id}" data-fecha="${f}" onclick="abrirTurno('${e.id}','${f}')">
+        return `<td class="hcell con-turno${f === hoy ? " es-hoy" : ""}" data-emp="${e.id}" data-fecha="${f}" onclick="abrirTurno('${e.id}','${f}')">
           <div class="hcell-turno">
             <span class="hcell-horas">${t.in} – ${t.out}</span>
             <span class="hcell-dur">${numES(horasDe(t), 1)} h</span>
@@ -350,7 +362,7 @@ function pintar() {
                 onmousedown="iniciarArrastre(event,'${e.id}','${f}')"
                 onclick="event.stopPropagation()">⠿</span></td>`;
       }
-      return `<td class="hcell libre" data-emp="${e.id}" data-fecha="${f}" onclick="abrirTurno('${e.id}','${f}')">
+      return `<td class="hcell libre${f === hoy ? " es-hoy" : ""}" data-emp="${e.id}" data-fecha="${f}" onclick="abrirTurno('${e.id}','${f}')">
         <span class="hcell-mas">+</span></td>`;
     }).join('');
 

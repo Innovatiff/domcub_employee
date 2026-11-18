@@ -278,7 +278,7 @@ function renderCalendar() {
 
     const chips = events.slice(0,2).map(t => {
       const emp = allEmpsCache.find(e => e.id === t.employeeId);
-      return `<div class="cal-event-chip ${typeClass(t.type)}" title="${emp ? emp.name : ''} — ${t.type}">${emp ? emp.name.split(' ')[0] : '?'}</div>`;
+      return `<div class="cal-event-chip ${typeClass(t.type)}" title="${emp ? escapeHtml(emp.name) : ''} — ${escapeHtml(t.type)}">${emp ? escapeHtml(emp.name.split(' ')[0]) : '?'}</div>`;
     }).join('') + (events.length > 2 ? `<div class="cal-event-chip badge-gray">+${events.length-2} más</div>` : '');
 
     html += `<div class="cal-cell ${isToday?'today':''}" style="animation-delay:${delay}s">
@@ -316,8 +316,8 @@ function renderList() {
     return `<tr>
       <td>${isManager() && t.status === 'pending'
         ? `<input type="checkbox" class="to-check" value="${t.id}" onchange="pintarLote()">` : ''}</td>
-      <td><div class="employee-info">${emp ? avatarHtml(emp.name) : ''}<div><div class="employee-name">${emp ? emp.name : '—'}</div><div class="employee-sub">${emp ? storeName(emp.store) : ''}</div></div></div></td>
-      <td><span class="badge ${typeBadge[t.type]||'badge-gray'}">${typeLabel[t.type]||t.type}</span></td>
+      <td><div class="employee-info">${emp ? avatarHtml(emp.name) : ''}<div><div class="employee-name">${emp ? escapeHtml(emp.name) : '—'}</div><div class="employee-sub">${emp ? storeName(emp.store) : ''}</div></div></div></td>
+      <td><span class="badge ${typeBadge[t.type]||'badge-gray'}">${escapeHtml(typeLabel[t.type]||t.type)}</span></td>
       <td>${formatDate(t.startDate)}</td>
       <td>${formatDate(t.endDate)}</td>
       <td>${days} ${days === 1 ? 'día' : 'días'}</td>
@@ -327,7 +327,7 @@ function renderList() {
           ? `<div class="deny-reason"><ion-icon name="information-circle-outline"></ion-icon><span>${escapeHtml(t.denyReason)}</span></div>`
           : ''}
       </td>
-      <td><span class="badge ${statBadge[t.status]||'badge-gray'}">${statLabel[t.status]||t.status}</span></td>
+      <td><span class="badge ${statBadge[t.status]||'badge-gray'}">${escapeHtml(statLabel[t.status]||t.status)}</span></td>
       <td>
         <div class="td-actions">
           ${!isManager() ? '<span style="color:var(--text-light);font-size:12px">—</span>' : t.status === 'pending' ? `
