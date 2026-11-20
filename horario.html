@@ -83,6 +83,9 @@
       <p>Asigna los turnos de la semana. Los permisos aprobados quitan a la persona solos.</p>
     </div>
     <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" onclick="abrirImprimir()">
+        <ion-icon name="print-outline"></ion-icon> Imprimir
+      </button>
       <button class="btn btn-outline" onclick="abrirFijar()">
         <ion-icon name="pin-outline"></ion-icon> Fijar
       </button>
@@ -108,6 +111,40 @@
 
   <div id="horarioWrap"></div>
 </main>
+
+<!-- Modal Imprimir horario -->
+<div class="modal-overlay" id="imprimirModal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Imprimir horario</h3>
+      <button class="modal-close" onclick="closeModal('imprimirModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:14px">
+        Horario de <strong id="impTienda"></strong>, todo en una sola hoja horizontal.
+      </p>
+      <div class="form-group">
+        <label>¿Qué quieres imprimir?</label>
+        <select id="impPeriodo"></select>
+      </div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin-top:10px">
+        En los períodos que vienen salen los turnos ya puestos y los horarios fijos (📌).
+        En la ventana de impresión elige orientación <strong>horizontal</strong> si no sale así sola.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('imprimirModal')">Cancelar</button>
+      <button class="btn btn-primary" id="impBtn" onclick="imprimirHorario()">
+        <ion-icon name="print-outline"></ion-icon> Imprimir
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea" class="print-only"></div>
+<style media="print">
+  @page { size: letter landscape; margin: 8mm; }
+</style>
 
 <!-- Modal de turno -->
 <div class="modal-overlay" id="turnoModal">
@@ -737,6 +774,115 @@ document.addEventListener('mouseup', async () => {
     render();                                // recarga lo real si falló
   }
 });
+// ══ Imprimir el horario de un período, en una sola hoja ══
+function abrirImprimir() {
+  document.getElementById('impTienda').textContent = storeName(tiendaActiva());
+  const cur = getCurrentPeriod();
+  const dias = diasDeSemana(lunes);
+  const ops = [];
+  for (let i = cur.index; i <= cur.index + 5; i++) {
+    const p = getPeriodByIndex(i);
+    const cual = i === cur.index ? 'Período actual' : i === cur.index + 1 ? 'Próximo período' : 'Período';
+    ops.push(`<option value="${p.start}|${p.end}">${cual} · ${formatPeriodLabel(p)}</option>`);
+  }
+  const ant = getPeriodByIndex(cur.index - 1);
+  ops.push(`<option value="${ant.start}|${ant.end}">Período anterior · ${formatPeriodLabel(ant)}</option>`);
+  ops.push(`<option value="${dias[0]}|${dias[6]}">Sólo la semana que estoy viendo</option>`);
+  document.getElementById('impPeriodo').innerHTML = ops.join('');
+  openModal('imprimirModal');
+}
+
+// "08:00" -> "8:00a", para que quepa en una casilla angosta
+function horaCorta(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm || '');
+  if (!m) return hhmm || '';
+  const h = +m[1];
+  return `${h % 12 || 12}:${m[2]}${h < 12 ? 'a' : 'p'}`;
+}
+
+async function imprimirHorario() {
+  const [desde, hasta] = document.getElementById('impPeriodo').value.split('|');
+  const store = tiendaActiva();
+  const btn = document.getElementById('impBtn');
+  btn.disabled = true;
+  try {
+    // Los días del período y las semanas (lunes) que lo cubren
+    const fechas = [];
+    for (let d = parseLocalDate(desde); toDateStr(d) <= hasta; d.setDate(d.getDate() + 1)) fechas.push(toDateStr(d));
+    const lunesSet = [...new Set(fechas.map(f => lunesDe(f)))];
+    const [todos, fj, ...semanas] = await Promise.all([
+      getEmployees(), getFijos(store),
+      ...lunesSet.map(l => Promise.all([getHorario(l, store), permisosDeSemana(l)]))
+    ]);
+    const gente = todos.filter(e => e.status === 'active' && e.store === store)
+                       .sort((x, y) => x.name.localeCompare(y.name));
+    const porLunes = {};
+    lunesSet.forEach((l, i) => { porLunes[l] = { h: semanas[i][0], perm: semanas[i][1] }; });
+    const lunesHoy = lunesDe(new Date());
+
+    // Sólo se LEE: el horario fijo se muestra en las semanas aún sin llenar,
+    // pero aquí no se guarda nada.
+    const turnoDe = (e, f) => {
+      const l = lunesDe(f), sem = porLunes[l];
+      if ((sem.perm[e.id] || []).some(t => f >= t.startDate && f <= t.endDate)) return { permiso: true };
+      const t = ((sem.h.shifts || {})[e.id] || {})[f];
+      if (t) return t;
+      const fijo = fj[e.id];
+      if (fijo && l >= lunesHoy && !(sem.h.fijados || []).includes(e.id)) {
+        const i = (parseLocalDate(f).getDay() + 6) % 7;
+        if (fijo[i]) return fijo[i];
+      }
+      return null;
+    };
+
+    const grupos = store === '1'
+      ? [['Tienda', gente.filter(e => e.area !== 'envios')], ['Envíos', gente.filter(e => e.area === 'envios')]]
+      : [['', gente]];
+    const filas = grupos.filter(g => g[1].length).map(([titulo, lista]) =>
+      (titulo ? `<tr class="ph-area"><td colspan="${fechas.length + 2}">${titulo}</td></tr>` : '') +
+      lista.map(e => {
+        let total = 0;
+        const celdas = fechas.map(f => {
+          const t = turnoDe(e, f);
+          const finde = [0, 6].includes(parseLocalDate(f).getDay()) ? ' ph-finde' : '';
+          if (!t) return `<td class="ph-vacio${finde}"></td>`;
+          if (t.permiso) return `<td class="ph-permiso${finde}">Permiso</td>`;
+          if (t.libre) return `<td class="ph-libre${finde}">Libre</td>`;
+          total += horasDe(t);
+          return `<td class="${finde.trim()}">${horaCorta(t.in)}<br>${horaCorta(t.out)}</td>`;
+        }).join('');
+        return `<tr><th class="ph-nombre">${escapeHtml(e.name)}${fj[e.id] ? ' 📌' : ''}</th>${celdas}<td class="ph-total">${numES(total, 1)} h</td></tr>`;
+      }).join('')).join('');
+
+    const a = parseLocalDate(desde), b = parseLocalDate(hasta);
+    const rango = `${a.getDate()} ${MESES_CORTOS[a.getMonth()]} – ${b.getDate()} ${MESES_CORTOS[b.getMonth()]}, ${b.getFullYear()}`;
+    // Con mucha gente o muchos días se achica la letra para que siga cabiendo en una hoja
+    const nFilas = gente.length + grupos.filter(g => g[0] && g[1].length).length;
+    const escala = Math.min(1, 24 / Math.max(nFilas, 1), 17 / Math.max(fechas.length, 1) * 1.05);
+    document.getElementById('printArea').innerHTML = `
+      <div class="ph" style="font-size:${(9.5 * Math.max(escala, 0.55)).toFixed(2)}px">
+        <div class="ph-cab">
+          <div><div class="ph-tit">Horario · ${escapeHtml(storeName(store))}</div>
+            <div class="ph-sub">${rango}</div></div>
+          <div class="ph-marca">Águila<br><span>Impreso el ${formatDate(todayStr())}</span></div>
+        </div>
+        <table class="ph-tabla">
+          <thead><tr><th class="ph-nombre">Colaborador</th>
+            ${fechas.map(f => { const d = parseLocalDate(f);
+              return `<th class="${[0,6].includes(d.getDay()) ? 'ph-finde' : ''}">${DIAS_CORTOS[d.getDay()]}<br><b>${d.getDate()}</b></th>`; }).join('')}
+            <th class="ph-total">Total</th></tr></thead>
+          <tbody>${filas || `<tr><td colspan="${fechas.length + 2}">No hay colaboradores activos.</td></tr>`}</tbody>
+        </table>
+        <div class="ph-pie">a = AM · p = PM · 📌 horario fijo · casilla vacía = sin turno asignado</div>
+      </div>`;
+    closeModal('imprimirModal');
+    setTimeout(() => window.print(), 150);
+  } catch (err) {
+    console.error(err);
+    toast('No se pudo preparar la impresión: ' + err.message, 'error');
+  } finally { btn.disabled = false; }
+}
+
 // ══ Horario fijo por persona ══
 function abrirFijar() {
   document.getElementById('fjTienda').textContent = storeName(tiendaActiva());
