@@ -355,7 +355,7 @@ function pintar() {
       if (t) {
         return `<td class="hcell con-turno${f === hoy ? " es-hoy" : ""}" data-emp="${e.id}" data-fecha="${f}" onclick="abrirTurno('${e.id}','${f}')">
           <div class="hcell-turno">
-            <span class="hcell-horas">${t.in} – ${t.out}</span>
+            <span class="hcell-horas">${hora12(t.in)} – ${hora12(t.out)}</span>
             <span class="hcell-dur">${numES(horasDe(t), 1)} h</span>
           </div>
           <span class="hgrip" title="Arrastra para copiar este turno a otros días"
@@ -453,7 +453,7 @@ function abrirTurno(empId, fecha) {
     : '<ion-icon name="cafe-outline"></ion-icon> Libre';
 
   document.getElementById('turnoPresets').innerHTML = presets().map(p =>
-    `<button type="button" class="turno-preset" onclick="usarPreset('${p.in}','${p.out}')">${p.in} – ${p.out}</button>`
+    `<button type="button" class="turno-preset" onclick="usarPreset('${p.in}','${p.out}')">${hora12(p.in)} – ${hora12(p.out)}</button>`
   ).join('');
 
   openModal('turnoModal');
@@ -731,7 +731,7 @@ document.addEventListener('mouseup', async () => {
     await saveHorario(lunes, tiendaActiva(), shifts, horario.fijados);
     toast(esLibre(d.turno)
       ? `Libre puesto en ${n} días`
-      : `Turno ${d.turno.in} – ${d.turno.out} puesto en ${n} días`, 'success');
+      : `Turno ${hora12(d.turno.in)} – ${hora12(d.turno.out)} puesto en ${n} días`, 'success');
   } catch (err) {
     toast('No se pudo guardar: ' + err.message, 'error');
     render();                                // recarga lo real si falló
