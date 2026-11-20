@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // La versión que se ve abajo a la izquierda. Sube el número con cada entrega:
 // así se sabe de un vistazo si el navegador ya cargó lo último.
-const APP_VERSION = '3.2';
+const APP_VERSION = '3.3';
 function pintarVersion() {
   const pie = document.querySelector('.sidebar-footer');
   if (!pie || document.getElementById('appVersion')) return;
