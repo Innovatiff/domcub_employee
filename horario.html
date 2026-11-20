@@ -778,17 +778,32 @@ document.addEventListener('mouseup', async () => {
 function abrirImprimir() {
   document.getElementById('impTienda').textContent = storeName(tiendaActiva());
   const cur = getCurrentPeriod();
-  const dias = diasDeSemana(lunes);
-  const ops = [];
-  for (let i = cur.index; i <= cur.index + 5; i++) {
+  const etiqueta = l => {
+    const d = diasDeSemana(l), a = parseLocalDate(d[0]), b = parseLocalDate(d[6]);
+    return `${a.getDate()} ${MESES_CORTOS[a.getMonth()]} – ${b.getDate()} ${MESES_CORTOS[b.getMonth()]}`;
+  };
+  const opSemana = (l, nombre) => { const d = diasDeSemana(l);
+    return `<option value="${d[0]}|${d[6]}">${nombre} · ${etiqueta(l)}</option>`; };
+  const hoyL = lunesDe(new Date());
+  const mas = n => { const d = parseLocalDate(hoyL); d.setDate(d.getDate() + n * 7); return toDateStr(d); };
+
+  // Primero las semanas (lo que más se imprime); los períodos de pago, aparte
+  const semanas = [];
+  if (lunes !== hoyL && lunes !== mas(1)) semanas.push(opSemana(lunes, 'La semana que estoy viendo'));
+  semanas.push(opSemana(hoyL, 'Esta semana'));
+  semanas.push(opSemana(mas(1), 'Próxima semana'));
+  for (let n = 2; n <= 5; n++) semanas.push(opSemana(mas(n), 'Semana'));
+  const periodos = [];
+  for (let i = cur.index; i <= cur.index + 3; i++) {
     const p = getPeriodByIndex(i);
-    const cual = i === cur.index ? 'Período actual' : i === cur.index + 1 ? 'Próximo período' : 'Período';
-    ops.push(`<option value="${p.start}|${p.end}">${cual} · ${formatPeriodLabel(p)}</option>`);
+    periodos.push(`<option value="${p.start}|${p.end}">${i === cur.index ? 'Período actual' : i === cur.index + 1 ? 'Próximo período' : 'Período'} · ${formatPeriodLabel(p)}</option>`);
   }
-  const ant = getPeriodByIndex(cur.index - 1);
-  ops.push(`<option value="${ant.start}|${ant.end}">Período anterior · ${formatPeriodLabel(ant)}</option>`);
-  ops.push(`<option value="${dias[0]}|${dias[6]}">Sólo la semana que estoy viendo</option>`);
+  const ops = [`<optgroup label="Por semana">${semanas.join('')}</optgroup>`,
+               `<optgroup label="Por período de pago">${periodos.join('')}</optgroup>`];
   document.getElementById('impPeriodo').innerHTML = ops.join('');
+  // Por defecto, la semana que está en pantalla
+  const dv = diasDeSemana(lunes);
+  document.getElementById('impPeriodo').value = `${dv[0]}|${dv[6]}`;
   openModal('imprimirModal');
 }
 
@@ -835,6 +850,7 @@ async function imprimirHorario() {
       return null;
     };
 
+    const semanal = fechas.length <= 7;   // una semana: letra grande y horas completas
     const grupos = store === '1'
       ? [['Tienda', gente.filter(e => e.area !== 'envios')], ['Envíos', gente.filter(e => e.area === 'envios')]]
       : [['', gente]];
@@ -849,7 +865,9 @@ async function imprimirHorario() {
           if (t.permiso) return `<td class="ph-permiso${finde}">Permiso</td>`;
           if (t.libre) return `<td class="ph-libre${finde}">Libre</td>`;
           total += horasDe(t);
-          return `<td class="${finde.trim()}">${horaCorta(t.in)}<br>${horaCorta(t.out)}</td>`;
+          return semanal
+            ? `<td class="${finde.trim()}">${hora12(t.in)}<br>${hora12(t.out)}</td>`
+            : `<td class="${finde.trim()}">${horaCorta(t.in)}<br>${horaCorta(t.out)}</td>`;
         }).join('');
         return `<tr><th class="ph-nombre">${escapeHtml(e.name)}${fj[e.id] ? ' 📌' : ''}</th>${celdas}<td class="ph-total">${numES(total, 1)} h</td></tr>`;
       }).join('')).join('');
@@ -858,9 +876,9 @@ async function imprimirHorario() {
     const rango = `${a.getDate()} ${MESES_CORTOS[a.getMonth()]} – ${b.getDate()} ${MESES_CORTOS[b.getMonth()]}, ${b.getFullYear()}`;
     // Con mucha gente o muchos días se achica la letra para que siga cabiendo en una hoja
     const nFilas = gente.length + grupos.filter(g => g[0] && g[1].length).length;
-    const escala = Math.min(1, 24 / Math.max(nFilas, 1), 17 / Math.max(fechas.length, 1) * 1.05);
+    const escala = Math.min(1, (semanal ? 18 : 24) / Math.max(nFilas, 1), 17 / Math.max(fechas.length, 1) * 1.05);
     document.getElementById('printArea').innerHTML = `
-      <div class="ph" style="font-size:${(9.5 * Math.max(escala, 0.55)).toFixed(2)}px">
+      <div class="ph${semanal ? ' ph-semana' : ''}" style="font-size:${((semanal ? 11.5 : 9.5) * Math.max(escala, 0.55)).toFixed(2)}px">
         <div class="ph-cab">
           <div><div class="ph-tit">Horario · ${escapeHtml(storeName(store))}</div>
             <div class="ph-sub">${rango}</div></div>
@@ -873,7 +891,7 @@ async function imprimirHorario() {
             <th class="ph-total">Total</th></tr></thead>
           <tbody>${filas || `<tr><td colspan="${fechas.length + 2}">No hay colaboradores activos.</td></tr>`}</tbody>
         </table>
-        <div class="ph-pie">a = AM · p = PM · 📌 horario fijo · casilla vacía = sin turno asignado</div>
+        <div class="ph-pie">${semanal ? '' : 'a = AM · p = PM · '}📌 horario fijo · casilla vacía = sin turno asignado</div>
       </div>`;
     closeModal('imprimirModal');
     setTimeout(() => window.print(), 150);

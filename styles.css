@@ -2474,3 +2474,9 @@ tbody td { font-variant-numeric: tabular-nums; }
   .ph-tabla tr { page-break-inside: avoid; }
   .ph-pie { margin-top: 5px; font-size: 0.85em; color: #555; }
 }
+@media print {
+  .ph-semana .ph-tabla th, .ph-semana .ph-tabla td { padding: 4px 3px; }
+  .ph-semana .ph-tabla .ph-nombre { width: 19%; }
+  .ph-semana .ph-tabla .ph-total { width: 8%; }
+}
+@media print { .ph-semana .ph-tabla th, .ph-semana .ph-tabla td { padding: 2.5px 3px; } .ph-semana .ph-tabla tbody td { font-weight: 600; } }
