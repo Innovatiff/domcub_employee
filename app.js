@@ -212,9 +212,84 @@ function restaurarNav() {
   });
 }
 
+// ── Horas en formato de 12 h (AM/PM) ──
+// "16:00" -> "4:00 PM". En la base se sigue guardando "16:00": sólo cambia
+// cómo se ve y cómo se escribe.
+function hora12(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm || '');
+  if (!m) return hhmm || '';
+  const h = +m[1];
+  return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+// Cada <input type="time"> se cambia por tres listas (hora, minutos, AM/PM).
+// El campo original sigue ahí, oculto y con su valor de siempre ("16:00"),
+// así el resto del programa no se entera del cambio. Antes dependía del
+// idioma de la computadora: en unas salía AM/PM y en otras hora militar.
+function ponerHora12(inp) {
+  if (inp.dataset.h12) return;
+  inp.dataset.h12 = '1';
+  const caja = document.createElement('span');
+  caja.className = 'h12';
+  const sel = (ops, cls) => {
+    const s = document.createElement('select');
+    s.className = cls;
+    s.innerHTML = '<option value="">--</option>' + ops.map(o => `<option value="${o}">${o}</option>`).join('');
+    caja.appendChild(s);
+    return s;
+  };
+  const sh = sel([12,1,2,3,4,5,6,7,8,9,10,11].map(String), 'h12-h');
+  const sm = sel(Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')), 'h12-m');
+  const sa = sel(['AM', 'PM'], 'h12-a');
+  sa.querySelector('option').remove();
+
+  const nativo = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  const pintar = v => {
+    const m = /^(\d{1,2}):(\d{2})/.exec(v || '');
+    if (!m) { sh.value = ''; sm.value = ''; return; }
+    const h = +m[1];
+    sh.value = String(h % 12 || 12); sm.value = m[2]; sa.value = h < 12 ? 'AM' : 'PM';
+  };
+  const leer = () => {
+    if (sh.value === '') return '';
+    if (sm.value === '') sm.value = '00';
+    const h = (+sh.value % 12) + (sa.value === 'PM' ? 12 : 0);
+    return String(h).padStart(2, '0') + ':' + sm.value;
+  };
+  // Cuando el programa escribe inp.value = '08:00', las listas se ponen al día
+  Object.defineProperty(inp, 'value', {
+    configurable: true,
+    get() { return nativo.get.call(inp); },
+    set(v) { nativo.set.call(inp, v); pintar(nativo.get.call(inp)); }
+  });
+  [sh, sm, sa].forEach(s => s.addEventListener('change', () => {
+    nativo.set.call(inp, leer());
+    inp.dispatchEvent(new Event('input',  { bubbles: true }));
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
+  }));
+  if (inp.disabled) [sh, sm, sa].forEach(s => s.disabled = true);
+  if (inp.style.width) caja.style.width = inp.style.width;
+  inp.classList.add('h12-oculto');
+  inp.tabIndex = -1;
+  inp.insertAdjacentElement('afterend', caja);
+  pintar(nativo.get.call(inp));
+}
+function ponerHoras12(raiz) {
+  (raiz || document).querySelectorAll('input[type="time"]').forEach(ponerHora12);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  ponerHoras12();
+  // También los campos que se crean después (filas del horario fijo, bandeja…)
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
+    if (n.nodeType !== 1) return;
+    if (n.matches && n.matches('input[type="time"]')) ponerHora12(n);
+    else if (n.querySelectorAll) ponerHoras12(n);
+  }))).observe(document.body, { childList: true, subtree: true });
+});
+
 // La versión que se ve abajo a la izquierda. Sube el número con cada entrega:
 // así se sabe de un vistazo si el navegador ya cargó lo último.
-const APP_VERSION = '3.1';
+const APP_VERSION = '3.2';
 function pintarVersion() {
   const pie = document.querySelector('.sidebar-footer');
   if (!pie || document.getElementById('appVersion')) return;
