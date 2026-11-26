@@ -2480,3 +2480,6 @@ tbody td { font-variant-numeric: tabular-nums; }
   .ph-semana .ph-tabla .ph-total { width: 8%; }
 }
 @media print { .ph-semana .ph-tabla th, .ph-semana .ph-tabla td { padding: 2.5px 3px; } .ph-semana .ph-tabla tbody td { font-weight: 600; } }
+
+/* Colaboradores: restablecer el acceso al portal */
+.portal-reset { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 16px; padding: 13px 15px; border: 1px dashed var(--border-strong, #d5d9e6); border-radius: 12px; background: var(--surface-alt); }

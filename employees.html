@@ -630,6 +630,18 @@ async function openView(id) {
       ${infoBlock('Encargado de pedidos', emp.canPedidos ? 'Sí' : 'No')}
       ${infoBlock('PIN del Colaborador', `<span class="pin-cell" id="viewPin" style="font-size:15px;font-weight:700">···</span>`)}
     </div>
+    ${isManager() && emp.status === 'active' && emp.email ? `
+    <div class="portal-reset">
+      <div>
+        <div style="font-weight:650">¿No puede entrar al portal?</div>
+        <div style="font-size:12.5px;color:var(--text-muted);margin-top:2px">
+          Deja su contraseña del portal igual a su PIN actual. No cambia nada más.
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="resetPortalBtn" onclick="restablecerPortal('${id}', this)">
+        <ion-icon name="key-outline"></ion-icon> Restablecer acceso
+      </button>
+    </div>` : ''}
   `;
   getEmployeePin(id).then(p => {
     const el = document.getElementById('viewPin');
@@ -637,6 +649,35 @@ async function openView(id) {
   });
   document.getElementById('viewEditBtn').onclick = () => { closeModal('viewModal'); openEditModal(id); };
   openModal('viewModal');
+}
+
+// La contraseña del portal se fijó con el PIN del día en que se creó la
+// cuenta. Si luego se cambió el PIN, o la persona cambió y olvidó su
+// contraseña, no hay correo real al que mandarle un enlace: la gerencia la
+// restablece desde aquí. El cambio lo hace el servidor (una página no puede
+// tocar la contraseña de otra persona); aquí sólo se deja el pedido.
+async function restablecerPortal(id, btn) {
+  if (!confirm('La contraseña del portal de este colaborador quedará igual a su PIN actual. ¿Continuar?')) return;
+  const ref = db.collection('Employees').doc(id).collection('secure').doc('portalReset');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<ion-icon name="sync-outline" class="gira"></ion-icon> Restableciendo...';
+  let parar = null, reloj = null;
+  const fin = (msg, tipo) => {
+    if (parar) parar(); clearTimeout(reloj);
+    btn.disabled = false; btn.innerHTML = original;
+    toast(msg, tipo);
+  };
+  try {
+    await ref.set({ status: 'pedido', por: SESSION.name,
+      pedidoAt: firebase.firestore.FieldValue.serverTimestamp() });
+    parar = ref.onSnapshot(d => {
+      const r = d.exists ? d.data() : {};
+      if (r.status === 'ok')    fin('Listo: ya puede entrar al portal con su correo y su PIN.', 'success');
+      if (r.status === 'error') fin('No se pudo restablecer: ' + (r.error || 'error desconocido'), 'error');
+    }, err => fin('No se pudo restablecer: ' + err.message, 'error'));
+    reloj = setTimeout(() => fin('El servidor no respondió. Revisa que las funciones estén desplegadas e inténtalo de nuevo.', 'error'), 30000);
+  } catch (err) { fin('No se pudo restablecer: ' + err.message, 'error'); }
 }
 
 function infoBlock(label, value) {
