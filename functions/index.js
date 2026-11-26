@@ -24,6 +24,7 @@ const { onDocumentCreated, onDocumentWritten, onDocumentUpdated } = require('fir
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore }  = require('firebase-admin/firestore');
 const { getMessaging }  = require('firebase-admin/messaging');
+const { getAuth }       = require('firebase-admin/auth');
 
 initializeApp();
 const db = getFirestore();
@@ -149,6 +150,53 @@ exports.avisarPedidoAceptado = onDocumentUpdated('Pedidos/{id}', async event => 
   await enviar(await tokensDe(['emp:' + ahora.createdBy]),
     '✅ ' + (ahora.paraName || 'Tu compañero') + ' aceptó tu pedido',
     ahora.title || 'Pedido', { tipo: 'pedido' }, 'pedido-ok-' + event.params.id);
+});
+
+// ── Restablecer el acceso al portal de un colaborador ──
+//
+// La gerencia deja un pedido en Employees/{id}/secure/portalReset (ruta que
+// las reglas sólo abren a la gerencia). Aquí se pone la contraseña del portal
+// igual al PIN actual; si la cuenta no existía, se crea y se vincula.
+exports.restablecerPortal = onDocumentWritten('Employees/{id}/secure/portalReset', async event => {
+  const ahora = event.data.after.exists ? event.data.after.data() : null;
+  if (!ahora || ahora.status !== 'pedido') return;
+  const empId = event.params.id;
+  const ref = event.data.after.ref;
+  try {
+    const [empDoc, pinDoc] = await Promise.all([
+      db.collection('Employees').doc(empId).get(),
+      db.collection('Employees').doc(empId).collection('secure').doc('pin').get()
+    ]);
+    if (!empDoc.exists) throw new Error('No existe la ficha del colaborador');
+    const emp = empDoc.data();
+    const email = String(emp.email || '').trim().toLowerCase();
+    const pin = pinDoc.exists ? String(pinDoc.data().pin || '') : '';
+    if (!email) throw new Error('El colaborador no tiene correo en su ficha');
+    if (pin.length < 6) throw new Error('El colaborador no tiene un PIN de 6 dígitos');
+
+    const auth = getAuth();
+    let user = null;
+    if (emp.authUid) { try { user = await auth.getUser(emp.authUid); } catch (e) { user = null; } }
+    if (!user) { try { user = await auth.getUserByEmail(email); } catch (e) { user = null; } }
+    let creada = false;
+    if (user) {
+      const cambios = { password: pin };
+      if ((user.email || '').toLowerCase() !== email) cambios.email = email;   // se corrigió el correo en la ficha
+      await auth.updateUser(user.uid, cambios);
+    } else {
+      user = await auth.createUser({ email, password: pin });
+      creada = true;
+    }
+    const vinculo = db.collection('Colaboradores').doc(user.uid);
+    if (!(await vinculo.get()).exists) {
+      await vinculo.set({ employeeId: empId, email, createdAt: new Date() });
+    }
+    await db.collection('Employees').doc(empId).update({ authUid: user.uid, portalReady: true });
+    await ref.set({ status: 'ok', creada, por: ahora.por || null, hechoAt: new Date() });
+  } catch (err) {
+    console.error('restablecerPortal', empId, err);
+    await ref.set({ status: 'error', error: String(err.message || err), por: ahora.por || null, hechoAt: new Date() });
+  }
 });
 
 // ── Reportes de incidentes ──
